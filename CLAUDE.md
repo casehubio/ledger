@@ -55,7 +55,7 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 | specs      | project     | lands in `docs/specs/` — promoted at epic close |
 | blog       | workspace   | staged here; published to mdproctor.github.io via publish-blog |
 | plans      | workspace   | stay in workspace permanently |
-| design     | project     | journal file lives in workspace design/; DESIGN.md merge target is project docs/DESIGN.md |
+| design     | project     | journal file lives in workspace design/; ARC42STORIES.MD is the primary architecture record at project root |
 | snapshots  | workspace   | stay in workspace permanently |
 | handover   | workspace   | |
 
@@ -130,7 +130,7 @@ Each consumer defines its own subclass and its own Flyway migration for the subc
 The base tables (`ledger_entry`, `ledger_attestation`, `actor_trust_score`) are defined here
 in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 
-**Design documentation:** `docs/DESIGN.md` covers entity model, architecture, SPI contracts, and configuration. `docs/DESIGN-capabilities.md` covers Merkle MMR, PROV-DM export, agent identity model, and agent mesh topology.
+**Design documentation:** `ARC42STORIES.MD` at the project root is the primary architecture record — covers entity model, architecture, SPI contracts, Merkle MMR, trust scoring, agent identity, and delivery history. `docs/DESIGN.md` and `docs/DESIGN-capabilities.md` redirect to it.
 
 ---
 
@@ -195,7 +195,7 @@ Qhorus each define their own REST/MCP endpoints on top.
 LLM agents are stateless; use versioned persona names so trust accumulates correctly
 across sessions: `"{model-family}:{persona}@{major}"` — e.g. `"claude:tarkus-reviewer@v1"`.
 Major version bump resets the trust baseline; tuning/bug-fix does not. See ADR 0004 and
-`docs/DESIGN-capabilities.md` (Agent Identity Model) for concrete bump criteria and the no-inheritance
+`ARC42STORIES.MD` §9.4 Layer L6 (Agent Identity) for concrete bump criteria and the no-inheritance
 rationale.
 
 **Multi-tenancy — explicit `tenancyId` parameter, unconditional filtering**
@@ -520,7 +520,7 @@ filtering or dropping commits that touch these paths.
 |------|------------|
 | `docs/adr/` | Architecture decision records |
 | `CLAUDE.md` | Project conventions (build, test, naming) |
-| `docs/DESIGN.md` | Design document |
+| `ARC42STORIES.MD` | Architecture and delivery documentation (arc42stories format) |
 
 ## Work Tracking
 
