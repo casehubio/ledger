@@ -31,13 +31,13 @@ public interface GlobalScoreStrategy {
      * Select which attestations feed the global Beta model.
      *
      * <p>
-     * The input list contains aggregated synthetic {@link LedgerAttestation} instances produced by
-     * {@link AttestationAggregator} — one per {@code (entryId, capabilityTag)} group. The caller
-     * groups the returned list by {@code ledgerEntryId} to build the per-entry attestation map
-     * for {@link TrustScoreComputer#compute}. Implementations may filter by any field
-     * ({@code capabilityTag}, {@code verdict}, etc.); all fields on the input instances are set.
+     * The input list contains raw {@link LedgerAttestation} instances — each individual
+     * attestation appears separately, not aggregated. The caller groups the returned list
+     * by {@code ledgerEntryId} to build the per-entry attestation map for
+     * {@link TrustScoreComputer#compute}. Implementations may filter by any field
+     * ({@code capabilityTag}, {@code verdict}, etc.).
      *
-     * @param all all aggregated attestations for the actor's decisions (may be empty)
+     * @param all all raw attestations for the actor's decisions (may be empty)
      * @return a subset of {@code all} to use for the global Beta computation; return the
      *         full list to include all attestations, or an empty list to skip global scoring
      */

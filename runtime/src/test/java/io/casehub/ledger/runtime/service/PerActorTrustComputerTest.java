@@ -44,9 +44,7 @@ class PerActorTrustComputerTest {
         computer = new PerActorTrustComputer(
                 (ageInDays, verdict) -> Math.pow(2.0, -(double) ageInDays / 90),
                 trustRepo,
-                new AllAttestationsGlobalStrategy(),
-                new AttestationAggregator(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                new AllAttestationsGlobalStrategy());
     }
 
     // ── Test 1: No attestations → neutral GLOBAL score ───────────────────────

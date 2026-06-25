@@ -37,11 +37,8 @@ class PerActorTrustComputer {
 
     PerActorTrustComputer(final DecayFunction decayFunction,
                           final ActorTrustScoreRepository trustRepo,
-                          final GlobalScoreStrategy globalScoreStrategy,
-                          final AttestationAggregator attestationAggregator,
-                          final AttestationAggregator.Strategy aggregationStrategy) {
-        this.calculator = new TrustScoreCalculator(
-                decayFunction, attestationAggregator, globalScoreStrategy, aggregationStrategy);
+                          final GlobalScoreStrategy globalScoreStrategy) {
+        this.calculator = new TrustScoreCalculator(decayFunction, globalScoreStrategy);
         this.trustRepo = trustRepo;
     }
 

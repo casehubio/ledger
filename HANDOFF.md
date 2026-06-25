@@ -1,43 +1,21 @@
 # HANDOFF.md — casehub-ledger
 
-**Session:** 2026-06-12
-**Branch:** main (hygiene session, no feature branch)
+**Session:** 2026-06-25
+**Branch:** main
 
 ## What happened
 
-Branch hygiene audit across all 39 non-main branches (26 issue, 12 backup, 1 snapshot).
-
-**Audit scope per branch:** code merged to main, specs promoted to `docs/specs/`, ADRs promoted to `docs/adr/`, blog entries published to mdproctor.github.io.
-
-**Findings — all clean:**
-- All code across all branches is incorporated into main (renames, migrations to platform libs, and intentional design simplifications all accounted for)
-- All 20 blog entries ever written are published to mdproctor.github.io
-- All ADRs promoted to `docs/adr/`
-- All specs promoted to `docs/specs/`
-- `origin/issue-92-optional-reactive-repo` confirmed fully merged — stale remote ref, safe to prune
-
-**Actions taken:**
-- Deleted published blog copies from main (`blog/` directory) — `5d56b83`
-- Promoted issue-118 spec to `docs/specs/` — `fb2a624`
-- Stamped all 39 non-main branches with `chore: branch closed`
-- Added Step 8 (source cleanup after publish) to `publish-blog` skill in cc-praxis — `d4b37cf`; synced to installed skills
-
-## Immediate next step
-
-- Optionally prune `origin/issue-92-optional-reactive-repo`
-- Run `/work` to pick up next issue
+Handover refresh — previous handover (2026-06-12) was stale. Issues #100 and #123 from the old "What's Next" list are now closed. Updated open issue inventory.
 
 ## What's Next
 
-| # | Description | Scale | Complexity | Notes |
-|---|-------------|-------|------------|-------|
-| #100 | Fix race-safe sequence numbering under concurrent writers | M | Med | |
-| #110 | ScimDIDResolver — synthetic DIDDocument from SCIM | S | Med | |
-| #108 | JwtVCValidator — W3C VC JWT credential validation | M | High | |
-| #102 | Cloud KMS AgentSigner adapters | L | Med | |
-| #123 | Engine-side TrustScoreSource migration | M | Low | Cross-repo |
+| # | Description | Scale | Complexity | Blocked by | Blocks | Notes |
+|---|-------------|-------|------------|------------|--------|-------|
+| #137 | Artifact trust scoring — extend Bayesian Beta model to content-hashed artifacts | — | — | — | — | First consumer: casehub-ops LlmProvisioner |
+| #102 | Cloud KMS AgentSigner adapters (AWS, GCP, Azure) | L | Med | — | — | |
+| #101 | Vault AppRole/OIDC auth for VaultTransitAgentSigner | M | High | — | — | Dynamic auth only; static token shipped in #85 |
+| #96 | Code-generation for reactive service tier (Vert.x codegen approach) | L | High | — | — | Not worth pursuing until pair count grows past 5+ |
 
 ## Cross-Module
 
-**We're blocking:**
-- `casehub-engine` — needs `TrustScoreSource` SPI migration (#123)
+No active cross-repo blockers.

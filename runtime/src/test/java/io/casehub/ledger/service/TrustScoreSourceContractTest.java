@@ -30,7 +30,6 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AllAttestationsGlobalStrategy;
-import io.casehub.ledger.runtime.service.AttestationAggregator;
 import io.casehub.ledger.runtime.service.CachedTrustScoreSource;
 import io.casehub.ledger.runtime.service.ComputedTrustScoreSource;
 import io.casehub.ledger.runtime.service.DecayFunction;
@@ -76,8 +75,7 @@ class TrustScoreSourceContractTest {
 
     static Stream<Named<TrustScoreSource>> sources() {
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                NO_DECAY, new AttestationAggregator(), new AllAttestationsGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                NO_DECAY, new AllAttestationsGlobalStrategy());
 
         // --- Materialized: compute scores via calculator, then populate repo ---
         final InlineRepo repo = new InlineRepo();
@@ -177,8 +175,7 @@ class TrustScoreSourceContractTest {
 
     static Stream<Named<TrustScoreSource>> sourcesWithUnattestedActor() {
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                NO_DECAY, new AttestationAggregator(), new AllAttestationsGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                NO_DECAY, new AllAttestationsGlobalStrategy());
 
         final String unattestedActor = "agent-unattested";
         final TestLedgerEntry unattestedEntry = decision("unattested");

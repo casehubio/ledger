@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalDouble;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -13,7 +12,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import io.casehub.ledger.api.model.CapabilityTag;
-import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.LedgerEntry;
 
@@ -29,27 +27,13 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
 public class TrustScoreCalculator {
 
     private final DecayFunction decayFunction;
-    private final AttestationAggregator attestationAggregator;
     private final GlobalScoreStrategy globalScoreStrategy;
-    private final AttestationAggregator.Strategy aggregationStrategy;
 
     @Inject
     public TrustScoreCalculator(final DecayFunction decayFunction,
-                                final AttestationAggregator attestationAggregator,
-                                final GlobalScoreStrategy globalScoreStrategy,
-                                final LedgerConfig config) {
-        this(decayFunction, attestationAggregator, globalScoreStrategy,
-                config.trustScore().aggregationStrategy());
-    }
-
-    public TrustScoreCalculator(final DecayFunction decayFunction,
-                                final AttestationAggregator attestationAggregator,
-                                final GlobalScoreStrategy globalScoreStrategy,
-                                final AttestationAggregator.Strategy aggregationStrategy) {
+                                final GlobalScoreStrategy globalScoreStrategy) {
         this.decayFunction = decayFunction;
-        this.attestationAggregator = attestationAggregator;
         this.globalScoreStrategy = globalScoreStrategy;
-        this.aggregationStrategy = aggregationStrategy;
     }
 
     public record ComputedScores(
@@ -69,9 +53,6 @@ public class TrustScoreCalculator {
         for (final LedgerEntry decision : decisions) {
             rawAttestations.addAll(attestationsByEntry.getOrDefault(decision.id, List.of()));
         }
-
-        final List<LedgerAttestation> effectiveAttestations =
-                buildEffectiveAttestations(decisions, attestationsByEntry);
 
         // ── Capability pass ──────────────────────────────────────────────────
         // Uses raw attestations — not aggregated — so that FLAGGED attestations
@@ -130,14 +111,14 @@ public class TrustScoreCalculator {
         }
 
         // ── Global pass ──────────────────────────────────────────────────────
-        // selectAttestations receives EFFECTIVE (aggregated) attestations
-        final List<LedgerAttestation> selectedEffective =
-                globalScoreStrategy.selectAttestations(effectiveAttestations);
-        final Map<UUID, List<LedgerAttestation>> selectedByEntry = selectedEffective.stream()
+        // Uses raw attestations — not aggregated — same reasoning as the
+        // capability pass: aggregation masks contradicting verdicts (#157, #158).
+        final List<LedgerAttestation> selected =
+                globalScoreStrategy.selectAttestations(rawAttestations);
+        final Map<UUID, List<LedgerAttestation>> selectedByEntry = selected.stream()
                 .collect(Collectors.groupingBy(a -> a.ledgerEntryId));
 
         final TrustScoreComputer.ActorScore betaGlobal = computer.compute(decisions, selectedByEntry, now);
-        // derive() receives RAW attestations — frequency counts stay accurate
         final TrustScoreComputer.ActorScore globalScore =
                 globalScoreStrategy.derive(capabilityScores, rawAttestations)
                         .orElse(betaGlobal);
@@ -145,41 +126,4 @@ public class TrustScoreCalculator {
         return new ComputedScores(capabilityScores, dimensionScores, capDimScores, globalScore);
     }
 
-    private List<LedgerAttestation> buildEffectiveAttestations(
-            final List<LedgerEntry> decisions,
-            final Map<UUID, List<LedgerAttestation>> attestationsByEntry) {
-        final List<LedgerAttestation> result = new ArrayList<>();
-        for (final LedgerEntry decision : decisions) {
-            final List<LedgerAttestation> entryAttestations =
-                    attestationsByEntry.getOrDefault(decision.id, List.of());
-            if (entryAttestations.isEmpty()) {
-                continue;
-            }
-            final Map<String, List<LedgerAttestation>> byCapTag = entryAttestations.stream()
-                    .collect(Collectors.groupingBy(
-                            a -> a.capabilityTag != null ? a.capabilityTag : CapabilityTag.GLOBAL));
-            for (final List<LedgerAttestation> group : byCapTag.values()) {
-                attestationAggregator.aggregate(group, aggregationStrategy)
-                        .map(agg -> toSynthetic(agg, group.get(0)))
-                        .ifPresent(result::add);
-            }
-        }
-        return result;
-    }
-
-    private static LedgerAttestation toSynthetic(
-            final AttestationAggregator.AggregatedAttestation agg,
-            final LedgerAttestation template) {
-        final LedgerAttestation synthetic = new LedgerAttestation();
-        synthetic.ledgerEntryId = template.ledgerEntryId;
-        synthetic.subjectId = template.subjectId;
-        synthetic.capabilityTag = template.capabilityTag;
-        synthetic.trustDimension = template.trustDimension;
-        synthetic.dimensionScore = template.dimensionScore;
-        synthetic.verdict = agg.consensusVerdict();
-        synthetic.confidence = agg.aggregatedConfidence();
-        synthetic.occurredAt = template.occurredAt;
-        synthetic.attestorRole = template.attestorRole;
-        return synthetic;
-    }
 }

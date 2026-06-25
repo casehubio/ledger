@@ -16,7 +16,6 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.LedgerEntry;
 import io.casehub.ledger.runtime.service.AllAttestationsGlobalStrategy;
-import io.casehub.ledger.runtime.service.AttestationAggregator;
 import io.casehub.ledger.runtime.service.DecayFunction;
 import io.casehub.ledger.runtime.service.FrequencyWeightedGlobalStrategy;
 import io.casehub.ledger.runtime.service.TrustScoreCalculator;
@@ -36,11 +35,7 @@ class TrustScoreCalculatorTest {
     private final Instant now = Instant.now();
 
     private TrustScoreCalculator calculator(final DecayFunction decay) {
-        return new TrustScoreCalculator(
-                decay,
-                new AttestationAggregator(),
-                new AllAttestationsGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+        return new TrustScoreCalculator(decay, new AllAttestationsGlobalStrategy());
     }
 
     private TrustScoreCalculator calculator() {
@@ -171,7 +166,6 @@ class TrustScoreCalculatorTest {
                 List.of(d), Map.of(d.id, List.of(s1, s2, f1)), now);
 
         assertThat(scores.capabilityScores()).containsKey("review");
-        // WEIGHTED_MAJORITY: 2 positive vs 1 negative → SOUND consensus → score > 0.5
         assertThat(scores.capabilityScores().get("review").trustScore()).isGreaterThan(0.5);
     }
 
@@ -246,10 +240,7 @@ class TrustScoreCalculatorTest {
     @Test
     void globalScore_withDeriveStrategy_usesCapabilityFrequencyWeights() {
         final TrustScoreCalculator freqCalculator = new TrustScoreCalculator(
-                NO_DECAY,
-                new AttestationAggregator(),
-                new FrequencyWeightedGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                NO_DECAY, new FrequencyWeightedGlobalStrategy());
 
         final TestLedgerEntry d1 = decision("alice");
         final TestLedgerEntry d2 = decision("alice");
@@ -270,20 +261,9 @@ class TrustScoreCalculatorTest {
     }
 
     @Test
-    void globalPass_selectAttestationsGetsEffective_deriveGetsRaw() {
-        // The global pass must call selectAttestations() with aggregated attestations
-        // and derive() with raw attestations. FrequencyWeightedGlobalStrategy.derive()
-        // counts raw attestations per capability for frequency weights — passing aggregated
-        // synthetics (1 per group) would produce wrong frequencies.
-        //
-        // This test verifies indirectly: with 3 raw attestations for "review" (2 SOUND + 1 FLAGGED)
-        // and 1 for "triage", derive() should see review frequency = 3/4, triage = 1/4.
-        // If derive() received aggregated synthetics, it would see 1/2 and 1/2.
+    void globalPass_deriveReceivesRawAttestationsForFrequencyWeights() {
         final TrustScoreCalculator freqCalculator = new TrustScoreCalculator(
-                NO_DECAY,
-                new AttestationAggregator(),
-                new FrequencyWeightedGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                NO_DECAY, new FrequencyWeightedGlobalStrategy());
 
         final TestLedgerEntry d = decision("alice");
         final LedgerAttestation r1 = attestation(d.id, AttestationVerdict.SOUND, "review");
@@ -303,5 +283,26 @@ class TrustScoreCalculatorTest {
         // Since review has SOUND consensus and triage has SOUND, both contribute positively
         // but the frequency weights differ — result should reflect the 3:1 ratio
         assertThat(scoresFreq.globalScore().trustScore()).isGreaterThan(0.0);
+    }
+
+    @Test
+    void globalScore_flaggedOnSameEntry_contributesToBeta() {
+        final TestLedgerEntry d = decision("alice");
+        final LedgerAttestation sound = attestation(d.id, AttestationVerdict.SOUND, "security-review");
+        sound.confidence = 1.0;
+
+        final LedgerAttestation flagged = attestation(d.id, AttestationVerdict.FLAGGED, "security-review");
+        flagged.confidence = 0.9;
+        flagged.attestorId = "peer-2";
+
+        final ComputedScores scores = calculator().computeAll(
+                List.of(d), Map.of(d.id, List.of(sound, flagged)), now);
+
+        assertThat(scores.globalScore().attestationNegative())
+                .as("FLAGGED attestation must be counted as negative in global score")
+                .isEqualTo(1);
+        assertThat(scores.globalScore().overturnedCount())
+                .as("Entry with FLAGGED attestation must count as overturned")
+                .isEqualTo(1);
     }
 }

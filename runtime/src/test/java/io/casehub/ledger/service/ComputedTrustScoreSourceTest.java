@@ -23,7 +23,6 @@ import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AllAttestationsGlobalStrategy;
-import io.casehub.ledger.runtime.service.AttestationAggregator;
 import io.casehub.ledger.runtime.service.ComputedTrustScoreSource;
 import io.casehub.ledger.runtime.service.TrustScoreCalculator;
 import io.casehub.ledger.runtime.service.model.SubjectSequenceStats;
@@ -42,10 +41,7 @@ class ComputedTrustScoreSourceTest {
     void setUp() {
         ledgerRepo = new StubLedgerEntryRepository();
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                (age, verdict) -> 1.0,
-                new AttestationAggregator(),
-                new AllAttestationsGlobalStrategy(),
-                AttestationAggregator.Strategy.WEIGHTED_MAJORITY);
+                (age, verdict) -> 1.0, new AllAttestationsGlobalStrategy());
         source = new ComputedTrustScoreSource(ledgerRepo, calculator);
     }
 
