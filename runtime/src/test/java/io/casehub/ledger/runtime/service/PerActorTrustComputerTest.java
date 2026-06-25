@@ -156,12 +156,115 @@ class PerActorTrustComputerTest {
         assertThat(trustRepo.findByActorId(actorId)).isPresent();
     }
 
+    // ── Test 6: FLAGGED capability attestation → capability score decreases (#157) ─
+
+    @Test
+    void flaggedCapabilityAttestation_decreasesCapabilityScore() {
+        final String actorId = "agent-flagged-cap";
+        final LedgerEntry entry = makeEntry(actorId, now.minus(1, ChronoUnit.DAYS));
+        final LedgerAttestation att = makeAttestation(entry, AttestationVerdict.FLAGGED,
+                "security-review", null, null);
+
+        computer.computeForActor(actorId, List.of(entry),
+                Map.of(entry.id, List.of(att)), now);
+
+        final Optional<ActorTrustScore> capScore = trustRepo.findCapabilityScore(actorId, "security-review");
+        assertThat(capScore).isPresent();
+        assertThat(capScore.get().scoreType).isEqualTo(ActorTrustScore.ScoreType.CAPABILITY);
+        assertThat(capScore.get().trustScore).isLessThan(0.5);
+        assertThat(capScore.get().beta).isGreaterThan(capScore.get().alpha);
+        assertThat(capScore.get().attestationNegative).isEqualTo(1);
+    }
+
+    // ── Test 7: Mixed SOUND+FLAGGED on separate entries → score reflects both ──
+
+    @Test
+    void mixedSoundAndFlagged_separateEntries_scoreReflectsBoth() {
+        final String actorId = "agent-mixed-cap";
+        final UUID subjectId = UUID.randomUUID();
+
+        // 10 decisions with SOUND attestations for "security-review"
+        final List<LedgerEntry> decisions = new ArrayList<>();
+        final Map<UUID, List<LedgerAttestation>> attestationsByEntry = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < 10; i++) {
+            final LedgerEntry entry = makeEntryWithSubject(actorId, subjectId,
+                    now.minus(10 - i, ChronoUnit.DAYS));
+            decisions.add(entry);
+            attestationsByEntry.put(entry.id, List.of(
+                    makeAttestation(entry, AttestationVerdict.SOUND, "security-review", null, null)));
+        }
+
+        // 1 decision with FLAGGED attestation for "security-review" on its own entry
+        final LedgerEntry flaggedEntry = makeEntryWithSubject(actorId, subjectId,
+                now.minus(1, ChronoUnit.HOURS));
+        decisions.add(flaggedEntry);
+        attestationsByEntry.put(flaggedEntry.id, List.of(
+                makeAttestation(flaggedEntry, AttestationVerdict.FLAGGED, "security-review", null, null)));
+
+        computer.computeForActor(actorId, decisions, attestationsByEntry, now);
+
+        final Optional<ActorTrustScore> capScore = trustRepo.findCapabilityScore(actorId, "security-review");
+        assertThat(capScore).isPresent();
+        assertThat(capScore.get().beta).as("FLAGGED must increment beta beyond prior")
+                .isGreaterThan(1.0);
+        assertThat(capScore.get().trustScore).as("FLAGGED must decrease capability score")
+                .isLessThan(0.9);
+        assertThat(capScore.get().attestationNegative).as("FLAGGED attestation must be counted")
+                .isGreaterThanOrEqualTo(1);
+    }
+
+    // ── Test 8: FLAGGED on same entry as SOUND → both must contribute (#157) ─
+
+    @Test
+    void flaggedOnSameEntryAsSound_sameCapability_bothContribute() {
+        final String actorId = "agent-incident";
+        final UUID subjectId = UUID.randomUUID();
+
+        // 10 entries with SOUND attestations for "security-review"
+        final List<LedgerEntry> decisions = new ArrayList<>();
+        final Map<UUID, List<LedgerAttestation>> attestationsByEntry = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < 10; i++) {
+            final LedgerEntry entry = makeEntryWithSubject(actorId, subjectId,
+                    now.minus(10 - i, ChronoUnit.DAYS));
+            decisions.add(entry);
+            attestationsByEntry.put(entry.id, List.of(
+                    makeAttestation(entry, AttestationVerdict.SOUND, "security-review", null, null)));
+        }
+
+        // Incident: FLAGGED attestation added to entry 0 (same entry that has SOUND)
+        final LedgerEntry targetEntry = decisions.get(0);
+        final LedgerAttestation incidentAtt = makeAttestation(targetEntry, AttestationVerdict.FLAGGED,
+                "security-review", null, null);
+        incidentAtt.confidence = 0.9;
+        final List<LedgerAttestation> combined = new ArrayList<>(attestationsByEntry.get(targetEntry.id));
+        combined.add(incidentAtt);
+        attestationsByEntry.put(targetEntry.id, combined);
+
+        computer.computeForActor(actorId, decisions, attestationsByEntry, now);
+
+        final Optional<ActorTrustScore> capScore = trustRepo.findCapabilityScore(actorId, "security-review");
+        assertThat(capScore).isPresent();
+        // The FLAGGED attestation must increment beta — not be masked by aggregation
+        assertThat(capScore.get().beta).as("FLAGGED on same entry must still increment beta")
+                .isGreaterThan(1.0);
+        assertThat(capScore.get().attestationNegative).as("FLAGGED must be counted")
+                .isGreaterThanOrEqualTo(1);
+        // Score must be lower than pure-SOUND (11/12 = 0.917)
+        assertThat(capScore.get().trustScore).as("Score must reflect FLAGGED contribution")
+                .isLessThan(0.91);
+    }
+
     // ── Fixtures ──────────────────────────────────────────────────────────────
 
     private LedgerEntry makeEntry(final String actorId, final Instant occurredAt) {
+        return makeEntryWithSubject(actorId, UUID.randomUUID(), occurredAt);
+    }
+
+    private LedgerEntry makeEntryWithSubject(final String actorId, final UUID subjectId,
+                                              final Instant occurredAt) {
         final LedgerEntry entry = new LedgerEntry() {};
         entry.id = UUID.randomUUID();
-        entry.subjectId = UUID.randomUUID();
+        entry.subjectId = subjectId;
         entry.entryType = LedgerEntryType.EVENT;
         entry.actorId = actorId;
         entry.actorType = ActorType.AGENT;

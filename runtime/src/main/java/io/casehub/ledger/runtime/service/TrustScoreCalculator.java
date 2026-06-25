@@ -74,9 +74,14 @@ public class TrustScoreCalculator {
                 buildEffectiveAttestations(decisions, attestationsByEntry);
 
         // ── Capability pass ──────────────────────────────────────────────────
+        // Uses raw attestations — not aggregated — so that FLAGGED attestations
+        // added to an entry that already has a SOUND attestation still contribute
+        // to beta independently. Aggregation masks contradicting verdicts on the
+        // same entry (#157).
         final Map<String, Map<UUID, List<LedgerAttestation>>> byCapabilityAndEntry =
-                effectiveAttestations.stream()
-                        .filter(a -> !CapabilityTag.GLOBAL.equals(a.capabilityTag))
+                rawAttestations.stream()
+                        .filter(a -> a.capabilityTag != null
+                                && !CapabilityTag.GLOBAL.equals(a.capabilityTag))
                         .collect(Collectors.groupingBy(
                                 a -> a.capabilityTag,
                                 Collectors.groupingBy(a -> a.ledgerEntryId)));
