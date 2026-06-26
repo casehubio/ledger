@@ -1,15 +1,13 @@
 # HANDOFF.md — casehub-ledger
 
-**Session:** 2026-06-25
+**Session:** 2026-06-26
 **Branch:** main (closed issue-158-global-pass-raw-attestations)
 
 ## What happened
 
-Fixed #158 — global pass in `TrustScoreCalculator` was still masking FLAGGED attestations via WEIGHTED_MAJORITY aggregation. The c45f126 capability-pass fix used raw attestations, but the global pass still fed through `buildEffectiveAttestations()`. FLAGGED attestations on entries with SOUND attestations never incremented beta in the global score.
+Fixed #158 — global pass in `TrustScoreCalculator` still masked FLAGGED attestations via WEIGHTED_MAJORITY aggregation. Used raw attestations in the global pass (same as capability-pass fix c45f126). Removed dead aggregation code. Net -67 lines. TDD.
 
-Fix: use `rawAttestations` in the global pass too. Removed dead aggregation code (`buildEffectiveAttestations`, `toSynthetic`, unused fields). Net -67 lines. TDD: test asserts `attestationNegative == 1` when FLAGGED exists.
-
-Also refreshed the handover — #100 and #123 were stale (both closed).
+Consumer (devtown) reported the fix didn't take effect — traced to Quarkus augmentation cache. Consumer needs `mvn clean test` after picking up the updated SNAPSHOT; without `clean`, Quarkus reuses stale augmented bytecode referencing the old 4-arg constructor.
 
 **Paused:** #137 (artifact trust scoring) is on the pause stack.
 
