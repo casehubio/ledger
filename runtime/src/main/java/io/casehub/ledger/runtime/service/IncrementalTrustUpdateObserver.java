@@ -87,7 +87,10 @@ public class IncrementalTrustUpdateObserver {
             final List<ActorTrustScore> scores =
                     perActorComputer.computeForActor(event.actorId(), decisions, attestationsByEntry, now);
 
-            actorUpdatedEvent.fire(new TrustScoreActorUpdatedEvent(event.actorId(), scores, now));
+            final TrustScoreActorUpdatedEvent payload = new TrustScoreActorUpdatedEvent(event.actorId(), scores, now);
+            actorUpdatedEvent.fire(payload);
+            actorUpdatedEvent.fireAsync(payload)
+                    .exceptionally(ex -> { log.debugf(ex, "TrustScoreActorUpdatedEvent async observer failed"); return null; });
 
             log.debugf("Incremental trust recomputation completed for actor=%s, scores=%d",
                     event.actorId(), scores.size());

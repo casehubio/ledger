@@ -8,6 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
+import org.jboss.logging.Logger;
+
 import io.smallrye.mutiny.Uni;
 
 import io.casehub.ledger.runtime.model.LedgerEntry;
@@ -29,6 +31,8 @@ import io.casehub.ledger.runtime.service.model.VerificationResult;
  */
 @ApplicationScoped
 public class ReactiveAgentSignatureVerificationService {
+
+    private static final Logger log = Logger.getLogger(ReactiveAgentSignatureVerificationService.class);
 
     @Inject
     ReactiveLedgerEntryRepository reactiveLedgerRepo;
@@ -75,11 +79,15 @@ public class ReactiveAgentSignatureVerificationService {
                     return compromisedEffectiveSinceAsync(entry.actorId, entry.agentKeyRef, entry.occurredAt)
                             .chain(effectiveSince -> {
                                 if (effectiveSince.isPresent()) {
-                                    return Uni.createFrom().completionStage(
-                                            () -> suspectEvent.fireAsync(new AgentSignatureSuspectEvent(
-                                                    entryId, entry.actorId, entry.agentKeyRef,
-                                                    entry.occurredAt, effectiveSince.get())))
-                                            .replaceWith(VerificationResult.SUSPECT);
+                                    final AgentSignatureSuspectEvent payload = new AgentSignatureSuspectEvent(
+                                            entryId, entry.actorId, entry.agentKeyRef,
+                                            entry.occurredAt, effectiveSince.get());
+                                    return Uni.createFrom().item(VerificationResult.SUSPECT)
+                                            .invoke(() -> {
+                                                suspectEvent.fire(payload);
+                                                suspectEvent.fireAsync(payload)
+                                                        .exceptionally(ex -> { log.debugf(ex, "AgentSignatureSuspectEvent async observer failed"); return null; });
+                                            });
                                 }
                                 return Uni.createFrom().item(VerificationResult.VALID);
                             });

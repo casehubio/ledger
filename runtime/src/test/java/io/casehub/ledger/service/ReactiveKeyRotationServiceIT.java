@@ -158,9 +158,12 @@ class ReactiveKeyRotationServiceIT {
                 KeyRotationReason.SCHEDULED, Instant.now(), DEFAULT_TENANT_ID)
                 .await().atMost(Duration.ofSeconds(5));
 
-        // fireAsync is fire-and-forget; give it a moment to complete
-        Thread.sleep(200);
-        assertThat(eventCapture.events()).hasSize(1);
-        assertThat(eventCapture.events().get(0).actorId()).isEqualTo(actorId);
+        assertThat(eventCapture.asyncLatch().await(5, java.util.concurrent.TimeUnit.SECONDS))
+                .as("fireAsync() should deliver to @ObservesAsync").isTrue();
+        assertThat(eventCapture.asyncEvents()).hasSize(1);
+        assertThat(eventCapture.asyncEvents().get(0).actorId()).isEqualTo(actorId);
+        assertThat(eventCapture.syncEvents())
+                .as("fire() should deliver to @Observes from reactive path")
+                .hasSize(1);
     }
 }

@@ -100,7 +100,10 @@ public class LedgerHealthJob {
             }
             LOG.warnf("Sequence gap for subject %s / tenant %s: expected %d entries (seq %d–%d), found %d",
                     s.subjectId(), s.tenancyId(), expected, s.min(), s.max(), s.count());
-            anomalyEvent.fire(new LedgerSequenceGapDetected(s.subjectId(), s.tenancyId(), expected, s.count()));
+            final LedgerSequenceGapDetected payload = new LedgerSequenceGapDetected(s.subjectId(), s.tenancyId(), expected, s.count());
+            anomalyEvent.fire(payload);
+            anomalyEvent.fireAsync(payload)
+                    .exceptionally(ex -> { LOG.debugf(ex, "LedgerAnomalyDetected async observer failed"); return null; });
         }
     }
 
@@ -116,8 +119,11 @@ public class LedgerHealthJob {
                 if (domainCount != ledgerCount) {
                     LOG.warnf("Reconciliation mismatch for %s: domain=%d, ledger=%d",
                             source.subjectType(), domainCount, ledgerCount);
-                    anomalyEvent.fire(new LedgerReconciliationMismatchDetected(
-                            source.subjectType(), domainCount, ledgerCount));
+                    final LedgerReconciliationMismatchDetected payload = new LedgerReconciliationMismatchDetected(
+                            source.subjectType(), domainCount, ledgerCount);
+                    anomalyEvent.fire(payload);
+                    anomalyEvent.fireAsync(payload)
+                            .exceptionally(ex -> { LOG.debugf(ex, "LedgerAnomalyDetected async observer failed"); return null; });
                 }
             } catch (final Exception e) {
                 LOG.errorf(e, "Reconciliation check failed for source %s — skipping", source.subjectType());

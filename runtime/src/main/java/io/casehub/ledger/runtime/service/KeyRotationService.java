@@ -10,6 +10,8 @@ import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import org.jboss.logging.Logger;
+
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.ledger.api.model.LedgerEntryType;
@@ -28,6 +30,8 @@ import io.casehub.ledger.runtime.service.model.CompromisedWindow;
  */
 @ApplicationScoped
 public class KeyRotationService {
+
+    private static final Logger log = Logger.getLogger(KeyRotationService.class);
 
     @Inject
     KeyRotationRepository repository;
@@ -70,7 +74,10 @@ public class KeyRotationService {
         entry.reason = reason;
         entry.effectiveSince = effectiveSince;
         final KeyRotationEntry persisted = (KeyRotationEntry) ledgerRepo.save(entry, tenancyId);
-        keyRotatedEvent.fire(new AgentKeyRotatedEvent(actorId, previousKeyRef, newKeyRef));
+        final AgentKeyRotatedEvent payload = new AgentKeyRotatedEvent(actorId, previousKeyRef, newKeyRef);
+        keyRotatedEvent.fire(payload);
+        keyRotatedEvent.fireAsync(payload)
+                .exceptionally(ex -> { log.debugf(ex, "AgentKeyRotatedEvent async observer failed"); return null; });
         return persisted;
     }
 

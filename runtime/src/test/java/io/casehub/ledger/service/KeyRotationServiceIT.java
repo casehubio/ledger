@@ -183,8 +183,8 @@ class KeyRotationServiceIT {
         rotationService.recordRotation(actorId, oldRef, newRef,
                 KeyRotationReason.SCHEDULED, Instant.now(), DEFAULT_TENANT_ID);
 
-        assertThat(eventCapture.events()).hasSize(1);
-        final AgentKeyRotatedEvent fired = eventCapture.events().get(0);
+        assertThat(eventCapture.syncEvents()).hasSize(1);
+        final AgentKeyRotatedEvent fired = eventCapture.syncEvents().get(0);
         assertThat(fired.actorId()).isEqualTo(actorId);
         assertThat(fired.previousKeyRef()).isEqualTo(oldRef);
         assertThat(fired.newKeyRef()).isEqualTo(newRef);

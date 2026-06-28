@@ -131,14 +131,18 @@ public class ActorIdentityValidationEnricher implements LedgerEntryEnricher {
 
     private void fireEvent(final LedgerEntry entry, final IdentityBindingStatus status) {
         final String didMethod = extractDidMethod(entry.actorDid);
+        final Object payload;
         if (status == IdentityBindingStatus.VALID) {
-            event.fireAsync(new AgentIdentityValidatedEvent(
+            payload = new AgentIdentityValidatedEvent(
                 entry.actorId, entry.tenancyId, entry.actorDid, status,
-                true, true, entry.agentKeyRef, null, didMethod));
+                true, true, entry.agentKeyRef, null, didMethod);
         } else {
-            event.fireAsync(new AgentIdentityViolationEvent(
-                entry.actorId, entry.tenancyId, entry.actorDid, status));
+            payload = new AgentIdentityViolationEvent(
+                entry.actorId, entry.tenancyId, entry.actorDid, status);
         }
+        event.fire(payload);
+        event.fireAsync(payload)
+                .exceptionally(ex -> { LOG.debugf(ex, "Identity event async observer failed"); return null; });
     }
 
     private String extractDidMethod(final String did) {

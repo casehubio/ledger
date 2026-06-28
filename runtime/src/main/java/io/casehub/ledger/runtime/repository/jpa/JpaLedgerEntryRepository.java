@@ -236,8 +236,11 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
         em.persist(attestation);
 
         if (entry.actorId != null) {
-            attestationRecordedEvent.fire(
-                    new AttestationRecordedEvent(entry.actorId, entry.id, attestation.id));
+            final AttestationRecordedEvent payload =
+                    new AttestationRecordedEvent(entry.actorId, entry.id, attestation.id);
+            attestationRecordedEvent.fire(payload);
+            attestationRecordedEvent.fireAsync(payload)
+                    .exceptionally(ex -> { log.debugf(ex, "AttestationRecordedEvent async observer failed"); return null; });
         }
 
         return attestation;

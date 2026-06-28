@@ -10,28 +10,28 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
 
-import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
+import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
 
 @ApplicationScoped
-public class AgentKeyRotatedEventCapture {
+public class AttestationRecordedEventCapture {
 
-    private final List<AgentKeyRotatedEvent> syncEvents = new CopyOnWriteArrayList<>();
-    private final List<AgentKeyRotatedEvent> asyncEvents = new CopyOnWriteArrayList<>();
+    private final List<AttestationRecordedEvent> syncEvents = new CopyOnWriteArrayList<>();
+    private final List<AttestationRecordedEvent> asyncEvents = new CopyOnWriteArrayList<>();
     private volatile CountDownLatch asyncLatch = new CountDownLatch(1);
 
-    void onRotated(@Observes final AgentKeyRotatedEvent event) {
+    void onSync(@Observes final AttestationRecordedEvent event) {
         syncEvents.add(event);
     }
 
-    CompletionStage<Void> onRotatedAsync(@ObservesAsync final AgentKeyRotatedEvent event) {
+    CompletionStage<Void> onAsync(@ObservesAsync final AttestationRecordedEvent event) {
         asyncEvents.add(event);
         asyncLatch.countDown();
         return CompletableFuture.completedFuture(null);
     }
 
-    public List<AgentKeyRotatedEvent> syncEvents() { return syncEvents; }
+    public List<AttestationRecordedEvent> syncEvents() { return syncEvents; }
 
-    public List<AgentKeyRotatedEvent> asyncEvents() { return asyncEvents; }
+    public List<AttestationRecordedEvent> asyncEvents() { return asyncEvents; }
 
     public CountDownLatch asyncLatch() { return asyncLatch; }
 

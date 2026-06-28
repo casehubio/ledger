@@ -82,7 +82,7 @@ class SuspectEventIT {
 
     @Test
     @Transactional
-    void verifyAgentSignature_suspect_firesSyncEvent() {
+    void verifyAgentSignature_suspect_firesSyncEvent() throws Exception {
         final UUID sub = UUID.randomUUID();
         final TestEntry e = seedSigned(sub, 1);
 
@@ -97,6 +97,11 @@ class SuspectEventIT {
         assertThat(event.entryId()).isEqualTo(e.id);
         assertThat(event.actorId()).isEqualTo("claude:reviewer@v1");
         assertThat(event.keyRef()).isEqualTo(testKeyRef);
+
+        assertThat(eventCapture.asyncLatch().await(5, java.util.concurrent.TimeUnit.SECONDS))
+                .as("fireAsync() should deliver to @ObservesAsync").isTrue();
+        assertThat(eventCapture.lastAsyncEvent()).isNotNull();
+        assertThat(eventCapture.lastAsyncEvent().entryId()).isEqualTo(e.id);
     }
 
     @Test
@@ -155,6 +160,10 @@ class SuspectEventIT {
         assertThat(event.keyRef()).isEqualTo(testKeyRef);
         assertThat(event.occurredAt()).isEqualTo(e.occurredAt);
         assertThat(event.effectiveSince()).isNotNull().isBefore(e.occurredAt.plusSeconds(1));
+
+        assertThat(eventCapture.syncEvents())
+                .as("fire() should deliver to @Observes from reactive path")
+                .hasSize(1);
     }
 
     @Test

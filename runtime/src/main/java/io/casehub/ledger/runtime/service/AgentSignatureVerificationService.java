@@ -9,6 +9,8 @@ import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import org.jboss.logging.Logger;
+
 import io.casehub.ledger.runtime.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.model.CompromisedWindow;
@@ -28,6 +30,8 @@ import io.casehub.ledger.runtime.service.model.VerificationResult;
  */
 @ApplicationScoped
 public class AgentSignatureVerificationService {
+
+    private static final Logger log = Logger.getLogger(AgentSignatureVerificationService.class);
 
     @Inject
     LedgerEntryRepository ledgerRepo;
@@ -69,9 +73,12 @@ public class AgentSignatureVerificationService {
             final Optional<Instant> effectiveSince =
                     compromisedEffectiveSince(entry.actorId, entry.agentKeyRef, entry.occurredAt);
             if (effectiveSince.isPresent()) {
-                suspectEvent.fire(new AgentSignatureSuspectEvent(
+                final AgentSignatureSuspectEvent payload = new AgentSignatureSuspectEvent(
                         entryId, entry.actorId, entry.agentKeyRef,
-                        entry.occurredAt, effectiveSince.get()));
+                        entry.occurredAt, effectiveSince.get());
+                suspectEvent.fire(payload);
+                suspectEvent.fireAsync(payload)
+                        .exceptionally(ex -> { log.debugf(ex, "AgentSignatureSuspectEvent async observer failed"); return null; });
                 return VerificationResult.SUSPECT;
             }
         }

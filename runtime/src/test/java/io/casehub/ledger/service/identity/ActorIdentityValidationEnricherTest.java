@@ -201,6 +201,7 @@ class ActorIdentityValidationEnricherTest {
         var e = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(e);
         verify(event).fireAsync(argThat(ev -> ev instanceof AgentIdentityValidatedEvent));
+        verify(event).fire(argThat(ev -> ev instanceof AgentIdentityValidatedEvent));
     }
 
     @Test
@@ -223,6 +224,7 @@ class ActorIdentityValidationEnricherTest {
         var e = entry("claude:r@v1", "did:web:x", null);
         enricher.enrich(e);
         verify(event).fireAsync(argThat(ev -> ev instanceof AgentIdentityViolationEvent));
+        verify(event).fire(argThat(ev -> ev instanceof AgentIdentityViolationEvent));
     }
 
     @Test

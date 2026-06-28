@@ -28,10 +28,9 @@ import io.casehub.ledger.runtime.model.ActorTrustScore;
  * entirely when no {@link TrustScoreDeltaPayload} observer is registered.
  *
  * <p>
- * {@link TrustScoreComputedAt} fires both {@code fire()} (for {@code @Observes} sync observers)
- * and {@code fireAsync()} (for {@code @ObservesAsync} async observers) — CDI 4.x does not
- * deliver {@code fire()} to async observers. {@link TrustScoreFullPayload} and
- * {@link TrustScoreDeltaPayload} use only {@code fire()} because no async observers exist for them.
+ * All three event types fire both {@code fire()} and {@code fireAsync()} — CDI 4.x does not
+ * deliver {@code fire()} to async observers or vice versa. Dual-channel firing ensures both
+ * {@code @Observes} and {@code @ObservesAsync} consumers receive every signal.
  */
 @ApplicationScoped
 public class TrustScoreRoutingPublisher {
@@ -101,10 +100,20 @@ public class TrustScoreRoutingPublisher {
         }
 
         if (hasFullObservers) {
+            final TrustScoreFullPayload fullPayload = new TrustScoreFullPayload(List.copyOf(current));
             try {
-                fullEvent.fire(new TrustScoreFullPayload(List.copyOf(current)));
+                fullEvent.fire(fullPayload);
             } catch (final Exception e) {
-                log.warnf(e, "TrustScoreFullPayload observer failed — routing signal skipped");
+                log.warnf(e, "TrustScoreFullPayload sync observer failed — routing signal skipped");
+            }
+            try {
+                fullEvent.fireAsync(fullPayload)
+                        .exceptionally(ex -> {
+                            log.warnf(ex, "TrustScoreFullPayload async observer failed — routing signal skipped");
+                            return null;
+                        });
+            } catch (final Exception e) {
+                log.warnf(e, "TrustScoreFullPayload fireAsync failed — routing signal skipped");
             }
         }
 
@@ -112,7 +121,17 @@ public class TrustScoreRoutingPublisher {
             try {
                 final double threshold = config.trustScore().routingDeltaThreshold();
                 final List<TrustScoreDelta> deltas = computeDeltas(current, previousSnapshot, threshold);
-                deltaEvent.fire(new TrustScoreDeltaPayload(deltas));
+                final TrustScoreDeltaPayload deltaPayload = new TrustScoreDeltaPayload(deltas);
+                deltaEvent.fire(deltaPayload);
+                try {
+                    deltaEvent.fireAsync(deltaPayload)
+                            .exceptionally(ex -> {
+                                log.warnf(ex, "TrustScoreDeltaPayload async observer failed — routing signal skipped");
+                                return null;
+                            });
+                } catch (final Exception e) {
+                    log.warnf(e, "TrustScoreDeltaPayload fireAsync failed — routing signal skipped");
+                }
             } catch (final Exception e) {
                 log.warnf(e, "TrustScoreDeltaPayload observer failed — routing signal skipped");
             }

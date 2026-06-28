@@ -217,8 +217,11 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
         attestations.put(attestation.id, attestation);
 
         if (entry != null && entry.actorId != null) {
-            attestationRecordedEvent.fire(
-                    new AttestationRecordedEvent(entry.actorId, entry.id, attestation.id));
+            final AttestationRecordedEvent payload =
+                    new AttestationRecordedEvent(entry.actorId, entry.id, attestation.id);
+            attestationRecordedEvent.fire(payload);
+            attestationRecordedEvent.fireAsync(payload)
+                    .exceptionally(ex -> { log.debugf(ex, "AttestationRecordedEvent async observer failed"); return null; });
         } else if (entry == null) {
             log.warnf("saveAttestation: no LedgerEntry found for ledgerEntryId=%s — "
                     + "AttestationRecordedEvent not fired", attestation.ledgerEntryId);

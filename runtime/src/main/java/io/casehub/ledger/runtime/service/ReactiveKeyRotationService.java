@@ -10,6 +10,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
+import org.jboss.logging.Logger;
+
 import io.smallrye.mutiny.Uni;
 
 import io.casehub.platform.api.identity.ActorType;
@@ -34,6 +36,8 @@ import io.casehub.ledger.runtime.service.model.CompromisedWindow;
  */
 @ApplicationScoped
 public class ReactiveKeyRotationService {
+
+    private static final Logger log = Logger.getLogger(ReactiveKeyRotationService.class);
 
     @Inject
     ReactiveKeyRotationRepository reactiveRepository;
@@ -94,8 +98,11 @@ public class ReactiveKeyRotationService {
         entry.effectiveSince = effectiveSince;
         return reactiveLedgerRepo.save(entry, tenancyId)
                 .map(e -> (KeyRotationEntry) e)
-                // Fire-and-forget: observer failure is invisible; benign for cache eviction
-                .invoke(e -> keyRotatedEvent.fireAsync(
-                        new AgentKeyRotatedEvent(actorId, previousKeyRef, newKeyRef)));
+                .invoke(e -> {
+                    final AgentKeyRotatedEvent payload = new AgentKeyRotatedEvent(actorId, previousKeyRef, newKeyRef);
+                    keyRotatedEvent.fire(payload);
+                    keyRotatedEvent.fireAsync(payload)
+                            .exceptionally(ex -> { log.debugf(ex, "AgentKeyRotatedEvent async observer failed"); return null; });
+                });
     }
 }
