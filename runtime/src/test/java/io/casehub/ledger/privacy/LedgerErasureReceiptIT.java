@@ -118,6 +118,30 @@ class LedgerErasureReceiptIT {
         assertThat(receipts).hasSize(2);
     }
 
+    // ── countByTenant ─────────────────────────────────────────────────────────
+
+    @Test
+    @Transactional
+    void countByTenant_returnsCorrectCount() {
+        final long before = receiptRepo.countByTenant(DEFAULT_TENANT_ID);
+
+        final String actor1 = "actor-" + UUID.randomUUID();
+        final String actor2 = "actor-" + UUID.randomUUID();
+        saveEntry(actor1);
+        saveEntry(actor2);
+
+        erasureService.erase(actor1, ErasureReason.GDPR_ART_17_REQUEST);
+        erasureService.erase(actor2, ErasureReason.ACCOUNT_DELETION);
+
+        assertThat(receiptRepo.countByTenant(DEFAULT_TENANT_ID)).isEqualTo(before + 2);
+    }
+
+    @Test
+    @Transactional
+    void countByTenant_emptyTenant_returnsZero() {
+        assertThat(receiptRepo.countByTenant("nonexistent-tenant")).isEqualTo(0L);
+    }
+
     // ── Fixture ───────────────────────────────────────────────────────────────
 
     private void saveEntry(final String actorId) {

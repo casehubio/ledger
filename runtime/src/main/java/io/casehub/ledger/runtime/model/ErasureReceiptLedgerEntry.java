@@ -37,7 +37,11 @@ import io.casehub.ledger.api.model.ErasureReason;
         name = "ErasureReceiptLedgerEntry.findByErasedActorId",
         query = "SELECT e FROM ErasureReceiptLedgerEntry e " +
                 "WHERE e.erasedActorId = :erasedActorId AND e.tenancyId = :tenancyId " +
-                "ORDER BY e.occurredAt ASC")
+                "ORDER BY e.occurredAt ASC"),
+    @NamedQuery(
+        name = "ErasureReceiptLedgerEntry.countByTenant",
+        query = "SELECT COUNT(e) FROM ErasureReceiptLedgerEntry e " +
+                "WHERE e.tenancyId = :tenancyId")
 })
 @Entity
 @Table(name = "erasure_receipt_entry")

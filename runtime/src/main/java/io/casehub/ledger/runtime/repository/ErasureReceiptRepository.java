@@ -19,4 +19,9 @@ public interface ErasureReceiptRepository {
      * ordered by {@code occurredAt} ascending.
      */
     List<ErasureReceiptLedgerEntry> findByErasedActorId(String erasedActorId, String tenancyId);
+
+    /**
+     * Total number of erasure receipts within the given tenant.
+     */
+    long countByTenant(String tenancyId);
 }

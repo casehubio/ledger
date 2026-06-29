@@ -35,4 +35,12 @@ public class JpaErasureReceiptRepository implements ErasureReceiptRepository {
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
     }
+
+    @Override
+    public long countByTenant(final String tenancyId) {
+        return em.createNamedQuery(
+                "ErasureReceiptLedgerEntry.countByTenant", Long.class)
+                .setParameter("tenancyId", tenancyId)
+                .getSingleResult();
+    }
 }

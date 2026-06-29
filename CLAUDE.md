@@ -299,7 +299,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── NoOpLedgerEntryRepository.java    — @DefaultBean: CDI-satisfaction no-op; all reads return empty, save/saveAttestation return argument unchanged; active when neither JPA nor in-memory alternative is selected (see #138)
 │       │   ├── NoOpActorIdentityBindingRepository.java — @DefaultBean: CDI-satisfaction no-op for ActorIdentityBindingRepository read methods; write path uses LedgerEntryRepository (observer no longer injects this bean)
 │       │   ├── NoOpLedgerMerkleFrontierRepository.java — @DefaultBean: CDI-satisfaction no-op; findBySubjectId() returns empty, replace() is a no-op
-│       │   ├── ErasureReceiptRepository.java  — SPI: query-only; findByErasedActorId(erasedActorId, tenancyId); save via LedgerEntryRepository
+│       │   ├── ErasureReceiptRepository.java  — SPI: query-only; findByErasedActorId(erasedActorId, tenancyId), countByTenant(tenancyId); save via LedgerEntryRepository
 │       │   ├── NoOpErasureReceiptRepository.java — @DefaultBean: CDI-satisfaction no-op; returns empty list
 │       │   └── jpa/                              — JPA implementations (EntityManager-based)
 │       │       ├── JpaActorIdentityBindingRepository.java — @Alternative: read-only JPA implementation (latestBindingFor, bindingHistoryFor with tenancyId); no save() — saves go through JpaLedgerEntryRepository; activate via quarkus.arc.selected-alternatives

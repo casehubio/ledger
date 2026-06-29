@@ -28,4 +28,9 @@ public class NoOpErasureReceiptRepository implements ErasureReceiptRepository {
             final String erasedActorId, final String tenancyId) {
         return List.of();
     }
+
+    @Override
+    public long countByTenant(final String tenancyId) {
+        return 0L;
+    }
 }

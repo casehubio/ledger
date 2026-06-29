@@ -31,4 +31,12 @@ public class InMemoryErasureReceiptRepository implements ErasureReceiptRepositor
                 .sorted(Comparator.comparing(e -> e.occurredAt))
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public long countByTenant(final String tenancyId) {
+        return blocking.allEntries().stream()
+                .filter(e -> e instanceof ErasureReceiptLedgerEntry)
+                .filter(e -> tenancyId.equals(e.tenancyId))
+                .count();
+    }
 }

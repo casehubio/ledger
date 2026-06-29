@@ -755,7 +755,7 @@ public interface LedgerConfig {
          * The receipt is queryable via {@link io.casehub.ledger.runtime.repository.ErasureReceiptRepository}.
          *
          * <p>Off by default — enabling requires {@code JpaErasureReceiptRepository} (or the
-         * in-memory alternative) to be on the CDI path and the V1009 migration to be applied.
+         * in-memory alternative) to be on the CDI path and the V1010 migration to be applied.
          *
          * @return {@code true} if erasure receipt writing is active; {@code false} by default
          */
