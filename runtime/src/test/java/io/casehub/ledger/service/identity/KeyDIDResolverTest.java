@@ -27,7 +27,7 @@ class KeyDIDResolverTest {
         var keyPair = gen.generateKeyPair();
         var did = buildDIDKey(keyPair.getPublic().getEncoded());
 
-        var result = resolver.resolve(did);
+        var result = resolver.resolve("test-actor", did);
         assertThat(result).isPresent();
         assertThat(result.get().id()).isEqualTo(did);
         assertThat(result.get().verificationMethods()).hasSize(1);
@@ -39,22 +39,22 @@ class KeyDIDResolverTest {
     void alsoKnownAsIsAlwaysEmpty() throws Exception {
         var gen = KeyPairGenerator.getInstance("Ed25519");
         var did = buildDIDKey(gen.generateKeyPair().getPublic().getEncoded());
-        assertThat(resolver.resolve(did).get().alsoKnownAs()).isEmpty();
+        assertThat(resolver.resolve("test-actor", did).get().alsoKnownAs()).isEmpty();
     }
 
     @Test
     void returnsEmptyForNonDIDKeyMethod() {
-        assertThat(resolver.resolve("did:web:example.com")).isEmpty();
-        assertThat(resolver.resolve("did:ethr:0xabc")).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:web:example.com")).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:ethr:0xabc")).isEmpty();
     }
 
     @Test
     void returnsEmptyForMalformedKey() {
-        assertThat(resolver.resolve("did:key:NOT_BASE64URL!!")).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:key:NOT_BASE64URL!!")).isEmpty();
     }
 
     @Test
     void returnsEmptyForNull() {
-        assertThat(resolver.resolve(null)).isEmpty();
+        assertThat(resolver.resolve("test-actor", null)).isEmpty();
     }
 }

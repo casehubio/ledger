@@ -17,7 +17,7 @@ public final class LedgerPemUtil {
 
     // Mirrors AgentCryptographicVerifier.SUPPORTED_ALGORITHMS — update both together.
     private static final List<String> SUPPORTED_ALGORITHMS =
-            List.of("Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87");
+            List.of("Ed25519", "EC", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87");
 
     private LedgerPemUtil() {}
 

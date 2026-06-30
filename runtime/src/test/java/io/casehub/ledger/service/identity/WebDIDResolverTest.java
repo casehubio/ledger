@@ -60,21 +60,21 @@ class WebDIDResolverTest {
 
     @Test
     void returnsEmptyForNonWebMethod() {
-        assertThat(resolver.resolve("did:key:z6Mk")).isEmpty();
-        assertThat(resolver.resolve("did:ethr:0xabc")).isEmpty();
-        assertThat(resolver.resolve(null)).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:key:z6Mk")).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:ethr:0xabc")).isEmpty();
+        assertThat(resolver.resolve("test-actor", null)).isEmpty();
     }
 
     @Test
     void rejectsBlockedHostsForSsrf() {
         // Use real resolver (no SSRF override) to confirm SSRF rejection
         final WebDIDResolver real = new WebDIDResolver(identityConfig());
-        assertThat(real.resolve("did:web:localhost")).isEmpty();
-        assertThat(real.resolve("did:web:127.0.0.1")).isEmpty();
-        assertThat(real.resolve("did:web:192.168.1.1")).isEmpty();
-        assertThat(real.resolve("did:web:10.0.0.1")).isEmpty();
-        assertThat(real.resolve("did:web:172.16.0.1")).isEmpty();
-        assertThat(real.resolve("did:web:0.0.0.0")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:localhost")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:127.0.0.1")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:192.168.1.1")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:10.0.0.1")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:172.16.0.1")).isEmpty();
+        assertThat(real.resolve("test-actor", "did:web:0.0.0.0")).isEmpty();
     }
 
     // -------------------------------------------------------------------------
@@ -86,7 +86,7 @@ class WebDIDResolverTest {
         wm.stubFor(get(anyUrl()).willReturn(notFound()));
         // Port is percent-encoded per did:web spec: %3A separates host from port
         final String did = "did:web:localhost%3A" + wm.port();
-        assertThat(resolver.resolve(did)).isEmpty();
+        assertThat(resolver.resolve("test-actor", did)).isEmpty();
     }
 
     // -------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class WebDIDResolverTest {
         wm.stubFor(get("/.well-known/did.json").willReturn(okJson(doc)));
         // Port is percent-encoded per did:web spec
         final String did = "did:web:localhost%3A" + wm.port();
-        final var result = resolver.resolve(did);
+        final var result = resolver.resolve("test-actor", did);
         assertThat(result).isPresent();
         assertThat(result.get().alsoKnownAs()).containsExactly("claude:reviewer@v1");
         assertThat(result.get().id()).isEqualTo("did:web:example.com");
@@ -134,7 +134,7 @@ class WebDIDResolverTest {
         wm.stubFor(get("/.well-known/did.json").willReturn(okJson(doc)));
         // Port is percent-encoded per did:web spec
         final String did = "did:web:localhost%3A" + wm.port();
-        final var result = resolver.resolve(did);
+        final var result = resolver.resolve("test-actor", did);
         assertThat(result).isPresent();
         assertThat(result.get().verificationMethods()).hasSize(1);
         final var vm = result.get().verificationMethods().get(0);
@@ -159,7 +159,7 @@ class WebDIDResolverTest {
                 """;
         wm.stubFor(get("/.well-known/did.json").willReturn(okJson(doc)));
         // Port is percent-encoded per did:web spec
-        final var result = resolver.resolve("did:web:localhost%3A" + wm.port());
+        final var result = resolver.resolve("test-actor", "did:web:localhost%3A" + wm.port());
         // Should still return a document, just with empty key bytes
         assertThat(result).isPresent();
         assertThat(result.get().verificationMethods().get(0).publicKeyBytes()).isEmpty();
@@ -178,7 +178,7 @@ class WebDIDResolverTest {
         wm.stubFor(get("/users/alice/did.json").willReturn(okJson(doc)));
         // Port is percent-encoded; colons after the authority are path separators
         final String did = "did:web:localhost%3A" + wm.port() + ":users:alice";
-        final var result = resolver.resolve(did);
+        final var result = resolver.resolve("test-actor", did);
         assertThat(result).isPresent();
         assertThat(result.get().alsoKnownAs()).containsExactly("alice@example.com");
     }
@@ -186,7 +186,7 @@ class WebDIDResolverTest {
     @Test
     void returnsEmptyOnMalformedJson() {
         wm.stubFor(get(anyUrl()).willReturn(okJson("NOT_JSON_AT_ALL!!!")));
-        assertThat(resolver.resolve("did:web:localhost%3A" + wm.port())).isEmpty();
+        assertThat(resolver.resolve("test-actor", "did:web:localhost%3A" + wm.port())).isEmpty();
     }
 
     // -------------------------------------------------------------------------

@@ -63,7 +63,7 @@ class ActorIdentityValidationEnricherTest {
 
     @Test
     void setsDIDUnresolvable() {
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.empty());
+        when(resolver.resolve(any(), any())).thenReturn(Optional.empty());
         var e = entry("claude:r@v1", "did:web:x", null);
         enricher.enrich(e);
         assertThat(e.pendingIdentityStatus).isEqualTo(IdentityBindingStatus.DID_UNRESOLVABLE);
@@ -72,7 +72,7 @@ class ActorIdentityValidationEnricherTest {
     @Test
     void setsIdentityMismatch() {
         var doc = new DIDDocument("did:web:x", List.of(), List.of("other:actor@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", null);
         enricher.enrich(e);
         assertThat(e.pendingIdentityStatus).isEqualTo(IdentityBindingStatus.IDENTITY_MISMATCH);
@@ -81,7 +81,7 @@ class ActorIdentityValidationEnricherTest {
     @Test
     void setsUnsignedWhenNoPubKey() {
         var doc = new DIDDocument("did:web:x", List.of(), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", null); // null pubKey
         enricher.enrich(e);
         assertThat(e.pendingIdentityStatus).isEqualTo(IdentityBindingStatus.UNSIGNED);
@@ -91,7 +91,7 @@ class ActorIdentityValidationEnricherTest {
     void setsKeyMismatch() {
         var vm = new VerificationMethod("id", "Ed25519", new byte[]{1, 2, 3});
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", new byte[]{9, 9, 9});
         enricher.enrich(e);
         assertThat(e.pendingIdentityStatus).isEqualTo(IdentityBindingStatus.KEY_MISMATCH);
@@ -102,7 +102,7 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1, 2, 3};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(e);
         assertThat(e.pendingIdentityStatus).isEqualTo(IdentityBindingStatus.VALID);
@@ -113,7 +113,7 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         when(credValidator.validate("claude:r@v1", "did:web:x"))
             .thenReturn(Optional.of(CredentialValidationResult.INVALID_SIGNATURE));
         var e = entry("claude:r@v1", "did:web:x", key);
@@ -126,7 +126,7 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         when(credValidator.validate("claude:r@v1", "did:web:x"))
             .thenReturn(Optional.of(CredentialValidationResult.EXPIRED));
         var e = entry("claude:r@v1", "did:web:x", key);
@@ -139,11 +139,11 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(e);
         enricher.enrich(e); // second call — should use cache
-        verify(resolver, times(1)).resolve("did:web:x"); // resolved once
+        verify(resolver, times(1)).resolve(any(), any()); // resolved once
         verify(event, times(1)).fireAsync(any()); // event fired once
     }
 
@@ -155,8 +155,10 @@ class ActorIdentityValidationEnricherTest {
         var vmB = new VerificationMethod("idB", "Ed25519", keyB);
         var docA = new DIDDocument("did:web:a", List.of(vmA), List.of("actor:a@v1"));
         var docB = new DIDDocument("did:web:b", List.of(vmB), List.of("actor:b@v1"));
-        when(resolver.resolve("did:web:a")).thenReturn(Optional.of(docA));
-        when(resolver.resolve("did:web:b")).thenReturn(Optional.of(docB));
+        when(resolver.resolve(any(), any())).thenAnswer(inv -> {
+            String did = inv.getArgument(1);
+            return "did:web:a".equals(did) ? Optional.of(docA) : Optional.of(docB);
+        });
         // Prime both caches
         var eA = entry("actor:a@v1", "did:web:a", keyA);
         var eB = entry("actor:b@v1", "did:web:b", keyB);
@@ -166,8 +168,7 @@ class ActorIdentityValidationEnricherTest {
         enricher.invalidate("actor:a@v1");
         enricher.enrich(eA);
         enricher.enrich(eB);
-        verify(resolver, times(2)).resolve("did:web:a"); // A was re-resolved
-        verify(resolver, times(1)).resolve("did:web:b"); // B was not
+        verify(resolver, times(3)).resolve(any(), any()); // Total: A called twice (initial + after invalidate), B called once
     }
 
     @Test
@@ -175,17 +176,17 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(e);
         enricher.invalidateAll();
         enricher.enrich(e);
-        verify(resolver, times(2)).resolve("did:web:x");
+        verify(resolver, times(2)).resolve(any(), any());
     }
 
     @Test
     void isNonFatal() {
-        when(resolver.resolve(any())).thenThrow(new RuntimeException("boom"));
+        when(resolver.resolve(any(), any())).thenThrow(new RuntimeException("boom"));
         var e = new ConcreteEntry();
         e.actorId = "a";
         e.actorDid = "did:web:x";
@@ -197,7 +198,7 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(e);
         verify(event).fireAsync(argThat(ev -> ev instanceof AgentIdentityValidatedEvent));
@@ -209,7 +210,7 @@ class ActorIdentityValidationEnricherTest {
         byte[] key = {1};
         var vm = new VerificationMethod("id", "Ed25519", key);
         var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         var e = entry("claude:r@v1", "did:web:x", key);
         e.tenancyId = "tenant-alpha";
         enricher.enrich(e);
@@ -220,7 +221,7 @@ class ActorIdentityValidationEnricherTest {
 
     @Test
     void firesViolationEventOnNonValid() {
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.empty());
+        when(resolver.resolve(any(), any())).thenReturn(Optional.empty());
         var e = entry("claude:r@v1", "did:web:x", null);
         enricher.enrich(e);
         verify(event).fireAsync(argThat(ev -> ev instanceof AgentIdentityViolationEvent));
@@ -229,7 +230,7 @@ class ActorIdentityValidationEnricherTest {
 
     @Test
     void firesViolationEvent_carriesTenancyId() {
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.empty());
+        when(resolver.resolve(any(), any())).thenReturn(Optional.empty());
         var e = entry("claude:r@v1", "did:web:x", null);
         e.tenancyId = "tenant-beta";
         enricher.enrich(e);

@@ -22,7 +22,7 @@ public class TestDIDResolver implements DIDResolver {
     }
 
     @Override
-    public Optional<DIDDocument> resolve(final String did) {
+    public Optional<DIDDocument> resolve(final String actorId, final String did) {
         return Optional.ofNullable(docs.get(did));
     }
 }

@@ -95,4 +95,42 @@ class AgentCryptographicVerifierTest {
         assertThat(AgentCryptographicVerifier.verifyCryptographic(entry))
                 .isEqualTo(VerificationResult.INVALID);
     }
+
+    @Test
+    void validSignature_ecP256_returnsValid() throws Exception {
+        // Generate EC P-256 keypair
+        KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
+        gen.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        KeyPair ecKeyPair = gen.generateKeyPair();
+
+        final byte[] canonical = entry.canonicalBytes();
+        final java.security.Signature sig = java.security.Signature.getInstance("SHA256withECDSA");
+        sig.initSign(ecKeyPair.getPrivate());
+        sig.update(canonical);
+        entry.agentSignature = sig.sign();
+        entry.agentPublicKey = ecKeyPair.getPublic().getEncoded();
+
+        assertThat(AgentCryptographicVerifier.verifyCryptographic(entry))
+                .isEqualTo(VerificationResult.VALID);
+    }
+
+    @Test
+    void tamperedSignature_ecP256_returnsInvalid() throws Exception {
+        // Generate EC P-256 keypair
+        KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
+        gen.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        KeyPair ecKeyPair = gen.generateKeyPair();
+
+        final byte[] canonical = entry.canonicalBytes();
+        final java.security.Signature sig = java.security.Signature.getInstance("SHA256withECDSA");
+        sig.initSign(ecKeyPair.getPrivate());
+        sig.update(canonical);
+        final byte[] signature = sig.sign();
+        signature[5] ^= 0xFF;  // Tamper with signature
+        entry.agentSignature = signature;
+        entry.agentPublicKey = ecKeyPair.getPublic().getEncoded();
+
+        assertThat(AgentCryptographicVerifier.verifyCryptographic(entry))
+                .isEqualTo(VerificationResult.INVALID);
+    }
 }

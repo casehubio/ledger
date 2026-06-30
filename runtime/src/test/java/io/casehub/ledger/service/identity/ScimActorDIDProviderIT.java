@@ -91,7 +91,7 @@ class ScimActorDIDProviderIT {
         stubScimSuccess();
         // Evict any DID cached by previous tests — ScimActorDIDProvider is ApplicationScoped
         // and its cache survives across test methods within the same Quarkus instance.
-        scimProvider.invalidateAll();
+        scimProvider.invalidate(ACTOR_ID);
     }
 
     @Test

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.casehub</groupId>
+    <artifactId>casehub-ledger-parent</artifactId>
+    <version>0.2-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>casehub-ledger-signing</artifactId>
+  <packaging>pom</packaging>
+
+  <name>CaseHub Ledger - Signing Adapters</name>
+  <description>Production-grade signing adapters for cloud KMS providers.
+    Each provider has a pure Java module (framework-free) and a Quarkus CDI adapter.</description>
+
+  <modules>
+    <module>vault-transit</module>
+    <module>vault-transit-quarkus</module>
+    <module>aws-kms</module>
+    <module>aws-kms-quarkus</module>
+    <module>gcp-kms</module>
+    <module>gcp-kms-quarkus</module>
+    <module>azure-keyvault</module>
+    <module>azure-keyvault-quarkus</module>
+  </modules>
+
+</project>

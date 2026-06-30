@@ -47,14 +47,14 @@ class ActorIdentityValidationEnricherObserverTest {
         final byte[] key = {1};
         final var vm = new VerificationMethod("id", "Ed25519", key);
         final var doc = new DIDDocument("did:web:x", List.of(vm), List.of("claude:r@v1"));
-        when(resolver.resolve("did:web:x")).thenReturn(Optional.of(doc));
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(doc));
         final var entry = entry("claude:r@v1", "did:web:x", key);
         enricher.enrich(entry); // prime cache — resolver called once
 
         enricher.onKeyRotated(new AgentKeyRotatedEvent("claude:r@v1", null, null));
 
         enricher.enrich(entry); // cache miss after eviction — resolver called again
-        verify(resolver, times(2)).resolve("did:web:x");
+        verify(resolver, times(2)).resolve(any(), any());
     }
 
     private LedgerEntry entry(final String actorId, final String actorDid, final byte[] pubKey) {

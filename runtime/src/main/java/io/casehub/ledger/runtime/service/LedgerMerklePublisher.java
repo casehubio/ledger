@@ -56,7 +56,7 @@ public class LedgerMerklePublisher {
     /** Sign the checkpoint text with the supplied private key. Returns raw signature bytes. */
     public static byte[] signCheckpoint(final String checkpointText, final PrivateKey privateKey) {
         try {
-            final Signature sig = Signature.getInstance(privateKey.getAlgorithm());
+            final Signature sig = Signature.getInstance(SignatureAlgorithms.signatureAlgorithm(privateKey));
             sig.initSign(privateKey);
             sig.update(checkpointText.getBytes(StandardCharsets.UTF_8));
             return sig.sign();

@@ -1,5 +1,6 @@
 package io.casehub.ledger.runtime.service;
 
+import java.security.PublicKey;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +30,24 @@ public abstract class AbstractCachingAgentSigner<C> implements AgentSigner {
 
     @Override
     public final Optional<AgentSignature> sign(final String actorId, final byte[] data) {
+        return resolveContext(actorId).map(ctx -> performSign(actorId, ctx, data));
+    }
+
+    @Override
+    public Optional<AgentKeyMaterial> keyMaterial(final String actorId) {
+        return resolveContext(actorId).map(ctx -> {
+            final byte[] pub = contextPublicKey(ctx).getEncoded();
+            return new AgentKeyMaterial(pub, AgentSignature.computeKeyRef(pub));
+        });
+    }
+
+    /**
+     * Resolves signing context for {@code actorId} from cache or via {@link #loadContext}.
+     * Shared by {@link #sign} and {@link #keyMaterial} to avoid duplicate cache-lookup logic.
+     *
+     * @return context if present (cached or newly loaded), or empty if not configured
+     */
+    protected Optional<C> resolveContext(final String actorId) {
         Optional<C> cached = contextCache.get(actorId);
         if (cached == null) {
             // loadContext throws on transient failure → not cached, caller retries next time
@@ -36,7 +55,7 @@ public abstract class AbstractCachingAgentSigner<C> implements AgentSigner {
             final Optional<C> racing = contextCache.putIfAbsent(actorId, loaded);
             cached = racing != null ? racing : loaded;
         }
-        return cached.map(ctx -> performSign(actorId, ctx, data));
+        return cached;
     }
 
     /**
@@ -52,6 +71,15 @@ public abstract class AbstractCachingAgentSigner<C> implements AgentSigner {
      * Called only when context is present. Must not cache the result.
      */
     protected abstract AgentSignature performSign(String actorId, C context, byte[] data);
+
+    /**
+     * Extracts the public key from the cached context.
+     * Used by {@link #keyMaterial} to return key material without triggering {@link #performSign}.
+     *
+     * @param context the cached signing context (never null)
+     * @return the public key held by this context
+     */
+    protected abstract PublicKey contextPublicKey(C context);
 
     /** Evicts all cached contexts. Next {@link #sign} call reloads from the source. */
     public void invalidateAll() {

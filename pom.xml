@@ -111,11 +111,20 @@
 
   <profiles>
     <profile>
+      <id>with-signing</id>
+      <modules>
+        <module>signing</module>
+      </modules>
+    </profile>
+    <profile>
       <id>with-examples</id>
       <modules>
         <module>examples/order-processing</module>
         <module>examples/trust-score-routing</module>
         <module>examples/vault-transit-signing</module>
+        <module>examples/aws-kms-signing</module>
+        <module>examples/gcp-kms-signing</module>
+        <module>examples/azure-keyvault-signing</module>
       </modules>
     </profile>
     <profile>

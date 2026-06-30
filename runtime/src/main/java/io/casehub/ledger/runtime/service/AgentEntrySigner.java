@@ -48,12 +48,10 @@ public class AgentEntrySigner {
     public void prepareKey(final LedgerEntry entry) {
         if (entry.actorId == null || entry.agentPublicKey != null) return;
         try {
-            // Sign dummy data to obtain the key material from the SPI.
-            // The signature itself is discarded — only publicKey and keyRef are kept.
-            signer.sign(entry.actorId, new byte[0])
-                    .ifPresent(sig -> {
-                        entry.agentPublicKey = sig.publicKey();
-                        entry.agentKeyRef = sig.keyRef();
+            signer.keyMaterial(entry.actorId)
+                    .ifPresent(km -> {
+                        entry.agentPublicKey = km.publicKey();
+                        entry.agentKeyRef = km.keyRef();
                     });
         } catch (final Exception e) {
             LOG.warnf("AgentEntrySigner.prepareKey failed for actor %s: %s",

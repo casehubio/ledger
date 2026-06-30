@@ -144,9 +144,15 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Runtime artifactId | `casehub-ledger` |
 | Deployment artifactId | `casehub-ledger-deployment` |
 | persistence-memory artifactId | `casehub-ledger-memory` |
+| Vault Transit artifactId | `casehub-ledger-vault-transit` / `casehub-ledger-vault-transit-quarkus` |
+| AWS KMS artifactId | `casehub-ledger-aws-kms` / `casehub-ledger-aws-kms-quarkus` |
+| GCP Cloud KMS artifactId | `casehub-ledger-gcp-kms` / `casehub-ledger-gcp-kms-quarkus` |
+| Azure Key Vault artifactId | `casehub-ledger-azure-keyvault` / `casehub-ledger-azure-keyvault-quarkus` |
 | Root Java package | `io.casehub.ledger.runtime` |
+| Signing packages | `io.casehub.ledger.signing.{vault,aws,gcp,azure}[.quarkus]` |
 | Deployment subpackage | `io.casehub.ledger.deployment` |
 | Config prefix | `casehub.ledger` |
+| Signing config prefixes | `casehub.ledger.{vault-transit,aws-kms,gcp-kms,azure-keyvault}` |
 | Feature name | `ledger` |
 
 ---
@@ -322,7 +328,9 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── AgentSignatureSuspectEvent.java  — CDI event record fired when verifyAgentSignature[Async] returns SUSPECT; consumers use @Observes or @ObservesAsync
 │       │   ├── LedgerMerklePublisher.java       — Ed25519 signed tlog-checkpoint (opt-in CDI bean)
 │       │   ├── SigningKey.java                  — record: keyRef (Base64URL SHA-256 of public key) + KeyPair; self-derived, zero operator config
-│       │   ├── AgentSigner.java                 — SPI: sign(actorId, data) → Optional<AgentSignature>; algorithm-transparent; see PP-20260523-e7b577
+│       │   ├── AgentSigner.java                 — SPI: sign(actorId, data) → Optional<AgentSignature>; keyMaterial(actorId) → Optional<AgentKeyMaterial> (default method, avoids wasted KMS sign calls); algorithm-transparent; see PP-20260523-e7b577
+│       │   ├── AgentKeyMaterial.java            — record: publicKey + keyRef; returned by AgentSigner.keyMaterial()
+│       │   ├── SignatureAlgorithms.java          — package-private: signatureAlgorithm(Key) maps EC curves to JCA Signature names (P-256→SHA256withECDSA, P-384→SHA384withECDSA, P-521→SHA512withECDSA); Ed25519/ML-DSA pass through
 │       │   ├── ConfiguredAgentSigner.java       — @DefaultBean: loads PKCS#8 private + X.509 public PEM per actorId from casehub.ledger.agent-signing.keys.*
 │       │   ├── AgentEntrySigner.java             — CDI bean: signs entry.canonicalBytes() in save pipeline (after hash, before persist), stores agentSignature + agentPublicKey + agentKeyRef
 │       │   ├── AgentKeyRotatedEvent.java        — CDI event record fired by KeyRotationService/ReactiveKeyRotationService after rotation is persisted; observers (ActorIdentityValidationEnricher, IdentityCacheInvalidator) invalidate their caches
@@ -438,7 +446,19 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
         ├── InMemoryReactiveKeyRotationRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
         ├── InMemoryCrossTenantLedgerEntryRepository.java — @Alternative @Priority(1); cross-tenant delegate
         └── InMemoryCrossTenantReactiveLedgerEntryRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
+└── signing/                              — first-class signing adapter modules (profile: with-signing)
+    ├── pom.xml                           — aggregator POM
+    ├── vault-transit/                    → io.casehub:casehub-ledger-vault-transit (pure Java; HttpClient + Jackson)
+    ├── vault-transit-quarkus/            → io.casehub:casehub-ledger-vault-transit-quarkus (CDI adapter)
+    ├── aws-kms/                          → io.casehub:casehub-ledger-aws-kms (pure Java; AWS SDK v2)
+    ├── aws-kms-quarkus/                  → io.casehub:casehub-ledger-aws-kms-quarkus (CDI adapter)
+    ├── gcp-kms/                          → io.casehub:casehub-ledger-gcp-kms (pure Java; Google Cloud KMS)
+    ├── gcp-kms-quarkus/                  → io.casehub:casehub-ledger-gcp-kms-quarkus (CDI adapter)
+    ├── azure-keyvault/                   → io.casehub:casehub-ledger-azure-keyvault (pure Java; Azure Key Vault + EcSignatureConverter)
+    └── azure-keyvault-quarkus/           → io.casehub:casehub-ledger-azure-keyvault-quarkus (CDI adapter)
 ```
+
+**Signing module architecture:** Two-layer per provider: pure Java client (zero framework deps, usable from Spring/Micronaut/plain Java) + Quarkus CDI adapter (extends `AbstractCachingAgentSigner`, `@Alternative @Priority(1)`). EC keys only — RSA out of scope. Consumer activation: `quarkus.arc.selected-alternatives=<adapter class>`.
 
 ---
 
@@ -459,6 +479,12 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl api        # pure JUnit 5
 # (mvn test -pl runtime resolves api from .m2 cache — source changes in api are invisible otherwise)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -pl api -q && \
   JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl runtime
+
+# Run signing module tests (requires with-signing profile)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pwith-signing
+
+# Run a specific signing module
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl signing/aws-kms -Pwith-signing
 
 # Native image build (requires GraalVM)
 JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \

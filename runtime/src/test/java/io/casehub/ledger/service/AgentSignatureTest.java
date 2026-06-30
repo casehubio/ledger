@@ -68,4 +68,19 @@ class AgentSignatureTest {
         pub[0] = 99;
         assertThat(as.publicKey()[0]).isEqualTo((byte) 4);
     }
+
+    @Test
+    void signWith_ecP256_producesVerifiableSignature() throws Exception {
+        final KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+        kpg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        final KeyPair kp = kpg.generateKeyPair();
+        final byte[] data = "canonical bytes".getBytes();
+
+        final AgentSignature sig = AgentSignature.signWith(kp, data);
+
+        final Signature verifier = Signature.getInstance("SHA256withECDSA");
+        verifier.initVerify(kp.getPublic());
+        verifier.update(data);
+        assertThat(verifier.verify(sig.signature())).isTrue();
+    }
 }

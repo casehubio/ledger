@@ -16,6 +16,22 @@ public record AgentSignature(byte[] signature, byte[] publicKey, String keyRef) 
     }
 
     /**
+     * Compute keyRef for a public key.
+     * {@code keyRef = Base64URL(SHA-256(publicKeyEncoded))}.
+     *
+     * @param publicKeyEncoded X.509 SubjectPublicKeyInfo DER-encoded public key
+     * @return Base64URL-encoded SHA-256 hash (no padding)
+     */
+    public static String computeKeyRef(final byte[] publicKeyEncoded) {
+        try {
+            final byte[] hash = MessageDigest.getInstance("SHA-256").digest(publicKeyEncoded);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (final java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    /**
      * Algorithm-transparent local signing factory.
      * Derives the algorithm from {@code keyPair.getPrivate().getAlgorithm()} — never hardcodes a string.
      * Computes {@code keyRef = Base64URL(SHA-256(publicKey.getEncoded()))}.
@@ -25,12 +41,11 @@ public record AgentSignature(byte[] signature, byte[] publicKey, String keyRef) 
         Objects.requireNonNull(data, "data must not be null");
         try {
             final byte[] pubEncoded = keyPair.getPublic().getEncoded();
-            final Signature sig = Signature.getInstance(keyPair.getPrivate().getAlgorithm());
+            final Signature sig = Signature.getInstance(SignatureAlgorithms.signatureAlgorithm(keyPair.getPrivate()));
             sig.initSign(keyPair.getPrivate());
             sig.update(data);
             final byte[] sigBytes = sig.sign();
-            final byte[] hash = MessageDigest.getInstance("SHA-256").digest(pubEncoded);
-            final String keyRef = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+            final String keyRef = computeKeyRef(pubEncoded);
             return new AgentSignature(sigBytes, pubEncoded, keyRef);
         } catch (final GeneralSecurityException e) {
             throw new IllegalStateException("Local signing failed", e);

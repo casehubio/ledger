@@ -1265,6 +1265,10 @@ Decisions captured inline in §9.4 Layer entries are not repeated here. This sec
 | ADR 0013 | Post-quantum algorithm migration — signing path algorithm-transparent; ML-DSA activates with BouncyCastle ≥ 1.79; transition via key rotation | Signing, Merkle | `docs/adr/0013-post-quantum-algorithm-migration.md` |
 | ADR 0015 | Agent DID/VC identity binding — 11 decisions: two-field model, `alsoKnownAs` verification, enricher ordering via `@Priority`, ENFORCE mode via `@EntityListeners`, binding persistence via `@ObservesAsync` + `REQUIRES_NEW` | Identity, Signing, Base Model | `docs/adr/0015-agent-did-vc-identity-binding.md` |
 
+**EC algorithm support (issue #102):** `SignatureAlgorithms.signatureAlgorithm(Key)` maps EC curve parameters to JCA Signature algorithm names (P-256→SHA256withECDSA, P-384→SHA384withECDSA, P-521→SHA512withECDSA). Both `AgentCryptographicVerifier` and `LedgerPemUtil` SUPPORTED_ALGORITHMS lists include `"EC"`. RSA is out of scope — signature algorithms are not deterministic from the key material.
+
+**Cloud KMS signing adapters (issue #102):** Four first-class signing modules under `signing/` — Vault Transit, AWS KMS, GCP Cloud KMS, Azure Key Vault. Two-layer architecture: pure Java signing client (zero framework deps) + Quarkus CDI adapter extending `AbstractCachingAgentSigner`. EC keys only. `AgentSigner.keyMaterial()` default method avoids wasted cloud KMS sign calls in `AgentEntrySigner.prepareKey()`. Azure adapter includes `EcSignatureConverter` for R‖S→DER signature format conversion.
+
 Full ADR catalogue: `docs/adr/INDEX.md` (17 ADRs; 2 superseded).
 
 ---
@@ -1274,7 +1278,7 @@ Full ADR catalogue: `docs/adr/INDEX.md` (17 ADRs; 2 superseded).
 | Quality | Scenario | Measure |
 |---|---|---|
 | Tamper evidence | Any modification to any persisted entry must be detectable | Merkle MMR inclusion proof verifies in O(log N); Ed25519 signed checkpoints publishable to external CT logs |
-| Non-repudiation | Agent entries must carry cryptographic proof of authorship | `AgentSigner` bilateral signing with per-actor Ed25519 keys; SUSPECT semantics for compromised windows |
+| Non-repudiation | Agent entries must carry cryptographic proof of authorship | `AgentSigner` bilateral signing with per-actor keys (Ed25519 local, EC P-256/P-384/P-521 via cloud KMS); SUSPECT semantics for compromised windows; cloud KMS adapters for AWS, GCP, Azure, Vault Transit |
 | Regulatory compliance | Regulatory auditor requests decision history for an actor over a time window | `LedgerComplianceReportService.reportForActor()` returns structured `ComplianceReport` with Merkle root anchor; W3C PROV-DM JSON-LD export |
 | Privacy | Data subject exercises right to erasure | `LedgerErasureService.erase()` severs token-identity mapping; entries remain, identity permanently unresolvable; optional `ErasureReceiptLedgerEntry` |
 | Extensibility | New consumer adds domain-specific fields to the audit log | JPA JOINED subclass + Flyway migration; zero changes to casehub-ledger |

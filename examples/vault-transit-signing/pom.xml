@@ -50,6 +50,13 @@
       <version>${casehub-ledger.version}</version>
     </dependency>
 
+    <!-- Vault Transit signing adapter — production-grade module -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-ledger-vault-transit-quarkus</artifactId>
+      <version>${casehub-ledger.version}</version>
+    </dependency>
+
     <!-- In-memory persistence — satisfies LedgerEntryRepository and friends without a real DB -->
     <dependency>
       <groupId>io.casehub</groupId>

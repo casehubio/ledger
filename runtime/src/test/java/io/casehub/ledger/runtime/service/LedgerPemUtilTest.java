@@ -65,6 +65,34 @@ class LedgerPemUtilTest {
         assertThat(loaded.getEncoded()).isEqualTo(kp.getPublic().getEncoded());
     }
 
+    @Test
+    void loadPrivateKey_ecP256_roundTrip() throws Exception {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+        kpg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        KeyPair kp = kpg.generateKeyPair();
+
+        Path pemFile = writePem(tempDir, "ec_private.pem", "PRIVATE KEY", kp.getPrivate().getEncoded());
+
+        var loaded = LedgerPemUtil.loadPrivateKey(pemFile.toString());
+
+        assertThat(loaded.getEncoded()).isEqualTo(kp.getPrivate().getEncoded());
+        assertThat(loaded.getAlgorithm()).isEqualTo("EC");
+    }
+
+    @Test
+    void loadPublicKey_ecP256_roundTrip() throws Exception {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+        kpg.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        KeyPair kp = kpg.generateKeyPair();
+
+        Path pemFile = writePem(tempDir, "ec_public.pem", "PUBLIC KEY", kp.getPublic().getEncoded());
+
+        var loaded = LedgerPemUtil.loadPublicKey(pemFile.toString());
+
+        assertThat(loaded.getEncoded()).isEqualTo(kp.getPublic().getEncoded());
+        assertThat(loaded.getAlgorithm()).isEqualTo("EC");
+    }
+
     private static Path writePem(Path dir, String name, String type, byte[] encoded) throws Exception {
         String pem = "-----BEGIN " + type + "-----\n"
                 + Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(encoded)

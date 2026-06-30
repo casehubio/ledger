@@ -28,10 +28,10 @@ final class AgentCryptographicVerifier {
 
     private static final Logger LOG = Logger.getLogger(AgentCryptographicVerifier.class);
 
-    // Trial order: Ed25519 first (current default), ML-DSA variants when BouncyCastle ≥ 1.79 is present.
+    // Trial order: Ed25519 first (current default), EC for cloud KMS adapters, ML-DSA variants when BouncyCastle ≥ 1.79 is present.
     // NoSuchAlgorithmException for unsupported entries is caught silently — forward-compatible.
     private static final List<String> SUPPORTED_ALGORITHMS =
-            List.of("Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87");
+            List.of("Ed25519", "EC", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87");
 
     private AgentCryptographicVerifier() {}
 
@@ -56,7 +56,7 @@ final class AgentCryptographicVerifier {
         }
         try {
             final PublicKey pub = loadPublicKey(entry.agentPublicKey);
-            final Signature sig = Signature.getInstance(pub.getAlgorithm());
+            final Signature sig = Signature.getInstance(SignatureAlgorithms.signatureAlgorithm(pub));
             sig.initVerify(pub);
             sig.update(entry.canonicalBytes());
             return sig.verify(entry.agentSignature) ? VerificationResult.VALID : VerificationResult.INVALID;

@@ -9,13 +9,16 @@ import java.security.Signature;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.runtime.service.AgentKeyMaterial;
 import io.casehub.ledger.runtime.service.AgentSignature;
+import io.casehub.ledger.runtime.service.AgentSigner;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.service.supplement.TestEntry;
 
@@ -194,5 +197,35 @@ class AgentEntrySignerTest {
 
         assertThat(e.agentPublicKey).isNull();
         assertThat(e.agentKeyRef).isNull();
+    }
+
+    @Test
+    void prepareKey_callsKeyMaterial_notSign() {
+        final AtomicInteger signCallCount = new AtomicInteger();
+        final AtomicInteger keyMaterialCallCount = new AtomicInteger();
+
+        final AgentSigner trackingSigner = new AgentSigner() {
+            @Override
+            public Optional<AgentSignature> sign(String actorId, byte[] data) {
+                signCallCount.incrementAndGet();
+                return Optional.of(AgentSignature.signWith(testKeyPair, data));
+            }
+
+            @Override
+            public Optional<AgentKeyMaterial> keyMaterial(String actorId) {
+                keyMaterialCallCount.incrementAndGet();
+                final byte[] pub = testKeyPair.getPublic().getEncoded();
+                return Optional.of(new AgentKeyMaterial(pub, AgentSignature.computeKeyRef(pub)));
+            }
+        };
+
+        signer = new AgentEntrySigner(trackingSigner);
+        final TestEntry e = entry("claude:reviewer@v1");
+        signer.prepareKey(e);
+
+        assertThat(keyMaterialCallCount.get()).isEqualTo(1);
+        assertThat(signCallCount.get()).isEqualTo(0);
+        assertThat(e.agentPublicKey).isNotNull();
+        assertThat(e.agentKeyRef).isNotNull();
     }
 }

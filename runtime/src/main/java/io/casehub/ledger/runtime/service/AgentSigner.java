@@ -30,4 +30,21 @@ public interface AgentSigner {
      * @return signed result, or empty if this actor does not sign entries
      */
     Optional<AgentSignature> sign(String actorId, byte[] data);
+
+    /**
+     * Retrieve key material without signing. Avoids wasted cloud KMS sign calls in
+     * {@link AgentEntrySigner#prepareKey(io.casehub.ledger.runtime.model.LedgerEntry)}.
+     *
+     * <p>Default implementation calls {@link #sign(String, byte[])} with dummy data
+     * and extracts the key material. Concrete implementations that cache public keys
+     * (e.g. {@link AbstractCachingAgentSigner}) override this to avoid triggering
+     * {@code performSign()}.
+     *
+     * @param actorId the actor identity
+     * @return key material (public key + keyRef), or empty if this actor does not sign entries
+     */
+    default Optional<AgentKeyMaterial> keyMaterial(String actorId) {
+        return sign(actorId, new byte[0])
+                .map(sig -> new AgentKeyMaterial(sig.publicKey(), sig.keyRef()));
+    }
 }

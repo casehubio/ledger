@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import io.casehub.platform.identity.ScimActorDIDProvider;
+import io.casehub.platform.identity.ScimAgentLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,9 @@ class ScimActorDIDProviderTest {
     void setUp() {
         wm = new WireMockServer(wireMockConfig().dynamicPort());
         wm.start();
-        provider = new ScimActorDIDProvider(
-                "http://localhost:" + wm.port(), "test-token", 5000, Duration.ofMinutes(5));
+        ScimAgentLookup lookup = new ScimAgentLookup(
+                "http://localhost:" + wm.port(), "test-token", 5000, Duration.ofMinutes(5), false);
+        provider = new ScimActorDIDProvider(lookup);
     }
 
     @AfterEach
@@ -182,8 +184,9 @@ class ScimActorDIDProviderTest {
 
     @Test
     void httpsValidation_throwsForHttpEndpoint() {
-        final ScimActorDIDProvider httpProvider = new ScimActorDIDProvider(
+        final ScimAgentLookup httpLookup = new ScimAgentLookup(
                 "http://localhost:9090", "token", 5000, Duration.ofMinutes(5), true);
+        final ScimActorDIDProvider httpProvider = new ScimActorDIDProvider(httpLookup);
         assertThatThrownBy(httpProvider::validateEndpoint)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("must use HTTPS");
@@ -191,8 +194,9 @@ class ScimActorDIDProviderTest {
 
     @Test
     void httpsValidation_passesForHttpsEndpoint() {
-        final ScimActorDIDProvider httpsProvider = new ScimActorDIDProvider(
+        final ScimAgentLookup httpsLookup = new ScimAgentLookup(
                 "https://idp.example.com", "token", 5000, Duration.ofMinutes(5), true);
+        final ScimActorDIDProvider httpsProvider = new ScimActorDIDProvider(httpsLookup);
         assertThatCode(httpsProvider::validateEndpoint).doesNotThrowAnyException();
     }
 }

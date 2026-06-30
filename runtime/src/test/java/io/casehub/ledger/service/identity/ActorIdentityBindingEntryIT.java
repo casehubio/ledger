@@ -26,6 +26,7 @@ import io.casehub.platform.api.identity.VerificationMethod;
 import io.casehub.ledger.runtime.model.ActorIdentityBindingEntry;
 import io.casehub.ledger.runtime.repository.ActorIdentityBindingRepository;
 import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.runtime.service.AgentKeyMaterial;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
 import io.casehub.ledger.runtime.service.identity.ActorIdentityValidationEnricher;
@@ -85,6 +86,7 @@ class ActorIdentityBindingEntryIT {
 
         // Default: no signing for any actor
         when(agentSigner.sign(anyString(), any())).thenReturn(Optional.empty());
+        when(agentSigner.keyMaterial(anyString())).thenReturn(Optional.empty());
     }
 
     /** Configures a DID document and AgentSigner mock for the given actorId. */
@@ -96,6 +98,9 @@ class ActorIdentityBindingEntryIT {
         when(agentSigner.sign(eq(actorId), any()))
                 .thenAnswer(inv -> Optional.of(
                         AgentSignature.signWith(keyPair, inv.getArgument(1))));
+        when(agentSigner.keyMaterial(eq(actorId)))
+                .thenReturn(Optional.of(
+                        new AgentKeyMaterial(pubKeyEncoded, AgentSignature.computeKeyRef(pubKeyEncoded))));
     }
 
     @Test

@@ -106,7 +106,7 @@ public class ActorIdentityValidationEnricher implements LedgerEntryEnricher {
     }
 
     private IdentityBindingStatus computeStatus(final LedgerEntry entry) {
-        final Optional<DIDDocument> docOpt = resolver.resolve(entry.actorDid);
+        final Optional<DIDDocument> docOpt = resolver.resolve(entry.actorId, entry.actorDid);
         if (docOpt.isEmpty()) return IdentityBindingStatus.DID_UNRESOLVABLE;
 
         final DIDDocument doc = docOpt.get();

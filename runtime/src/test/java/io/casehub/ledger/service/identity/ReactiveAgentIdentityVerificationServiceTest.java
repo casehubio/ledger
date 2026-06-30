@@ -1,6 +1,7 @@
 package io.casehub.ledger.service.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +51,7 @@ class ReactiveAgentIdentityVerificationServiceTest {
     @Test
     void verifyIdentityBindingAsync_nullPublicKey_returnsUnsigned() {
         final LedgerEntry e = entry("did:web:example.com", null);
-        when(resolver.resolve("did:web:example.com")).thenReturn(Optional.of(
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(
                 new DIDDocument("did:web:example.com", List.of(), List.of("claude:tester@v1"))));
         assertThat(service.verifyIdentityBindingAsync(e)
                 .await().atMost(Duration.ofSeconds(5)))
@@ -60,7 +61,7 @@ class ReactiveAgentIdentityVerificationServiceTest {
     @Test
     void verifyIdentityBindingAsync_unresolvedDid_returnsDIDUnresolvable() {
         final LedgerEntry e = entry("did:web:unreachable.example.com", new byte[]{1});
-        when(resolver.resolve(anyString())).thenReturn(Optional.empty());
+        when(resolver.resolve(any(), anyString())).thenReturn(Optional.empty());
         assertThat(service.verifyIdentityBindingAsync(e)
                 .await().atMost(Duration.ofSeconds(5)))
                 .isEqualTo(IdentityVerificationResult.DID_UNRESOLVABLE);
@@ -70,7 +71,7 @@ class ReactiveAgentIdentityVerificationServiceTest {
     void verifyIdentityBindingAsync_actorIdNotInAlsoKnownAs_returnsIdentityMismatch() {
         final byte[] key = new byte[]{1, 2, 3};
         final LedgerEntry e = entry("did:web:example.com", key);
-        when(resolver.resolve("did:web:example.com")).thenReturn(Optional.of(
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(
                 new DIDDocument("did:web:example.com",
                         List.of(new VerificationMethod("vm1", "Ed25519", key)),
                         List.of("claude:different-actor@v1"))));
@@ -84,7 +85,7 @@ class ReactiveAgentIdentityVerificationServiceTest {
         final byte[] key = new byte[]{1, 2, 3};
         final byte[] differentKey = new byte[]{4, 5, 6};
         final LedgerEntry e = entry("did:web:example.com", key);
-        when(resolver.resolve("did:web:example.com")).thenReturn(Optional.of(
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(
                 new DIDDocument("did:web:example.com",
                         List.of(new VerificationMethod("vm1", "Ed25519", differentKey)),
                         List.of("claude:tester@v1"))));
@@ -97,7 +98,7 @@ class ReactiveAgentIdentityVerificationServiceTest {
     void verifyIdentityBindingAsync_valid() {
         final byte[] key = new byte[]{1, 2, 3};
         final LedgerEntry e = entry("did:web:example.com", key);
-        when(resolver.resolve("did:web:example.com")).thenReturn(Optional.of(
+        when(resolver.resolve(any(), any())).thenReturn(Optional.of(
                 new DIDDocument("did:web:example.com",
                         List.of(new VerificationMethod("vm1", "Ed25519", key)),
                         List.of("claude:tester@v1"))));

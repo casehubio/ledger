@@ -50,7 +50,7 @@ class VaultTransitAgentSignerIT {
     @BeforeEach
     void resetWireMock() {
         wireMock.resetAll();
-        ((VaultTransitAgentSigner) agentSigner).invalidateAll();
+        ((io.casehub.ledger.signing.vault.quarkus.VaultTransitAgentSigner) agentSigner).invalidateAll();
     }
 
     @Inject
@@ -74,7 +74,7 @@ class VaultTransitAgentSignerIT {
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n");
-        return "{\"data\":{\"keys\":{\"1\":{\"public_key\":\"" + pemJsonSafe + "\"}}}}";
+        return "{\"data\":{\"keys\":{\"1\":{\"public_key\":\"" + pemJsonSafe + "\"}},\"type\":\"ed25519\"}}";
     }
 
     private static String signResponse(final byte[] sigBytes) {

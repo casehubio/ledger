@@ -24,6 +24,7 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.VerificationMethod;
 import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.runtime.service.AgentKeyMaterial;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
 import io.casehub.ledger.runtime.service.identity.ActorIdentityValidationEnricher;
@@ -81,6 +82,12 @@ class LedgerIdentityEnforcementIT {
         when(agentSigner.sign(eq(ACTOR_ID), any()))
                 .thenAnswer(inv -> Optional.of(
                         AgentSignature.signWith(keyPair, inv.getArgument(1))));
+
+        // Mock keyMaterial() for prepareKey() phase
+        when(agentSigner.keyMaterial(anyString())).thenReturn(Optional.empty());
+        when(agentSigner.keyMaterial(eq(ACTOR_ID)))
+                .thenReturn(Optional.of(
+                        new AgentKeyMaterial(pubKeyEncoded, AgentSignature.computeKeyRef(pubKeyEncoded))));
     }
 
     @Test
