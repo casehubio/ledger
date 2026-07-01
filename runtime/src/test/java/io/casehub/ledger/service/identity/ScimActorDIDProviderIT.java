@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.platform.api.identity.ActorDIDProvider;
+import io.casehub.platform.api.identity.ActorDIDSource;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.KeyRotationService;
 import io.casehub.platform.identity.ScimActorDIDProvider;
@@ -30,11 +31,11 @@ import java.util.List;
  *   <li>The {@code @Alternative} is activated via {@code quarkus.arc.selected-alternatives}.</li>
  *   <li>{@code ActorDIDProvider.didFor()} delegates to SCIM over WireMock HTTP.</li>
  *   <li>{@code KeyRotationService.recordRotation()} fires {@code AgentKeyRotatedEvent}, which
- *       {@code ScimActorDIDProvider.onKeyRotated()} observes and uses to evict its cache.</li>
+ *       triggers cache invalidation via {@code IdentityCacheInvalidator}.</li>
  * </ol>
  *
  * <p>WireMock port is injected via {@link ScimWireMockResource} as a config override, which
- * also sets {@code casehub.ledger.agent-identity.scim.require-https=false} so the plain
+ * also sets {@code casehub.identity.scim.require-https=false} so the plain
  * HTTP endpoint passes validation.
  */
 @QuarkusTest
@@ -61,6 +62,7 @@ class ScimActorDIDProviderIT {
     ActorDIDProvider actorDIDProvider;
 
     @Inject
+    @ActorDIDSource
     ScimActorDIDProvider scimProvider;
 
     @Inject
@@ -89,14 +91,11 @@ class ScimActorDIDProviderIT {
     void setUp() {
         wm.resetAll();
         stubScimSuccess();
-        // Evict any DID cached by previous tests — ScimActorDIDProvider is ApplicationScoped
-        // and its cache survives across test methods within the same Quarkus instance.
         scimProvider.invalidate(ACTOR_ID);
     }
 
     @Test
     void scimProviderIsActiveAlternative() {
-        // Verifies the @Alternative is selected: ActorDIDProvider resolves via SCIM.
         assertThat(actorDIDProvider.didFor(ACTOR_ID)).contains(DID);
         wm.verify(moreThanOrExactly(1), getRequestedFor(urlPathEqualTo("/scim/v2/Agents")));
     }
@@ -104,10 +103,8 @@ class ScimActorDIDProviderIT {
     @Test
     @Transactional
     void keyRotation_invalidatesScimCache() throws Exception {
-        // Seed the cache — first call hits SCIM, returns DID_V1
         assertThat(actorDIDProvider.didFor(ACTOR_ID)).contains(DID);
 
-        // Change the stub to return a different DID (simulates IdP update after rotation)
         final String updatedDid = "did:web:example.com:agents:scim-it-rotated";
         wm.resetAll();
         wm.stubFor(get(urlPathEqualTo("/scim/v2/Agents"))
@@ -124,7 +121,6 @@ class ScimActorDIDProviderIT {
                             }
                             """.formatted(updatedDid))));
 
-        // Rotate key — fires AgentKeyRotatedEvent, ScimActorDIDProvider.onKeyRotated() evicts cache
         final String keyRef = AgentSignature.signWith(
                 KeyPairGenerator.getInstance("Ed25519").generateKeyPair(), new byte[0]).keyRef();
         keyRotationService.recordRotation(ACTOR_ID, keyRef,
@@ -132,7 +128,6 @@ class ScimActorDIDProviderIT {
                         KeyPairGenerator.getInstance("Ed25519").generateKeyPair(), new byte[0]).keyRef(),
                 KeyRotationReason.SCHEDULED, Instant.now(), DEFAULT_TENANT_ID);
 
-        // Post-rotation explicit call — cache was evicted, so this must call SCIM and return the updated DID
         assertThat(actorDIDProvider.didFor(ACTOR_ID)).contains(updatedDid);
     }
 }
