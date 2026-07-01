@@ -17,25 +17,10 @@ import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.signing.azure.AzureKeyVaultClientWrapper;
 import io.casehub.ledger.signing.azure.AzureKeyVaultContext;
 import io.casehub.ledger.signing.azure.AzureKeyVaultSigningClient;
-import io.casehub.ledger.signing.azure.AzureKeyVaultSigningConfig;
 import io.quarkus.scheduler.Scheduled;
 
 /**
- * {@link io.casehub.ledger.runtime.service.AgentSigner} that delegates signing to Azure Key Vault.
- *
- * <p>The private key never leaves Azure Key Vault. Only the public key is fetched and cached locally
- * (for storage on {@code LedgerEntry.agentPublicKey}, needed by {@code AgentCryptographicVerifier}).
- *
- * <p><strong>Auth:</strong> This adapter uses {@code DefaultAzureCredential} (env vars, managed identity, Azure CLI).
- *
- * <p><strong>Algorithm support:</strong> Only EC key types are supported (P-256, P-384, P-521).
- * RSA key types are rejected at {@code loadContext()} time (the pure Java client logs an error
- * and returns {@code Optional.empty()}).
- *
- * <p><strong>Activation:</strong>
- * <pre>
- * quarkus.arc.selected-alternatives=io.casehub.ledger.signing.azure.quarkus.AzureKeyVaultAgentSigner
- * </pre>
+ * Activation: {@code quarkus.arc.selected-alternatives=io.casehub.ledger.signing.azure.quarkus.AzureKeyVaultAgentSigner}
  */
 @ApplicationScoped
 @Alternative
@@ -50,16 +35,13 @@ public class AzureKeyVaultAgentSigner extends AbstractCachingAgentSigner<AzureKe
     @Inject
     public AzureKeyVaultAgentSigner(final AzureKeyVaultConfig config) {
         this.config = config;
-        this.client = new AzureKeyVaultSigningClient(
-                new AzureKeyVaultSigningConfig(config.keyMapping()));
+        this.client = new AzureKeyVaultSigningClient();
     }
 
-    // Visible for testing — allows injecting a mocked wrapper
     AzureKeyVaultAgentSigner(final AzureKeyVaultConfig config,
             final AzureKeyVaultClientWrapper wrapper) {
         this.config = config;
-        this.client = new AzureKeyVaultSigningClient(
-                new AzureKeyVaultSigningConfig(config.keyMapping()), wrapper);
+        this.client = new AzureKeyVaultSigningClient(wrapper);
     }
 
     @Override
@@ -75,12 +57,11 @@ public class AzureKeyVaultAgentSigner extends AbstractCachingAgentSigner<AzureKe
     @Override
     protected AgentSignature performSign(final String actorId, final AzureKeyVaultContext context,
             final byte[] data) {
-        // Build key reference from context (format: "vaultUrl#keyName")
-        final String keyRef = context.vaultUrl() + "#" + context.keyName();
-        final byte[] sigBytes = client.sign(keyRef, data);
+        final byte[] sigBytes = client.sign(
+                context.vaultUrl(), context.keyName(), context.algorithm(), data);
         final byte[] pubEncoded = context.publicKey().getEncoded();
-        final String keyRefStr = AgentSignature.computeKeyRef(pubEncoded);
-        return new AgentSignature(sigBytes, pubEncoded, keyRefStr);
+        final String keyRef = AgentSignature.computeKeyRef(pubEncoded);
+        return new AgentSignature(sigBytes, pubEncoded, keyRef);
     }
 
     @Override
@@ -94,11 +75,6 @@ public class AzureKeyVaultAgentSigner extends AbstractCachingAgentSigner<AzureKe
         invalidateAll();
     }
 
-    /**
-     * Invalidates the cached context for the rotated actor.
-     * Required by {@link AbstractCachingAgentSigner} contract — concrete CDI subclasses
-     * must expose {@code onKeyRotated()} as a CDI observer.
-     */
     public void onKeyRotated(@Observes final AgentKeyRotatedEvent event) {
         super.onKeyRotated(event);
     }

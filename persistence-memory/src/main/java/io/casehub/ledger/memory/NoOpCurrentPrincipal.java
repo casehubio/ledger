@@ -8,12 +8,9 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.arc.DefaultBean;
 
-/**
- * Test-only {@link CurrentPrincipal} for persistence-memory module.
- */
 @DefaultBean
 @ApplicationScoped
-class TestCurrentPrincipal implements CurrentPrincipal {
+class NoOpCurrentPrincipal implements CurrentPrincipal {
 
     @Override
     public String actorId() {

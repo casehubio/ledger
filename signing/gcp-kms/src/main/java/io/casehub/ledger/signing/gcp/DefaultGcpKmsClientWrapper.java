@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import com.google.cloud.kms.v1.AsymmetricSignRequest;
 import com.google.cloud.kms.v1.AsymmetricSignResponse;
-import com.google.cloud.kms.v1.CryptoKeyVersion;
 import com.google.cloud.kms.v1.CryptoKeyVersionName;
 import com.google.cloud.kms.v1.KeyManagementServiceClient;
 import com.google.cloud.kms.v1.PublicKey;
@@ -29,11 +28,6 @@ final class DefaultGcpKmsClientWrapper implements GcpKmsClientWrapper {
     @Override
     public PublicKey getPublicKey(final String versionName) {
         return client.getPublicKey(CryptoKeyVersionName.parse(versionName));
-    }
-
-    @Override
-    public CryptoKeyVersion getCryptoKeyVersion(final String versionName) {
-        return client.getCryptoKeyVersion(CryptoKeyVersionName.parse(versionName));
     }
 
     @Override

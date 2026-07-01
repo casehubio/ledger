@@ -3,7 +3,6 @@ package io.casehub.ledger.signing.azure;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,14 +20,13 @@ import com.azure.security.keyvault.keys.models.KeyVaultKey;
  * <p>The private key never leaves Azure Key Vault. Only the public key is fetched for storage on
  * ledger entries (needed by verification infrastructure). Signing happens via Key Vault API call.
  *
- * <p><strong>Auth:</strong> Uses {@code DefaultAzureCredential} (env vars, managed identity, Azure CLI).
+ * <p><strong>Stateless:</strong> This client holds no per-actor state. Caching is the
+ * responsibility of the Quarkus CDI adapter ({@code AbstractCachingAgentSigner}).
  *
  * <p><strong>Algorithm support:</strong> Only EC key types are supported (P-256, P-384, P-521).
- * RSA key types are rejected at {@code fetchPublicKey()} time (returns empty, cached as absent).
  *
  * <p><strong>Signature format:</strong> Azure Key Vault returns raw R‖S bytes. This client
- * converts to DER-encoded format using {@link EcSignatureConverter} so verification infrastructure
- * (which expects DER) works correctly.
+ * converts to DER-encoded format using {@link EcSignatureConverter}.
  *
  * <p><strong>No casehub-ledger dependency.</strong> Usable from any framework or plain {@code main()}.
  */
@@ -38,29 +36,19 @@ public class AzureKeyVaultSigningClient {
 
     private final AzureKeyVaultClientWrapper wrapper;
 
-    public AzureKeyVaultSigningClient(final AzureKeyVaultSigningConfig config) {
-        Objects.requireNonNull(config, "config must not be null");
+    public AzureKeyVaultSigningClient() {
         this.wrapper = new DefaultAzureKeyVaultClientWrapper();
     }
 
-    // Visible for testing — allows injecting a mocked wrapper
-    public AzureKeyVaultSigningClient(final AzureKeyVaultSigningConfig config,
-            final AzureKeyVaultClientWrapper wrapper) {
-        Objects.requireNonNull(config, "config must not be null");
+    public AzureKeyVaultSigningClient(final AzureKeyVaultClientWrapper wrapper) {
         this.wrapper = wrapper;
     }
 
     /**
-     * Fetches the public key from Azure Key Vault.
-     *
-     * <p>Calls {@code getKey()} and extracts the EC public key from the JsonWebKey.
-     * Validates that the key type is EC — only P-256, P-384, and P-521 are supported.
-     * RSA key types are rejected (logged at ERROR, return empty).
-     *
-     * <p>Also computes the component size (R and S byte length) from the curve parameters.
+     * Fetches the public key and algorithm from Azure Key Vault.
      *
      * @param keyRef key reference (format: "vaultUrl#keyName")
-     * @return context with public key and component size, or empty if key not found or is not EC
+     * @return context with public key and algorithm, or empty if key not found or is not EC
      */
     public Optional<AzureKeyVaultContext> fetchPublicKey(final String keyRef) {
         final String[] parts = keyRef.split("#");
@@ -75,7 +63,6 @@ public class AzureKeyVaultSigningClient {
         try {
             final KeyVaultKey keyVaultKey = wrapper.getKey(vaultUrl, keyName);
 
-            // Validate key type — only EC is supported
             final JsonWebKey jwk = keyVaultKey.getKey();
             if (jwk.getKeyType() != KeyType.EC) {
                 LOG.log(Level.SEVERE, "Key " + keyRef + " is " + jwk.getKeyType()
@@ -83,17 +70,15 @@ public class AzureKeyVaultSigningClient {
                 return Optional.empty();
             }
 
-            // Convert to JCA ECPublicKey
             final PublicKey publicKey = jwk.toEc().getPublic();
             if (!(publicKey instanceof ECPublicKey ecKey)) {
                 LOG.log(Level.SEVERE, "Key " + keyRef + " could not be converted to ECPublicKey");
                 return Optional.empty();
             }
 
-            // Compute component size from curve
-            final int componentSize = computeComponentSize(ecKey);
+            final SignatureAlgorithm algorithm = mapCurveToAlgorithm(ecKey);
 
-            return Optional.of(new AzureKeyVaultContext(keyName, vaultUrl, publicKey, componentSize));
+            return Optional.of(new AzureKeyVaultContext(keyName, vaultUrl, publicKey, algorithm));
         } catch (final ResourceNotFoundException e) {
             LOG.log(Level.FINE, "Key not found in Azure Key Vault: " + keyRef);
             return Optional.empty();
@@ -106,58 +91,29 @@ public class AzureKeyVaultSigningClient {
     /**
      * Signs data via Azure Key Vault.
      *
-     * <p>Computes the appropriate digest (SHA-256, SHA-384, or SHA-512 based on curve),
-     * calls {@code sign()} with the matching algorithm (ES256, ES384, ES512), and
-     * converts the raw R‖S signature to DER format using {@link EcSignatureConverter}.
+     * <p>Uses the provided algorithm to compute the digest and derive the component size
+     * for DER conversion. No key metadata re-fetch.
      *
-     * @param keyRef key reference (format: "vaultUrl#keyName")
-     * @param data   data to sign
+     * @param vaultUrl  Azure Key Vault URL
+     * @param keyName   key name
+     * @param algorithm signature algorithm from cached context
+     * @param data      data to sign
      * @return DER-encoded ECDSA signature bytes
-     * @throws RuntimeException on Key Vault API errors
      */
-    public byte[] sign(final String keyRef, final byte[] data) {
-        final String[] parts = keyRef.split("#");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid key reference format: " + keyRef);
-        }
-        final String vaultUrl = parts[0];
-        final String keyName = parts[1];
-
+    public byte[] sign(final String vaultUrl, final String keyName,
+                       final SignatureAlgorithm algorithm, final byte[] data) {
         try {
-            // Fetch key to determine curve and algorithm
-            final KeyVaultKey keyVaultKey = wrapper.getKey(vaultUrl, keyName);
-            final JsonWebKey jwk = keyVaultKey.getKey();
-            final PublicKey publicKey = jwk.toEc().getPublic();
-
-            if (!(publicKey instanceof ECPublicKey ecKey)) {
-                throw new IllegalStateException("Key is not an EC key");
-            }
-
-            // Determine algorithm and digest from curve
-            final int componentSize = computeComponentSize(ecKey);
-            final SignatureAlgorithm algorithm = mapCurveToAlgorithm(ecKey);
             final byte[] digest = computeDigest(data, algorithm);
+            final int componentSize = mapAlgorithmToComponentSize(algorithm);
 
-            // Sign with Azure Key Vault — returns raw R||S
             final SignResult signResult = wrapper.sign(vaultUrl, keyName, algorithm, digest);
             final byte[] rawSignature = signResult.getSignature();
 
-            // Convert raw R||S to DER
             return EcSignatureConverter.rawToDer(rawSignature, componentSize);
         } catch (final Exception e) {
-            throw new RuntimeException("Azure Key Vault signing failed for key " + keyRef, e);
+            throw new RuntimeException("Azure Key Vault signing failed for key "
+                    + vaultUrl + "#" + keyName, e);
         }
-    }
-
-    private static int computeComponentSize(final ECPublicKey ecKey) {
-        final int orderBitLength = ecKey.getParams().getOrder().bitLength();
-        return switch (orderBitLength) {
-            case 256 -> 32;
-            case 384 -> 48;
-            case 521 -> 66;
-            default -> throw new IllegalArgumentException(
-                    "Unsupported EC curve order: " + orderBitLength);
-        };
     }
 
     private static SignatureAlgorithm mapCurveToAlgorithm(final ECPublicKey ecKey) {
@@ -169,6 +125,13 @@ public class AzureKeyVaultSigningClient {
             default -> throw new IllegalArgumentException(
                     "Unsupported EC curve for Azure Key Vault: " + orderBitLength);
         };
+    }
+
+    private static int mapAlgorithmToComponentSize(final SignatureAlgorithm algorithm) {
+        if (algorithm == SignatureAlgorithm.ES256) return 32;
+        if (algorithm == SignatureAlgorithm.ES384) return 48;
+        if (algorithm == SignatureAlgorithm.ES512) return 66;
+        throw new IllegalArgumentException("Unsupported algorithm: " + algorithm);
     }
 
     private static byte[] computeDigest(final byte[] data, final SignatureAlgorithm algorithm) {
@@ -183,8 +146,7 @@ public class AzureKeyVaultSigningClient {
             } else {
                 throw new IllegalArgumentException("Unsupported algorithm: " + algorithm);
             }
-            final MessageDigest md = MessageDigest.getInstance(digestAlg);
-            return md.digest(data);
+            return MessageDigest.getInstance(digestAlg).digest(data);
         } catch (final Exception e) {
             throw new RuntimeException("Failed to compute digest", e);
         }

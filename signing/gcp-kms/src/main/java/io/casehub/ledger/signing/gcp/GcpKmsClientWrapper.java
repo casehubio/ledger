@@ -2,7 +2,6 @@ package io.casehub.ledger.signing.gcp;
 
 import com.google.cloud.kms.v1.AsymmetricSignRequest;
 import com.google.cloud.kms.v1.AsymmetricSignResponse;
-import com.google.cloud.kms.v1.CryptoKeyVersion;
 import com.google.cloud.kms.v1.PublicKey;
 
 /**
@@ -23,14 +22,6 @@ public interface GcpKmsClientWrapper {
      * @return the public key
      */
     PublicKey getPublicKey(String versionName);
-
-    /**
-     * Gets the CryptoKeyVersion metadata (algorithm).
-     *
-     * @param versionName CryptoKeyVersion resource name
-     * @return the CryptoKeyVersion
-     */
-    CryptoKeyVersion getCryptoKeyVersion(String versionName);
 
     /**
      * Signs a digest via GCP Cloud KMS.

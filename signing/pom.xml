@@ -17,6 +17,15 @@
   <description>Production-grade signing adapters for cloud KMS providers.
     Each provider has a pure Java module (framework-free) and a Quarkus CDI adapter.</description>
 
+  <properties>
+    <aws-kms-sdk.version>2.29.32</aws-kms-sdk.version>
+    <google-cloud-kms.version>2.96.0</google-cloud-kms.version>
+    <azure-keyvault-keys.version>4.9.1</azure-keyvault-keys.version>
+    <azure-identity.version>1.14.2</azure-identity.version>
+    <wiremock.version>3.4.2</wiremock.version>
+    <bouncycastle.version>1.79</bouncycastle.version>
+  </properties>
+
   <modules>
     <module>vault-transit</module>
     <module>vault-transit-quarkus</module>

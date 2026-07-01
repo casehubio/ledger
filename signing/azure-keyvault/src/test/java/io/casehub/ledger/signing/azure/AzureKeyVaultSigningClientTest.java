@@ -11,7 +11,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
-import java.util.Map;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -25,9 +24,6 @@ import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyType;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 
-/**
- * Tests for {@link AzureKeyVaultSigningClient}.
- */
 class AzureKeyVaultSigningClientTest {
 
     private AzureKeyVaultClientWrapper mockWrapper;
@@ -36,27 +32,20 @@ class AzureKeyVaultSigningClientTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Add BouncyCastle provider for JsonWebKey.fromEc
         if (Security.getProvider("BC") == null) {
             Security.addProvider(new BouncyCastleProvider());
         }
 
-        final Map<String, String> keyMapping = Map.of(
-                "test-actor", "https://test-vault.vault.azure.net#test-key");
-        final AzureKeyVaultSigningConfig config = new AzureKeyVaultSigningConfig(keyMapping);
-
         mockWrapper = mock(AzureKeyVaultClientWrapper.class);
-        client = new AzureKeyVaultSigningClient(config, mockWrapper);
+        client = new AzureKeyVaultSigningClient(mockWrapper);
 
-        // Generate real P-256 keypair for testing
         final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
         gen.initialize(new ECGenParameterSpec("secp256r1"));
         testKeyPair = gen.generateKeyPair();
     }
 
     @Test
-    void fetchPublicKeyReturnsECPublicKeyForValidP256Key() throws Exception {
-        // Mock getKey to return P-256 EC key
+    void fetchPublicKeyReturnsContextWithAlgorithmForP256Key() {
         final JsonWebKey jwk = JsonWebKey.fromEc(testKeyPair, Security.getProvider("BC"));
         final KeyVaultKey keyVaultKey = mock(KeyVaultKey.class);
         when(keyVaultKey.getKey()).thenReturn(jwk);
@@ -68,7 +57,7 @@ class AzureKeyVaultSigningClientTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().publicKey()).isNotNull();
-        assertThat(result.get().componentSize()).isEqualTo(32);  // P-256
+        assertThat(result.get().algorithm()).isEqualTo(SignatureAlgorithm.ES256);
     }
 
     @Test
@@ -84,7 +73,6 @@ class AzureKeyVaultSigningClientTest {
 
     @Test
     void fetchPublicKeyReturnsEmptyForRSAKey() {
-        // Create RSA JWK (not supported)
         final JsonWebKey rsa = new JsonWebKey().setKeyType(KeyType.RSA);
         final KeyVaultKey keyVaultKey = mock(KeyVaultKey.class);
         when(keyVaultKey.getKey()).thenReturn(rsa);
@@ -98,16 +86,8 @@ class AzureKeyVaultSigningClientTest {
     }
 
     @Test
-    void signProducesDEREncodedSignature() throws Exception {
-        // Mock getKey for P-256
-        final JsonWebKey jwk = JsonWebKey.fromEc(testKeyPair, Security.getProvider("BC"));
-        final KeyVaultKey keyVaultKey = mock(KeyVaultKey.class);
-        when(keyVaultKey.getKey()).thenReturn(jwk);
-        when(mockWrapper.getKey("https://test-vault.vault.azure.net", "test-key"))
-                .thenReturn(keyVaultKey);
-
-        // Mock sign to return raw R||S (64 bytes for P-256)
-        final byte[] rawSig = new byte[64];  // Simplified - zero bytes
+    void signProducesDEREncodedSignature() {
+        final byte[] rawSig = new byte[64];
         final SignResult signResult = mock(SignResult.class);
         when(signResult.getSignature()).thenReturn(rawSig);
         when(mockWrapper.sign(
@@ -117,30 +97,21 @@ class AzureKeyVaultSigningClientTest {
                 any(byte[].class)))
                 .thenReturn(signResult);
 
-        // Call client
         final byte[] signature = client.sign(
-                "https://test-vault.vault.azure.net#test-key",
-                "test data".getBytes());
+                "https://test-vault.vault.azure.net", "test-key",
+                SignatureAlgorithm.ES256, "test data".getBytes());
 
-        // Verify signature is DER-encoded (DER is longer than raw for small values)
         assertThat(signature).isNotNull();
-        // DER for 64-byte raw sig is typically 70-72 bytes depending on high bits
     }
 
     @Test
-    void signThrowsExceptionOnServiceError() throws Exception {
-        final JsonWebKey jwk = JsonWebKey.fromEc(testKeyPair, Security.getProvider("BC"));
-        final KeyVaultKey keyVaultKey = mock(KeyVaultKey.class);
-        when(keyVaultKey.getKey()).thenReturn(jwk);
-        when(mockWrapper.getKey("https://test-vault.vault.azure.net", "test-key"))
-                .thenReturn(keyVaultKey);
-
+    void signThrowsExceptionOnServiceError() {
         when(mockWrapper.sign(any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Service unavailable"));
 
         assertThatThrownBy(() -> client.sign(
-                "https://test-vault.vault.azure.net#test-key",
-                "data".getBytes()))
+                "https://test-vault.vault.azure.net", "test-key",
+                SignatureAlgorithm.ES256, "data".getBytes()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Azure Key Vault signing failed");
     }

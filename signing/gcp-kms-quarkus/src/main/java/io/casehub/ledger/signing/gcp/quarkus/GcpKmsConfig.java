@@ -8,7 +8,7 @@ import io.smallrye.config.WithDefault;
 /**
  * Quarkus config mapping for GCP Cloud KMS signing.
  *
- * <p>Bridges Quarkus config to the pure Java {@link io.casehub.ledger.signing.gcp.GcpKmsSigningConfig}.
+ * <p>Maps actor IDs to CryptoKeyVersion resource names for {@link GcpKmsAgentSigner}.
  *
  * <p>Example:
  * <pre>

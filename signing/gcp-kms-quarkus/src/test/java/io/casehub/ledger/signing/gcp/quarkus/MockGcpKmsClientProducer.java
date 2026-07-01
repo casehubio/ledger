@@ -22,7 +22,6 @@ import com.google.protobuf.ByteString;
 
 import io.casehub.ledger.signing.gcp.GcpKmsClientWrapper;
 import io.casehub.ledger.signing.gcp.GcpKmsSigningClient;
-import io.casehub.ledger.signing.gcp.GcpKmsSigningConfig;
 
 /**
  * Test CDI producer for {@link GcpKmsAgentSigner} with a mocked {@link GcpKmsClientWrapper}.
@@ -56,12 +55,6 @@ public class MockGcpKmsClientProducer {
                         .setAlgorithm(CryptoKeyVersion.CryptoKeyVersionAlgorithm.EC_SIGN_P256_SHA256)
                         .build());
 
-        // Mock getCryptoKeyVersion — return P-256 algorithm
-        when(mockWrapper.getCryptoKeyVersion(any(String.class))).thenReturn(
-                CryptoKeyVersion.newBuilder()
-                        .setAlgorithm(CryptoKeyVersion.CryptoKeyVersionAlgorithm.EC_SIGN_P256_SHA256)
-                        .build());
-
         // Mock asymmetricSign — perform real ECDSA signing with the generated key pair
         when(mockWrapper.asymmetricSign(any(AsymmetricSignRequest.class))).thenAnswer(invocation -> {
             final AsymmetricSignRequest req = invocation.getArgument(0);
@@ -74,9 +67,7 @@ public class MockGcpKmsClientProducer {
                     .build();
         });
 
-        // Create client with mocked wrapper
-        final GcpKmsSigningClient client = new GcpKmsSigningClient(
-                new GcpKmsSigningConfig(config.keyMapping()), mockWrapper);
+        final GcpKmsSigningClient client = new GcpKmsSigningClient(mockWrapper);
 
         // Use the package-private test constructor that accepts a client
         return new GcpKmsAgentSigner(config, client);

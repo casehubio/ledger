@@ -8,7 +8,7 @@ import io.smallrye.config.WithDefault;
 /**
  * Quarkus config mapping for Azure Key Vault signing.
  *
- * <p>Bridges Quarkus config properties to the pure Java {@code AzureKeyVaultSigningConfig} POJO.
+ * <p>Maps actor IDs to Azure Key Vault key references for {@link AzureKeyVaultAgentSigner}.
  *
  * <p><strong>Activation:</strong>
  * <pre>

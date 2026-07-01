@@ -22,7 +22,7 @@
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-kms</artifactId>
-      <version>2.96.0</version>
+      <version>${google-cloud-kms.version}</version>
     </dependency>
 
     <!-- Testing -->
