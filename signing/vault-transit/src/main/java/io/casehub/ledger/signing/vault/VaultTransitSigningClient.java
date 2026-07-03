@@ -22,8 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <p>The private key never leaves Vault. Only the public key is fetched for storage on
  * ledger entries (needed by verification infrastructure). Signing happens via REST API call.
  *
- * <p><strong>Auth:</strong> Uses a static Vault token. Production deployments should use
- * AppRole or OIDC.
+ * <p><strong>Auth:</strong> Token passed per-call. Use {@link VaultTokenSource} for
+ * token lifecycle management (static, AppRole, Kubernetes, etc.).
  *
  * <p><strong>Algorithm support:</strong> Only {@code ed25519} Vault Transit key types are
  * supported. Vault returns a 64-byte raw signature prefixed with {@code vault:v1:} in
@@ -40,25 +40,26 @@ public class VaultTransitSigningClient {
     private static final String PEM_END = "-----END PUBLIC KEY-----";
 
     private final String address;
-    private final String token;
     private final HttpClient http;
     private final ObjectMapper mapper;
 
-    public VaultTransitSigningClient(final VaultTransitSigningConfig config) {
+    /**
+     * Constructs a client with shared HttpClient and ObjectMapper instances.
+     *
+     * @param config configuration containing Vault address and key mapping
+     * @param http   HTTP client (shared across requests)
+     * @param mapper JSON mapper (shared across requests)
+     */
+    public VaultTransitSigningClient(
+            final VaultTransitSigningConfig config,
+            final HttpClient http,
+            final ObjectMapper mapper) {
         Objects.requireNonNull(config, "config must not be null");
+        Objects.requireNonNull(http, "http must not be null");
+        Objects.requireNonNull(mapper, "mapper must not be null");
         this.address = config.address();
-        this.token = config.token();
-        this.http = HttpClient.newHttpClient();
-        this.mapper = new ObjectMapper();
-    }
-
-    // Visible for testing — allows injecting a custom HttpClient
-    VaultTransitSigningClient(final VaultTransitSigningConfig config, final HttpClient httpClient) {
-        Objects.requireNonNull(config, "config must not be null");
-        this.address = config.address();
-        this.token = config.token();
-        this.http = httpClient;
-        this.mapper = new ObjectMapper();
+        this.http = http;
+        this.mapper = mapper;
     }
 
     /**
@@ -71,12 +72,14 @@ public class VaultTransitSigningClient {
      * <p>Validates that the key type is {@code ed25519}. Non-ed25519 types are rejected
      * with a {@link RuntimeException}.
      *
+     * @param token   Vault authentication token
      * @param keyName Vault Transit key name
      * @return the Ed25519 public key
-     * @throws RuntimeException if the key is not found (HTTP 404), auth fails (HTTP 403),
-     *                          the key type is not ed25519, or the response is malformed
+     * @throws VaultAuthenticationException if authentication fails (HTTP 403)
+     * @throws RuntimeException             if the key is not found (HTTP 404),
+     *                                      the key type is not ed25519, or the response is malformed
      */
-    public PublicKey fetchPublicKey(final String keyName) {
+    public PublicKey fetchPublicKey(final String token, final String keyName) {
         try {
             final HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(address + "/v1/transit/keys/" + keyName))
@@ -84,6 +87,10 @@ public class VaultTransitSigningClient {
                     .GET()
                     .build();
             final HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 403) {
+                throw new VaultAuthenticationException("Vault authentication failed (HTTP 403) "
+                        + "fetching key info for " + keyName + ": " + resp.body());
+            }
             if (resp.statusCode() != 200) {
                 throw new RuntimeException("Vault returned HTTP " + resp.statusCode()
                         + " fetching key info for " + keyName + ": " + resp.body());
@@ -119,14 +126,16 @@ public class VaultTransitSigningClient {
      * <p>Calls {@code POST /v1/transit/sign/<keyName>} with the base64-encoded data.
      * Returns the raw signature bytes (strips the {@code vault:v1:} prefix and base64-decodes).
      *
+     * @param token   Vault authentication token
      * @param keyName Vault Transit key name
      * @param data    data to sign
      * @return raw Ed25519 signature bytes (64 bytes)
-     * @throws RuntimeException on Vault API errors or unexpected response format
+     * @throws VaultAuthenticationException if authentication fails (HTTP 403)
+     * @throws RuntimeException             on Vault API errors or unexpected response format
      */
-    public byte[] sign(final String keyName, final byte[] data) {
+    public byte[] sign(final String token, final String keyName, final byte[] data) {
         try {
-            return callVaultSign(keyName, data);
+            return callVaultSign(token, keyName, data);
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Vault Transit signing interrupted for key " + keyName, e);
@@ -137,7 +146,7 @@ public class VaultTransitSigningClient {
         }
     }
 
-    private byte[] callVaultSign(final String keyName, final byte[] data)
+    private byte[] callVaultSign(final String token, final String keyName, final byte[] data)
             throws IOException, InterruptedException {
         final String inputB64 = Base64.getEncoder().encodeToString(data);
         final String body = "{\"input\":\"" + inputB64 + "\"}";
@@ -148,6 +157,10 @@ public class VaultTransitSigningClient {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
         final HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() == 403) {
+            throw new VaultAuthenticationException("Vault authentication failed (HTTP 403) "
+                    + "signing with key " + keyName + ": " + resp.body());
+        }
         if (resp.statusCode() != 200) {
             throw new RuntimeException("Vault Transit sign returned HTTP " + resp.statusCode()
                     + " for key " + keyName + ": " + resp.body());

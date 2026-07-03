@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.http.HttpClient;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 /**
@@ -50,8 +52,8 @@ class VaultTransitSigningClientTest {
 
     private VaultTransitSigningClient createClient() {
         final VaultTransitSigningConfig config = new VaultTransitSigningConfig(
-                wireMock.baseUrl(), "test-token", Map.of("actor1", "my-key"));
-        return new VaultTransitSigningClient(config);
+                wireMock.baseUrl(), Map.of("actor1", "my-key"));
+        return new VaultTransitSigningClient(config, HttpClient.newHttpClient(), new ObjectMapper());
     }
 
     /** Returns the public key PEM as a Java string with real newlines. */
@@ -124,7 +126,7 @@ class VaultTransitSigningClientTest {
                 .withHeader("X-Vault-Token", equalTo("test-token"))
                 .willReturn(okJson(signResponse(sigBytes))));
 
-        final byte[] result = createClient().sign("my-key", data);
+        final byte[] result = createClient().sign("test-token", "my-key", data);
 
         assertThat(result).isEqualTo(sigBytes);
 
@@ -136,12 +138,12 @@ class VaultTransitSigningClientTest {
     }
 
     @Test
-    void sign_throwsOnNon200() {
+    void sign_throwsVaultAuthenticationExceptionOn403() {
         wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/my-key"))
                 .willReturn(forbidden()));
 
-        assertThatThrownBy(() -> createClient().sign("my-key", new byte[]{1}))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> createClient().sign("test-token", "my-key", new byte[]{1}))
+                .isInstanceOf(VaultAuthenticationException.class)
                 .hasMessageContaining("HTTP 403");
     }
 
@@ -154,7 +156,7 @@ class VaultTransitSigningClientTest {
                 .withHeader("X-Vault-Token", equalTo("test-token"))
                 .willReturn(okJson(keyInfoResponse(kp))));
 
-        final PublicKey result = createClient().fetchPublicKey("my-key");
+        final PublicKey result = createClient().fetchPublicKey("test-token", "my-key");
 
         assertThat(result.getEncoded()).isEqualTo(kp.getPublic().getEncoded());
         assertThat(result.getAlgorithm()).isIn("Ed25519", "EdDSA");
@@ -174,7 +176,7 @@ class VaultTransitSigningClientTest {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/my-key"))
                 .willReturn(okJson(multiVersionKeyInfoResponse(versionKeys))));
 
-        final PublicKey result = createClient().fetchPublicKey("my-key");
+        final PublicKey result = createClient().fetchPublicKey("test-token", "my-key");
 
         assertThat(result.getEncoded())
                 .as("Should select version 3 (highest), not version 1 (oldest)")
@@ -186,18 +188,18 @@ class VaultTransitSigningClientTest {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/missing-key"))
                 .willReturn(notFound()));
 
-        assertThatThrownBy(() -> createClient().fetchPublicKey("missing-key"))
+        assertThatThrownBy(() -> createClient().fetchPublicKey("test-token", "missing-key"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("HTTP 404");
     }
 
     @Test
-    void fetchPublicKey_throwsOn403() {
+    void fetchPublicKey_throwsVaultAuthenticationExceptionOn403() {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/my-key"))
                 .willReturn(forbidden()));
 
-        assertThatThrownBy(() -> createClient().fetchPublicKey("my-key"))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> createClient().fetchPublicKey("test-token", "my-key"))
+                .isInstanceOf(VaultAuthenticationException.class)
                 .hasMessageContaining("HTTP 403");
     }
 
@@ -214,7 +216,7 @@ class VaultTransitSigningClientTest {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/my-key"))
                 .willReturn(okJson(rsaKeyResponse)));
 
-        assertThatThrownBy(() -> createClient().fetchPublicKey("my-key"))
+        assertThatThrownBy(() -> createClient().fetchPublicKey("test-token", "my-key"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("rsa-2048")
                 .hasMessageContaining("requires ed25519");
@@ -233,7 +235,7 @@ class VaultTransitSigningClientTest {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/my-key"))
                 .willReturn(okJson(ecKeyResponse)));
 
-        assertThatThrownBy(() -> createClient().fetchPublicKey("my-key"))
+        assertThatThrownBy(() -> createClient().fetchPublicKey("test-token", "my-key"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("ecdsa-p256")
                 .hasMessageContaining("requires ed25519");
