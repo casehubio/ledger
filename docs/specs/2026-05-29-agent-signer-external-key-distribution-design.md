@@ -292,7 +292,8 @@ zero-latency rotation see #103.
 
 ```properties
 casehub.ledger.vault-transit.address=http://vault:8200
-casehub.ledger.vault-transit.token=<token>
+casehub.ledger.vault-transit.auth.method=token
+casehub.ledger.vault-transit.auth.token=<token>
 casehub.ledger.vault-transit.key-mapping."claude:reviewer@v1"=reviewer-signing-key
 casehub.ledger.vault-transit.refresh-interval=5m
 ```
@@ -378,8 +379,8 @@ and unchanged — the new ADR replaces the SPI contract that implements it. Reco
 
 | Issue | Description |
 |-------|-------------|
-| #101 | Vault AppRole / OIDC auth for `VaultTransitAgentSigner` |
-| #102 | Cloud KMS adapters (AWS KMS, GCP KMS, Azure Key Vault) |
+| #101 | ~~Vault AppRole / OIDC auth~~ — implemented (AppRole + Kubernetes auth) |
+| #102 | ~~Cloud KMS adapters~~ — implemented (AWS KMS, GCP KMS, Azure Key Vault) |
 | #103 | Rotation-triggered cache invalidation via CDI event (true hot swap) |
 | #104 | `InMemoryAgentSigner` in `persistence-memory/` |
 

@@ -1,6 +1,7 @@
 package io.casehub.ledger.signing.vault.quarkus;
 
 import java.util.Map;
+import java.util.Optional;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -22,13 +23,6 @@ public interface VaultTransitConfig {
     String address();
 
     /**
-     * Vault authentication token.
-     * Production deployments should use AppRole or OIDC instead.
-     */
-    @WithDefault("root")
-    String token();
-
-    /**
      * Map of actorId to Vault Transit key name.
      * Example: {@code casehub.ledger.vault-transit.key-mapping."claude:reviewer@v1"=reviewer-key}
      */
@@ -40,4 +34,58 @@ public interface VaultTransitConfig {
      */
     @WithDefault("5m")
     String refreshInterval();
+
+    /**
+     * Vault authentication configuration.
+     */
+    AuthConfig auth();
+
+    /**
+     * Vault authentication method configuration.
+     */
+    interface AuthConfig {
+
+        /**
+         * Authentication method: TOKEN, APPROLE, or KUBERNETES.
+         */
+        @WithDefault("token")
+        AuthMethod method();
+
+        /**
+         * Static token for TOKEN auth method.
+         */
+        Optional<String> token();
+
+        /**
+         * Role ID for AppRole auth method.
+         */
+        Optional<String> roleId();
+
+        /**
+         * Secret ID for AppRole auth method.
+         */
+        Optional<String> secretId();
+
+        /**
+         * Role for Kubernetes auth method.
+         */
+        Optional<String> role();
+
+        /**
+         * Path to Kubernetes JWT token file for KUBERNETES auth method.
+         */
+        @WithDefault("/var/run/secrets/kubernetes.io/serviceaccount/token")
+        String jwtPath();
+
+        /**
+         * Vault mount path for AppRole or Kubernetes auth.
+         * Defaults to {@code approle} or {@code kubernetes} if not specified.
+         */
+        Optional<String> mountPath();
+    }
+
+    /**
+     * Vault authentication methods supported by this adapter.
+     */
+    enum AuthMethod { TOKEN, APPROLE, KUBERNETES }
 }

@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -30,6 +31,7 @@ import io.casehub.ledger.runtime.service.AgentKeyMaterial;
 import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
+import io.casehub.ledger.signing.vault.VaultAuthenticationException;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -91,7 +93,6 @@ class VaultTransitAgentSignerIT {
 
     private static void stubKeyInfo(final KeyPair kp) {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/reviewer-key"))
-                .withHeader("X-Vault-Token", equalTo("test-token"))
                 .willReturn(okJson(keyInfoResponse(kp))));
     }
 
@@ -105,7 +106,6 @@ class VaultTransitAgentSignerIT {
     private static void stubSign(final KeyPair kp, final byte[] data) throws Exception {
         final byte[] sigBytes = realSign(kp, data);
         wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
-                .withHeader("X-Vault-Token", equalTo("test-token"))
                 .willReturn(okJson(signResponse(sigBytes))));
     }
 
@@ -177,5 +177,80 @@ class VaultTransitAgentSignerIT {
         final Optional<AgentSignature> result = agentSigner.sign("unmapped-actor", new byte[]{1});
         assertThat(result).isEmpty();
         wireMock.verify(0, anyRequestedFor(anyUrl()));
+    }
+
+    @Test
+    void retries_onVaultAuthenticationException() throws Exception {
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "retry test".getBytes();
+        stubKeyInfo(kp);
+
+        // First sign call returns 403
+        wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
+                .inScenario("auth-retry")
+                .whenScenarioStateIs("Started")
+                .willReturn(okJson("{\"errors\":[]}").withStatus(403))
+                .willSetStateTo("retried"));
+
+        // Second sign call (after tokenSource.invalidate()) succeeds
+        final byte[] sigBytes = realSign(kp, data);
+        wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
+                .inScenario("auth-retry")
+                .whenScenarioStateIs("retried")
+                .willReturn(okJson(signResponse(sigBytes))));
+
+        final Optional<AgentSignature> result = agentSigner.sign("claude:reviewer@v1", data);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().publicKey()).isEqualTo(kp.getPublic().getEncoded());
+        // Verify exactly 2 sign calls (first 403, second success)
+        wireMock.verify(2, anyRequestedFor(urlEqualTo("/v1/transit/sign/reviewer-key")));
+    }
+
+    @Test
+    void retries_exhausted_onDouble403() throws Exception {
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "double 403 test".getBytes();
+        stubKeyInfo(kp);
+
+        // Both sign calls return 403
+        wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
+                .willReturn(okJson("{\"errors\":[]}").withStatus(403)));
+
+        // Second 403 throws VaultAuthenticationException (not caught by adapter)
+        assertThatThrownBy(() -> agentSigner.sign("claude:reviewer@v1", data))
+                .isInstanceOf(VaultAuthenticationException.class)
+                .hasMessageContaining("Vault authentication failed (HTTP 403)");
+
+        // Verify exactly 2 sign calls (first 403 + retry 403)
+        wireMock.verify(2, anyRequestedFor(urlEqualTo("/v1/transit/sign/reviewer-key")));
+    }
+
+    @Test
+    void retries_onFetchPublicKey403() throws Exception {
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "key fetch retry test".getBytes();
+
+        // First key fetch returns 403
+        wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/reviewer-key"))
+                .inScenario("key-retry")
+                .whenScenarioStateIs("Started")
+                .willReturn(okJson("{\"errors\":[]}").withStatus(403))
+                .willSetStateTo("retried"));
+
+        // Second key fetch (after tokenSource.invalidate()) succeeds
+        wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/reviewer-key"))
+                .inScenario("key-retry")
+                .whenScenarioStateIs("retried")
+                .willReturn(okJson(keyInfoResponse(kp))));
+
+        stubSign(kp, data);
+
+        final Optional<AgentSignature> result = agentSigner.sign("claude:reviewer@v1", data);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().publicKey()).isEqualTo(kp.getPublic().getEncoded());
+        // Verify exactly 2 key fetch calls (first 403, second success)
+        wireMock.verify(2, getRequestedFor(urlEqualTo("/v1/transit/keys/reviewer-key")));
     }
 }

@@ -20,8 +20,9 @@ Vault Transit ECDSA (ecdsa-p256): ASN.1 DER — same format JCA expects, no conv
 
 ## Auth
 
-This example uses a static token (`casehub.ledger.vault-transit.token`).
-Production deployments should use AppRole or OIDC — see issue #101.
+This example uses a static token (`casehub.ledger.vault-transit.auth.method=token`).
+Production deployments use AppRole (`auth.method=approle`) or Kubernetes
+(`auth.method=kubernetes`) — see `VaultTransitConfig.AuthConfig`.
 
 ## PKCS#11 HSMs via JCA
 
