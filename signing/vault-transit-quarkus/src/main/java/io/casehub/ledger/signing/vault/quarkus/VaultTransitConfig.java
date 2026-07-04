@@ -46,7 +46,7 @@ public interface VaultTransitConfig {
     interface AuthConfig {
 
         /**
-         * Authentication method: TOKEN, APPROLE, or KUBERNETES.
+         * Authentication method: TOKEN, APPROLE, KUBERNETES, or JWT.
          */
         @WithDefault("token")
         AuthMethod method();
@@ -67,19 +67,26 @@ public interface VaultTransitConfig {
         Optional<String> secretId();
 
         /**
-         * Role for Kubernetes auth method.
+         * Role for Kubernetes or JWT auth methods.
          */
         Optional<String> role();
 
         /**
-         * Path to Kubernetes JWT token file for KUBERNETES auth method.
+         * Path to JWT file for KUBERNETES or JWT auth methods.
          */
-        @WithDefault("/var/run/secrets/kubernetes.io/serviceaccount/token")
-        String jwtPath();
+        Optional<String> jwtPath();
 
         /**
-         * Vault mount path for AppRole or Kubernetes auth.
-         * Defaults to {@code approle} or {@code kubernetes} if not specified.
+         * Static JWT string for JWT auth method. Mutually exclusive with jwt-path.
+         * Quarkus config substitution applies: {@code ${MY_JWT_TOKEN}} resolves from environment.
+         */
+        Optional<String> jwt();
+
+        /**
+         * Vault mount path for AppRole, Kubernetes, or JWT auth.
+         * Defaults to the auth method name if not specified.
+         * For Vault OIDC auth backends, use {@code mountPath=oidc} with {@code method=jwt}
+         * — the JWT and OIDC auth methods share the same login API.
          */
         Optional<String> mountPath();
     }
@@ -87,5 +94,5 @@ public interface VaultTransitConfig {
     /**
      * Vault authentication methods supported by this adapter.
      */
-    enum AuthMethod { TOKEN, APPROLE, KUBERNETES }
+    enum AuthMethod { TOKEN, APPROLE, KUBERNETES, JWT }
 }

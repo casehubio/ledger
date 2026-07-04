@@ -2,15 +2,20 @@ package io.casehub.ledger.signing.vault.quarkus;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.Signature;
@@ -24,6 +29,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 
@@ -32,6 +38,8 @@ import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
 import io.casehub.ledger.signing.vault.VaultAuthenticationException;
+import io.casehub.ledger.signing.vault.quarkus.VaultTransitConfig.AuthConfig;
+import io.casehub.ledger.signing.vault.quarkus.VaultTransitConfig.AuthMethod;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -252,5 +260,168 @@ class VaultTransitAgentSignerIT {
         assertThat(result.get().publicKey()).isEqualTo(kp.getPublic().getEncoded());
         // Verify exactly 2 key fetch calls (first 403, second success)
         wireMock.verify(2, getRequestedFor(urlEqualTo("/v1/transit/keys/reviewer-key")));
+    }
+
+    @Test
+    void jwtAuth_fileBasedJwt_signsSuccessfully(@TempDir final Path tempDir) throws Exception {
+        final Path jwtFile = tempDir.resolve("vault-jwt");
+        Files.writeString(jwtFile, "eyJhbGciOiJSUzI1NiJ9.file-jwt");
+
+        // Stub JWT auth login
+        wireMock.stubFor(post(urlEqualTo("/v1/auth/jwt/login"))
+                .willReturn(okJson("{\"auth\":{\"client_token\":\"hvs.jwt-file\","
+                        + "\"lease_duration\":3600,\"renewable\":true}}")));
+
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "jwt file auth test".getBytes();
+        stubKeyInfo(kp);
+        stubSign(kp, data);
+
+        // Build config stub for JWT file auth
+        final VaultTransitConfig config = jwtConfig(
+                Optional.of(jwtFile.toString()), Optional.empty(), Optional.empty());
+
+        final var signer = new VaultTransitAgentSigner(config);
+        final Optional<AgentSignature> result = signer.sign("claude:reviewer@v1", data);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().publicKey()).isEqualTo(kp.getPublic().getEncoded());
+
+        wireMock.verify(postRequestedFor(urlEqualTo("/v1/auth/jwt/login"))
+                .withRequestBody(containing("eyJhbGciOiJSUzI1NiJ9.file-jwt")));
+    }
+
+    @Test
+    void jwtAuth_staticJwt_signsSuccessfully() throws Exception {
+        // Stub JWT auth login
+        wireMock.stubFor(post(urlEqualTo("/v1/auth/jwt/login"))
+                .willReturn(okJson("{\"auth\":{\"client_token\":\"hvs.jwt-static\","
+                        + "\"lease_duration\":3600,\"renewable\":true}}")));
+
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "jwt static auth test".getBytes();
+        stubKeyInfo(kp);
+        stubSign(kp, data);
+
+        final VaultTransitConfig config = jwtConfig(
+                Optional.empty(), Optional.of("eyJhbGciOiJSUzI1NiJ9.static-jwt"), Optional.empty());
+
+        final var signer = new VaultTransitAgentSigner(config);
+        final Optional<AgentSignature> result = signer.sign("claude:reviewer@v1", data);
+
+        assertThat(result).isPresent();
+        wireMock.verify(postRequestedFor(urlEqualTo("/v1/auth/jwt/login"))
+                .withRequestBody(containing("eyJhbGciOiJSUzI1NiJ9.static-jwt")));
+    }
+
+    @Test
+    void jwtAuth_missingRole_failsFast() {
+        final VaultTransitConfig config = jwtConfig(
+                Optional.of("/tmp/jwt"), Optional.empty(), Optional.empty(),
+                Optional.empty()); // no role
+
+        assertThatThrownBy(() -> new VaultTransitAgentSigner(config))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("auth.role required");
+    }
+
+    @Test
+    void jwtAuth_bothJwtAndJwtPath_failsFast() {
+        final VaultTransitConfig config = jwtConfig(
+                Optional.of("/tmp/jwt"), Optional.of("inline-jwt"), Optional.empty());
+
+        assertThatThrownBy(() -> new VaultTransitAgentSigner(config))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("specify jwt-path or jwt, not both");
+    }
+
+    @Test
+    void jwtAuth_neitherJwtNorJwtPath_failsFast() {
+        final VaultTransitConfig config = jwtConfig(
+                Optional.empty(), Optional.empty(), Optional.empty());
+
+        assertThatThrownBy(() -> new VaultTransitAgentSigner(config))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("auth.jwt or auth.jwt-path required");
+    }
+
+    @Test
+    void kubernetesAuth_defaultJwtPath_configPath(@TempDir final Path tempDir) throws Exception {
+        // This test verifies the KUBERNETES case in createTokenSource() applies
+        // the default K8s service account path when jwtPath is absent.
+        // Since the default path won't exist in test, we provide an explicit path.
+        final Path jwtFile = tempDir.resolve("sa-token");
+        Files.writeString(jwtFile, "eyJhbGciOiJSUzI1NiJ9.k8s-sa");
+
+        wireMock.stubFor(post(urlEqualTo("/v1/auth/kubernetes/login"))
+                .willReturn(okJson("{\"auth\":{\"client_token\":\"hvs.k8s\","
+                        + "\"lease_duration\":3600,\"renewable\":true}}")));
+
+        final KeyPair kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        final byte[] data = "k8s auth test".getBytes();
+        stubKeyInfo(kp);
+        stubSign(kp, data);
+
+        final VaultTransitConfig config = kubernetesConfig(
+                Optional.of("my-role"), Optional.of(jwtFile.toString()), Optional.empty());
+
+        final var signer = new VaultTransitAgentSigner(config);
+        final Optional<AgentSignature> result = signer.sign("claude:reviewer@v1", data);
+
+        assertThat(result).isPresent();
+        wireMock.verify(postRequestedFor(urlEqualTo("/v1/auth/kubernetes/login"))
+                .withRequestBody(containing("eyJhbGciOiJSUzI1NiJ9.k8s-sa")));
+    }
+
+    private static VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
+            final Optional<String> jwt, final Optional<String> mountPathOpt) {
+        return jwtConfig(jwtPath, jwt, mountPathOpt, Optional.of("my-role"));
+    }
+
+    private static VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
+            final Optional<String> jwt, final Optional<String> mountPathOpt,
+            final Optional<String> role) {
+        return new VaultTransitConfig() {
+            @Override public String address() { return "http://localhost:8098"; }
+            @Override public java.util.Map<String, String> keyMapping() {
+                return java.util.Map.of("claude:reviewer@v1", "reviewer-key");
+            }
+            @Override public String refreshInterval() { return "24h"; }
+            @Override public AuthConfig auth() {
+                return new AuthConfig() {
+                    @Override public AuthMethod method() { return AuthMethod.JWT; }
+                    @Override public Optional<String> token() { return Optional.empty(); }
+                    @Override public Optional<String> roleId() { return Optional.empty(); }
+                    @Override public Optional<String> secretId() { return Optional.empty(); }
+                    @Override public Optional<String> role() { return role; }
+                    @Override public Optional<String> jwtPath() { return jwtPath; }
+                    @Override public Optional<String> jwt() { return jwt; }
+                    @Override public Optional<String> mountPath() { return mountPathOpt; }
+                };
+            }
+        };
+    }
+
+    private static VaultTransitConfig kubernetesConfig(final Optional<String> role,
+            final Optional<String> jwtPath, final Optional<String> mountPath) {
+        return new VaultTransitConfig() {
+            @Override public String address() { return "http://localhost:8098"; }
+            @Override public java.util.Map<String, String> keyMapping() {
+                return java.util.Map.of("claude:reviewer@v1", "reviewer-key");
+            }
+            @Override public String refreshInterval() { return "24h"; }
+            @Override public AuthConfig auth() {
+                return new AuthConfig() {
+                    @Override public AuthMethod method() { return AuthMethod.KUBERNETES; }
+                    @Override public Optional<String> token() { return Optional.empty(); }
+                    @Override public Optional<String> roleId() { return Optional.empty(); }
+                    @Override public Optional<String> secretId() { return Optional.empty(); }
+                    @Override public Optional<String> role() { return role; }
+                    @Override public Optional<String> jwtPath() { return jwtPath; }
+                    @Override public Optional<String> jwt() { return Optional.empty(); }
+                    @Override public Optional<String> mountPath() { return mountPath; }
+                };
+            }
+        };
     }
 }

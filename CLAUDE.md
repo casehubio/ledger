@@ -460,6 +460,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 
 **Signing module architecture:** Two-layer per provider: pure Java client (zero framework deps, usable from Spring/Micronaut/plain Java) + Quarkus CDI adapter (extends `AbstractCachingAgentSigner`, `@Alternative @Priority(1)`). EC keys only — RSA out of scope. Consumer activation: `quarkus.arc.selected-alternatives=<adapter class>`.
 
+**Vault Transit auth methods:** `VaultTransitConfig.AuthConfig` supports `AuthMethod.TOKEN` (static token), `AuthMethod.APPROLE` (AppRole auth with role-id + secret-id), `AuthMethod.KUBERNETES` (Kubernetes auth with service account token), and `AuthMethod.JWT` (JWT/OIDC auth with `role` + `jwt` from file/env). `JwtVaultTokenSource` handles JWT auth via `/v1/auth/jwt/login` endpoint. Browser-based OIDC flow (two-step auth URL + callback) deferred to #171.
+
 ---
 
 ## Build and Test

@@ -18,7 +18,7 @@ import io.casehub.ledger.runtime.service.AbstractCachingAgentSigner;
 import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.signing.vault.AppRoleVaultTokenSource;
-import io.casehub.ledger.signing.vault.KubernetesVaultTokenSource;
+import io.casehub.ledger.signing.vault.JwtVaultTokenSource;
 import io.casehub.ledger.signing.vault.StaticVaultTokenSource;
 import io.casehub.ledger.signing.vault.VaultAuthenticationException;
 import io.casehub.ledger.signing.vault.VaultTokenSource;
@@ -34,7 +34,7 @@ import io.quarkus.scheduler.Scheduled;
  * <p>The private key never leaves Vault. Only the public key is fetched and cached locally
  * (for storage on {@code LedgerEntry.agentPublicKey}, needed by {@code AgentCryptographicVerifier}).
  *
- * <p><strong>Auth:</strong> Supports TOKEN, APPROLE, and KUBERNETES auth methods.
+ * <p><strong>Auth:</strong> Supports TOKEN, APPROLE, KUBERNETES, and JWT auth methods.
  * Configure via {@code casehub.ledger.vault-transit.auth.method}.
  * 403 responses trigger token invalidation and a single retry.
  *
@@ -109,9 +109,30 @@ public class VaultTransitAgentSigner extends AbstractCachingAgentSigner<VaultTra
                 final String role = authConfig.role()
                         .orElseThrow(() -> new IllegalStateException(
                                 "casehub.ledger.vault-transit.auth.role required when auth.method=kubernetes"));
-                final java.nio.file.Path jwtPath = java.nio.file.Path.of(authConfig.jwtPath());
+                final java.nio.file.Path jwtPath = java.nio.file.Path.of(
+                        authConfig.jwtPath().orElse("/var/run/secrets/kubernetes.io/serviceaccount/token"));
                 final String mountPath = authConfig.mountPath().orElse("kubernetes");
-                yield new KubernetesVaultTokenSource(config.address(), role, jwtPath, mountPath,
+                yield JwtVaultTokenSource.fromFile(config.address(), role, jwtPath, mountPath,
+                        httpClient, objectMapper, java.time.Clock.systemUTC());
+            }
+            case JWT -> {
+                final String role = authConfig.role()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "casehub.ledger.vault-transit.auth.role required when auth.method=jwt"));
+                final String mountPath = authConfig.mountPath().orElse("jwt");
+                if (authConfig.jwtPath().isPresent() && authConfig.jwt().isPresent()) {
+                    throw new IllegalStateException(
+                            "casehub.ledger.vault-transit.auth: specify jwt-path or jwt, not both");
+                }
+                if (authConfig.jwtPath().isPresent()) {
+                    yield JwtVaultTokenSource.fromFile(config.address(), role,
+                            java.nio.file.Path.of(authConfig.jwtPath().get()), mountPath,
+                            httpClient, objectMapper, java.time.Clock.systemUTC());
+                }
+                final String jwt = authConfig.jwt()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "casehub.ledger.vault-transit.auth.jwt or auth.jwt-path required when auth.method=jwt"));
+                yield new JwtVaultTokenSource(config.address(), role, () -> jwt, mountPath,
                         httpClient, objectMapper, java.time.Clock.systemUTC());
             }
         };

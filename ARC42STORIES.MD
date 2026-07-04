@@ -1303,7 +1303,6 @@ Full ADR catalogue: `docs/adr/INDEX.md` (17 ADRs; 2 superseded).
 | Item | Layer | Source |
 |---|---|---|
 | Cloud KMS `AgentSigner` adapters (AWS, GCP, Azure) not implemented | L5 | #102 |
-| Vault AppRole/OIDC auth for `VaultTransitAgentSigner` not implemented | L5 | #101 |
 | Reactive service tier code-generation not evaluated | L8 | #96 (wait until service pair count ≥ 5) |
 | Artifact trust scoring for content-hashed artifacts not implemented | L4 | #137 (wait for casehub-ops consumer) |
 | Stale ADR file: `0016-plain-ledger-entry-generic-concrete-subclass.md` is a duplicate of ADR 0017 | — | File anomaly; ADR INDEX correctly maps 0016 to EigenTrust |
