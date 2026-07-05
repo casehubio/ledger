@@ -19,6 +19,7 @@
     <module>deployment</module>
     <module>persistence-memory</module>
     <module>consumer-compat-test</module>
+    <module>testing</module>
   </modules>
 
   <repositories>
@@ -77,6 +78,12 @@
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-identity</artifactId>
         <version>0.2-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-ledger-testing</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>

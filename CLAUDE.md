@@ -144,6 +144,7 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Runtime artifactId | `casehub-ledger` |
 | Deployment artifactId | `casehub-ledger-deployment` |
 | persistence-memory artifactId | `casehub-ledger-memory` |
+| Testing artifactId | `casehub-ledger-testing` |
 | Vault Transit artifactId | `casehub-ledger-vault-transit` / `casehub-ledger-vault-transit-quarkus` |
 | AWS KMS artifactId | `casehub-ledger-aws-kms` / `casehub-ledger-aws-kms-quarkus` |
 | GCP Cloud KMS artifactId | `casehub-ledger-gcp-kms` / `casehub-ledger-gcp-kms-quarkus` |
@@ -461,6 +462,10 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
         ├── InMemoryReactiveKeyRotationRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
         ├── InMemoryCrossTenantLedgerEntryRepository.java — @Alternative @Priority(1); cross-tenant delegate
         └── InMemoryCrossTenantReactiveLedgerEntryRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
+└── testing/
+    └── src/main/java/io/casehub/ledger/testing/
+        ├── NoOpLedgerEntryRepository.java           — @Alternative @Priority(1); no-op LedgerEntryRepository for consumer test profiles
+        └── NoOpReactiveLedgerEntryRepository.java   — @Alternative @Priority(1); no-op ReactiveLedgerEntryRepository for consumer test profiles
 └── signing/                              — first-class signing adapter modules (profile: with-signing)
     ├── pom.xml                           — aggregator POM
     ├── vault-transit/                    → io.casehub:casehub-ledger-vault-transit (pure Java; HttpClient + Jackson)
