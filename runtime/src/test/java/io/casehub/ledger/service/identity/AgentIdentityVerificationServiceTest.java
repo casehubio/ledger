@@ -3,7 +3,7 @@ package io.casehub.ledger.service.identity;
 import io.casehub.platform.api.identity.IdentityVerificationResult;
 import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.VerificationMethod;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.service.identity.AgentIdentityVerificationService;
 import org.junit.jupiter.api.Test;
 

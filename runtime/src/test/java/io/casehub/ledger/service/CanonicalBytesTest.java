@@ -12,13 +12,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.casehub.platform.api.identity.ActorType;
 
 /**
- * Tests for {@link io.casehub.ledger.runtime.model.LedgerEntry#canonicalBytes()}
- * and {@link io.casehub.ledger.runtime.model.LedgerEntry#domainContentBytes()}.
+ * Tests for {@link io.casehub.ledger.api.model.LedgerEntry#canonicalBytes()}
+ * and {@link io.casehub.ledger.api.model.LedgerEntry#domainContentBytes()}.
  */
 class CanonicalBytesTest {
 
@@ -56,7 +56,7 @@ class CanonicalBytesTest {
         entry.tenancyId = "default";
         entry.actorType = ActorType.AGENT;
 
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.rationale = "Test rationale for compliance";
         entry.attach(cs);
 
@@ -182,7 +182,7 @@ class CanonicalBytesTest {
         entry.tenancyId = "default";
         entry.actorType = ActorType.AGENT;
 
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.confidenceScore = 0.85;
         entry.attach(cs);
 

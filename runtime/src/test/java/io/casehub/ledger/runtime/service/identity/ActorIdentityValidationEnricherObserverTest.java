@@ -20,7 +20,7 @@ import io.casehub.platform.api.identity.AgentCredentialValidator;
 import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.DIDResolver;
 import io.casehub.platform.api.identity.VerificationMethod;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 
 /**

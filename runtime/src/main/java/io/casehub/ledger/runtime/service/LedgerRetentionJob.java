@@ -17,8 +17,9 @@ import org.jboss.logging.Logger;
 
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerEntryArchiveRecord;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
@@ -156,7 +157,7 @@ public class LedgerRetentionJob {
         // for JOINED inheritance, causing OptimisticLockException (row count mismatch).
         // em.find() returns the correctly-typed managed entity in this EM's context.
         for (final LedgerEntry e : sorted) {
-            final LedgerEntry managed = entityManager.find(LedgerEntry.class, e.id);
+            final LedgerEntry managed = entityManager.find(JpaLedgerEntry.class, e.id);
             if (managed != null) {
                 entityManager.remove(managed);
             }

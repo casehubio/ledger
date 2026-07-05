@@ -11,8 +11,8 @@ import jakarta.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.model.CompromisedWindow;
 import io.casehub.ledger.runtime.service.model.VerificationResult;
 

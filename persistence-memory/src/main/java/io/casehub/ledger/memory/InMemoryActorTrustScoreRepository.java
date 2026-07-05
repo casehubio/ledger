@@ -11,7 +11,7 @@ import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.platform.api.identity.ActorType;

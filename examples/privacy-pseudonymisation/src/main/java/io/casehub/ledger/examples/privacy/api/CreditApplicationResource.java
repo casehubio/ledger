@@ -15,9 +15,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.privacy.service.CreditApplicationService;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService.ErasureResult;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * REST endpoints for the credit application privacy demonstration.

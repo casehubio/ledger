@@ -15,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.LedgerProvExportService;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
@@ -73,7 +73,7 @@ class LedgerProvExportServiceIT {
     void exportSubject_complianceSupplement_fieldsInOutput() throws Exception {
         UUID sub = UUID.randomUUID();
         TestEntry e = seed(sub, 1, "actor-a");
-        ComplianceSupplement cs = new ComplianceSupplement();
+        JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "gpt-4o";
         cs.confidenceScore = 0.88;
         e.attach(cs);
@@ -94,7 +94,7 @@ class LedgerProvExportServiceIT {
     void exportSubject_provenanceSupplement_hadPrimarySourcePresent() throws Exception {
         UUID sub = UUID.randomUUID();
         TestEntry e = seed(sub, 1, "actor-a");
-        ProvenanceSupplement ps = new ProvenanceSupplement();
+        JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wi-abc";
         ps.sourceEntityType = "WorkItem";
         ps.sourceEntitySystem = "tarkus";

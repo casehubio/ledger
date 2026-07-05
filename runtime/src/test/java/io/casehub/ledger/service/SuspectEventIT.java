@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSignatureSuspectEvent;
 import io.casehub.ledger.runtime.service.AgentSigner;

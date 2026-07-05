@@ -25,7 +25,7 @@ import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.VerificationMethod;
 import io.casehub.ledger.runtime.model.ActorIdentityBindingEntry;
 import io.casehub.ledger.runtime.repository.ActorIdentityBindingRepository;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AgentKeyMaterial;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
@@ -42,7 +42,7 @@ import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_I
 /**
  * Integration tests for the async {@code ActorIdentityBindingEntry} persistence pipeline.
  *
- * <p>Verifies that saving a {@link io.casehub.ledger.runtime.model.LedgerEntry} with a DID
+ * <p>Verifies that saving a {@link io.casehub.ledger.api.model.LedgerEntry} with a DID
  * binding triggers the enricher → async CDI event → observer → binding entry persist flow
  * end-to-end inside a Quarkus container with H2.
  *

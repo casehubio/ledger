@@ -4,11 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 @Entity
 @Table(name = "task_ledger_entry")
-public class TaskLedgerEntry extends LedgerEntry {
+public class TaskLedgerEntry extends JpaLedgerEntry {
 
     @Column(name = "task_type")
     public String taskType;

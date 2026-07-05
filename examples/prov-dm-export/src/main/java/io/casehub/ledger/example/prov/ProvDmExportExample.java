@@ -8,9 +8,9 @@ import jakarta.transaction.Transactional;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.LedgerProvExportService;
 
 /**
@@ -37,7 +37,7 @@ public class ProvDmExportExample {
         e1.actorId = "classifier-agent-v2";
         e1.actorType = ActorType.AGENT;
         e1.actorRole = "Classifier";
-        ComplianceSupplement cs = new ComplianceSupplement();
+        JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "gpt-4o";
         cs.confidenceScore = 0.94;
         cs.contestationUri = "https://example.com/challenge/" + subjectId;
@@ -56,7 +56,7 @@ public class ProvDmExportExample {
         e2.actorId = "orchestrator-system";
         e2.actorType = ActorType.SYSTEM;
         e2.actorRole = "Orchestrator";
-        ProvenanceSupplement ps = new ProvenanceSupplement();
+        JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wi-" + UUID.randomUUID();
         ps.sourceEntityType = "WorkItem";
         ps.sourceEntitySystem = "tarkus";

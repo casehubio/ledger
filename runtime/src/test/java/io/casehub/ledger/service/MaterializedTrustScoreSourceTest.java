@@ -12,7 +12,7 @@ import java.util.OptionalDouble;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.MaterializedTrustScoreSource;

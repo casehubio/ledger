@@ -19,7 +19,7 @@ import io.casehub.platform.api.identity.ActorType;
 public class LedgerAttestationAccessor extends LedgerAttestation {
 
     /** Create a test attestation. Field assignment runs inside this subclass. */
-    public static LedgerAttestation create(final UUID entryId, final UUID subjectId,
+    public static io.casehub.ledger.api.model.LedgerAttestation create(final UUID entryId, final UUID subjectId,
             final String attestorId, final String capabilityTag) {
         final LedgerAttestationAccessor a = new LedgerAttestationAccessor();
         a.ledgerEntryId = entryId;
@@ -33,7 +33,7 @@ public class LedgerAttestationAccessor extends LedgerAttestation {
     }
 
     /** Create a test attestation with explicit attestorType. */
-    public static LedgerAttestation create(final UUID entryId, final UUID subjectId,
+    public static io.casehub.ledger.api.model.LedgerAttestation create(final UUID entryId, final UUID subjectId,
             final String attestorId, final String capabilityTag, final ActorType attestorType) {
         final LedgerAttestationAccessor a = new LedgerAttestationAccessor();
         a.ledgerEntryId = entryId;
@@ -47,12 +47,12 @@ public class LedgerAttestationAccessor extends LedgerAttestation {
     }
 
     /** Read {@code attestorId} via subclass context. */
-    public static String attestorId(final LedgerAttestation a) {
+    public static String attestorId(final io.casehub.ledger.api.model.LedgerAttestation a) {
         return ((LedgerAttestationAccessor) a).attestorId;
     }
 
     /** Read {@code capabilityTag} via subclass context. */
-    public static String capabilityTag(final LedgerAttestation a) {
+    public static String capabilityTag(final io.casehub.ledger.api.model.LedgerAttestation a) {
         return ((LedgerAttestationAccessor) a).capabilityTag;
     }
 }

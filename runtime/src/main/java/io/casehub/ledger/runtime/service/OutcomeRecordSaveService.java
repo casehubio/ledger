@@ -7,9 +7,9 @@ import jakarta.transaction.Transactional;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.PlainLedgerEntry;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * Transactional inner service for {@link DefaultOutcomeRecorder}.

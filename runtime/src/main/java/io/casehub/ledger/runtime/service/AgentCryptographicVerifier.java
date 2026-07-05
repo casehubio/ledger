@@ -11,7 +11,7 @@ import java.util.List;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.service.model.VerificationResult;
 
 /**

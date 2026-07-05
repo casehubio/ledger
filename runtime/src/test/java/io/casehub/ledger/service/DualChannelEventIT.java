@@ -3,7 +3,6 @@ package io.casehub.ledger.service;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -20,7 +19,7 @@ import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSignatureVerificationService;
 import io.casehub.ledger.runtime.service.KeyRotationService;

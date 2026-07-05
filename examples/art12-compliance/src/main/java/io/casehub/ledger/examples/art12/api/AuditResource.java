@@ -16,8 +16,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.art12.service.AuditService;
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 
 /**
  * REST API for the art12-compliance example.
@@ -67,7 +67,7 @@ public class AuditResource {
     }
 
     private Map<String, Object> toView(final LedgerEntry e) {
-        final ComplianceSupplement cs = e.compliance().orElse(null);
+        final JpaComplianceSupplement cs = e.compliance().orElse(null);
         return Map.of(
                 "id", String.valueOf(e.id),
                 "actorId", e.actorId != null ? e.actorId : "",

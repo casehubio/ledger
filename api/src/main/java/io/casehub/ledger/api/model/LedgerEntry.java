@@ -1,11 +1,20 @@
 package io.casehub.ledger.api.model;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Transient;
 
 import io.casehub.platform.api.identity.ActorType;
 
@@ -38,25 +47,38 @@ import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
  * <h2>JPA JOINED inheritance</h2>
  * <p>
  * Domain-specific subclasses (e.g. {@code WorkItemLedgerEntry} in Tarkus) extend
- * this class and add a sibling table joined on {@code id}. Supplements are orthogonal
- * to subclasses — any subclass can attach any supplement.
+ * the JPA entity subclass and add a sibling table joined on {@code id}. Supplements
+ * are orthogonal to subclasses — any subclass can attach any supplement.
  *
  * <h2>Hash chain</h2>
  * <p>
  * The {@code digest} field holds the RFC 9162 leaf hash — {@code SHA-256(0x00 | canonical fields)}.
  * Chain integrity is maintained by the Merkle Mountain Range in {@code LedgerMerkleFrontier}.
+ *
+ * <h2>Two-tier design</h2>
+ * <p>
+ * This class is {@code @MappedSuperclass} — it defines all persistent fields and the
+ * canonical bytes computation. JPA-specific machinery ({@code @Entity}, {@code @Inheritance},
+ * {@code @NamedQuery}, {@code @EntityListeners}) lives on the runtime
+ * {@code JpaLedgerEntry} subclass. Non-JPA backends (in-memory, event-sourced) extend
+ * this class directly.
  */
+@MappedSuperclass
 public abstract class LedgerEntry {
+
+    private static final byte[] EMPTY_BYTES = new byte[0];
 
     // ── Core identity ─────────────────────────────────────────────────────────
 
-    /** Primary key — UUID assigned on first persist. */
-    public UUID id;
+    /** Primary key — UUID assigned eagerly at construction time. */
+    @Id
+    public UUID id = UUID.randomUUID();
 
     /**
      * The aggregate this entry belongs to — the domain object whose lifecycle
      * is being recorded. Scopes the sequence number and hash chain.
      */
+    @Column(name = "subject_id", nullable = false)
     public UUID subjectId;
 
     /**
@@ -64,28 +86,37 @@ public abstract class LedgerEntry {
      * {@link io.casehub.platform.api.identity.TenancyConstants#DEFAULT_TENANT_ID}.
      * Set at persist time by the repository — callers do not set this directly.
      */
+    @Column(name = "tenancy_id", nullable = false)
     public String tenancyId;
 
     /** Position of this entry in the per-subject ledger sequence (1-based). */
+    @Column(name = "sequence_number", nullable = false)
     public int sequenceNumber;
 
     /** Whether this entry is a command (intent), event (fact), or attestation record. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "entry_type", nullable = false)
     public LedgerEntryType entryType;
 
     // ── Actor ─────────────────────────────────────────────────────────────────
 
     /** Identity of the actor who triggered this transition. */
+    @Column(name = "actor_id")
     public String actorId;
 
     /** Whether the actor is a human, autonomous agent, or the system itself. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "actor_type")
     public ActorType actorType;
 
     /** The functional role of the actor in this transition — e.g. {@code "Resolver"}. */
+    @Column(name = "actor_role")
     public String actorRole;
 
     // ── Timing ────────────────────────────────────────────────────────────────
 
     /** When this entry was recorded — set automatically on first persist. */
+    @Column(name = "occurred_at", nullable = false)
     public Instant occurredAt;
 
     // ── Hash chain ────────────────────────────────────────────────────────────
@@ -102,6 +133,7 @@ public abstract class LedgerEntry {
      * OpenTelemetry trace ID linking this entry to a distributed trace.
      * W3C trace context format (32-char hex string).
      */
+    @Column(name = "trace_id", length = 255)
     public String traceId;
 
     /**
@@ -114,16 +146,50 @@ public abstract class LedgerEntry {
      * When Claudony orchestrates Tarkus → Qhorus, each downstream entry's
      * {@code causedByEntryId} points to its upstream cause.
      */
+    @Column(name = "caused_by_entry_id")
     public UUID causedByEntryId;
+
+    // ── Agent signing ─────────────────────────────────────────────────────────
+
+    /**
+     * Ed25519 signature of {@link #canonicalBytes()}
+     * by the agent identified in {@link #actorId}.
+     * Null when the actor is not configured for bilateral signing.
+     */
+    @Column(name = "agent_signature")
+    public byte[] agentSignature;
+
+    /**
+     * X.509-encoded Ed25519 public key of the signing agent.
+     * Stored alongside the signature for self-contained verification —
+     * entries remain verifiable without any external key management system.
+     * Null when {@link #agentSignature} is null.
+     */
+    @Column(name = "agent_public_key")
+    public byte[] agentPublicKey;
+
+    /**
+     * Self-derived identifier for the key generation that produced {@link #agentSignature}.
+     * Value: {@code Base64URL(SHA-256(agentPublicKey))} — computable from stored bytes.
+     * Null when {@link #agentSignature} is null.
+     */
+    @Column(name = "agent_key_ref")
+    public String agentKeyRef;
+
+    /** DID URI bound to this entry's actorId at write time. Null when no binding is configured. */
+    @Column(name = "actor_did")
+    public String actorDid;
 
     // ── Supplements ───────────────────────────────────────────────────────────
 
     /**
-     * Lazily-loaded supplements attached to this entry.
-     * Never initialised unless a supplement is attached or explicitly accessed.
+     * In-memory supplements attached to this entry.
+     * Marked {@code @Transient} — JPA supplement entities are persisted explicitly
+     * by the save pipeline (each supplement type has its own self-contained table).
      * Use {@link #attach(LedgerSupplement)}, {@link #compliance()},
      * and {@link #provenance()} for type-safe access.
      */
+    @Transient
     public List<LedgerSupplement> supplements = new ArrayList<>();
 
     /**
@@ -132,6 +198,7 @@ public abstract class LedgerEntry {
      * Enables fast single-entry reads without joining supplement tables.
      * Format: {@code {"COMPLIANCE":{...},"PROVENANCE":{...}}}.
      */
+    @Column(name = "supplement_json", columnDefinition = "TEXT")
     public String supplementJson;
 
     // ── Supplement helpers ────────────────────────────────────────────────────
@@ -150,7 +217,6 @@ public abstract class LedgerEntry {
      */
     public void attach(final LedgerSupplement supplement) {
         Objects.requireNonNull(supplement, "supplement must not be null");
-        supplement.ledgerEntry = this;
         supplements.removeIf(s -> s.getClass() == supplement.getClass());
         supplements.add(supplement);
         supplementJson = LedgerSupplementSerializer.toJson(supplements);
@@ -197,5 +263,83 @@ public abstract class LedgerEntry {
                 .filter(ProvenanceSupplement.class::isInstance)
                 .map(ProvenanceSupplement.class::cast)
                 .findFirst();
+    }
+
+    // ── Canonical bytes ───────────────────────────────────────────────────────
+
+    /**
+     * Compute the canonical byte representation of this entry for tamper-evident hashing.
+     *
+     * <p>
+     * Includes all tamper-critical fields:
+     * <ul>
+     * <li>Base identity: {@code subjectId}, {@code sequenceNumber}, {@code entryType}</li>
+     * <li>Actor context: {@code actorId}, {@code actorRole}, {@code actorType}</li>
+     * <li>Timing: {@code occurredAt} (truncated to milliseconds)</li>
+     * <li>Multi-tenancy: {@code tenancyId}</li>
+     * <li>Causality: {@code causedByEntryId}</li>
+     * <li>Supplements: {@code supplementJson} (if non-null)</li>
+     * <li>Domain content: {@code domainContentBytes()} (if non-empty)</li>
+     * </ul>
+     *
+     * <p>
+     * Format: pipe-delimited base fields, followed by optional supplement JSON and domain content:
+     * {@code subjectId|seqNum|entryType|actorId|actorRole|occurredAt|tenancyId|actorType|causedByEntryId[|supplementJson][|domainContent]}
+     *
+     * <p>
+     * Null fields are rendered as empty strings. Deterministic — same entry produces same bytes.
+     *
+     * @return canonical UTF-8 byte array for this entry
+     */
+    public final byte[] canonicalBytes() {
+        final List<String> parts = new ArrayList<>(9);
+
+        // Base fields (9 fields, all pipe-delimited)
+        parts.add(subjectId != null ? subjectId.toString() : "");
+        parts.add(String.valueOf(sequenceNumber));
+        parts.add(entryType != null ? entryType.name() : "");
+        parts.add(actorId != null ? actorId : "");
+        parts.add(actorRole != null ? actorRole : "");
+        parts.add(occurredAt != null
+                ? occurredAt.truncatedTo(ChronoUnit.MILLIS).toString()
+                : "");
+        parts.add(tenancyId != null ? tenancyId : "");
+        parts.add(actorType != null ? actorType.name() : "");
+        parts.add(causedByEntryId != null ? causedByEntryId.toString() : "");
+
+        // Build base canonical string
+        final StringBuilder canonical = new StringBuilder(String.join("|", parts));
+
+        // Append supplement JSON if present
+        if (supplementJson != null && !supplementJson.isEmpty()) {
+            canonical.append("|").append(supplementJson);
+        }
+
+        // Append domain content if present
+        final byte[] domainBytes = domainContentBytes();
+        if (domainBytes.length > 0) {
+            canonical.append("|");
+            // Convert domain bytes to UTF-8 string for consistent pipe-delimited format
+            canonical.append(new String(domainBytes, StandardCharsets.UTF_8));
+        }
+
+        return canonical.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Returns domain-specific content bytes for hash protection.
+     *
+     * <p>Subclasses that declare persistent fields on join tables MUST override
+     * this method to include those fields. The returned bytes are appended to the
+     * canonical form used by both the Merkle leaf hash and the agent signature.
+     *
+     * <p>Build-time enforcement: {@code LedgerProcessor} produces a deployment error
+     * if a {@code LedgerEntry} subclass declares persistent fields (non-{@code @Transient})
+     * but does not override this method.
+     *
+     * @return domain content bytes; empty array if no domain fields exist
+     */
+    protected byte[] domainContentBytes() {
+        return EMPTY_BYTES;
     }
 }

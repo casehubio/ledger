@@ -9,7 +9,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.ledger.runtime.repository.ReactiveLedgerEntryRepository;
+import io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.ReactiveKeyRotationRepository;
 import io.casehub.ledger.runtime.service.AgentSignatureVerificationService;
 import io.casehub.ledger.runtime.service.KeyRotationService;

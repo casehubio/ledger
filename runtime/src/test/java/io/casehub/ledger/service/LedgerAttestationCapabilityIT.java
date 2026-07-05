@@ -16,8 +16,8 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
@@ -167,7 +167,7 @@ class LedgerAttestationCapabilityIT {
     void newAttestation_capabilityTagNotSet_defaultsToGlobalSentinel() {
         final TestEntry entry = savedEntry();
 
-        final LedgerAttestation att = new LedgerAttestation();
+        final LedgerAttestation att = new io.casehub.ledger.runtime.model.LedgerAttestation();
         att.ledgerEntryId = entry.id;
         att.subjectId = entry.subjectId;
         att.attestorId = "auto-reviewer-" + UUID.randomUUID();
@@ -207,7 +207,7 @@ class LedgerAttestationCapabilityIT {
 
     private LedgerAttestation attestationBy(final UUID entryId, final UUID subjectId,
             final String attestorId, final String capabilityTag) {
-        final LedgerAttestation att = new LedgerAttestation();
+        final LedgerAttestation att = new io.casehub.ledger.runtime.model.LedgerAttestation();
         att.ledgerEntryId = entryId;
         att.subjectId = subjectId;
         att.attestorId = attestorId;

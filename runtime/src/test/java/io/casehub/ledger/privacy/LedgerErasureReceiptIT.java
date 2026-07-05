@@ -16,7 +16,7 @@ import io.casehub.ledger.runtime.model.ErasureReceiptLedgerEntry;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService.ErasureResult;
 import io.casehub.ledger.runtime.repository.ErasureReceiptRepository;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.quarkus.test.junit.QuarkusTest;

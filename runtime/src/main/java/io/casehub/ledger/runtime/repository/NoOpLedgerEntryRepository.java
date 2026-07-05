@@ -7,12 +7,12 @@ import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.quarkus.arc.DefaultBean;
 
 /**
- * No-op {@link LedgerEntryRepository} that satisfies the CDI injection point when neither
+ * No-op {@link io.casehub.ledger.api.spi.LedgerEntryRepository} that satisfies the CDI injection point when neither
  * the JPA implementation ({@code JpaLedgerEntryRepository}) nor an in-memory alternative
  * ({@code InMemoryLedgerEntryRepository}) is active.
  *
@@ -34,13 +34,13 @@ import io.quarkus.arc.DefaultBean;
  */
 @DefaultBean
 @ApplicationScoped
-public class NoOpLedgerEntryRepository implements LedgerEntryRepository {
+public class NoOpLedgerEntryRepository implements io.casehub.ledger.api.spi.LedgerEntryRepository {
 
     /**
      * No-op save — returns the entry unchanged. Does NOT:
      * assign {@code sequenceNumber}, set {@code tenancyId}, compute digest, run the enricher
      * pipeline, or call {@code EntityManager.persist()}. This bean exists solely to satisfy
-     * the CDI injection point in deployments where the {@link LedgerEntryRepository} SPI
+     * the CDI injection point in deployments where the {@link io.casehub.ledger.api.spi.LedgerEntryRepository} SPI
      * should be inactive. Use a JPA or in-memory implementation for any context where entries
      * must actually be persisted.
      */

@@ -4,7 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * Domain-specific ledger entry subclass for the OTel trace wiring example.
@@ -21,7 +21,7 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
  */
 @Entity
 @Table(name = "recorded_event_ledger_entry")
-public class RecordedEventLedgerEntry extends LedgerEntry {
+public class RecordedEventLedgerEntry extends JpaLedgerEntry {
 
     /** The name of the event being recorded. */
     @Column(name = "event_name")

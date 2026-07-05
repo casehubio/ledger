@@ -8,10 +8,9 @@ import jakarta.persistence.EntityManager;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 
@@ -76,7 +75,7 @@ public final class LedgerTestFixtures {
      * cross-capability attestations.
      *
      * <p>Persists the attestation directly via {@link jakarta.persistence.EntityManager} —
-     * bypasses {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository#saveAttestation};
+     * bypasses {@link io.casehub.ledger.api.spi.LedgerEntryRepository#saveAttestation};
      * {@code attestorId} is stored without pseudonymisation.
      */
     public static TestEntry seedDecision(final String actorId, final Instant decisionTime,

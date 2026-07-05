@@ -14,7 +14,7 @@ import java.util.Optional;
 /**
  * JPA implementation of {@link ActorIdentityBindingRepository}.
  *
- * <p>Read-only — saves go through {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository#save}.
+ * <p>Read-only — saves go through {@link io.casehub.ledger.api.spi.LedgerEntryRepository#save}.
  *
  * <p>Activate via {@code quarkus.arc.selected-alternatives=...JpaActorIdentityBindingRepository}.
  */

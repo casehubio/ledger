@@ -8,7 +8,7 @@ import jakarta.inject.Inject;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.quarkus.arc.InjectableBean;
 import io.quarkus.arc.InjectableInstance;
 

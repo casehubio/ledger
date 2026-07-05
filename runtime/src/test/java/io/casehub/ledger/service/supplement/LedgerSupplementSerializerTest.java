@@ -6,9 +6,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.LedgerSupplementSerializer;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.model.supplement.LedgerSupplementSerializer;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 
 /**
  * Unit tests for {@link LedgerSupplementSerializer} — no Quarkus runtime, no CDI.
@@ -27,7 +27,7 @@ class LedgerSupplementSerializerTest {
 
     @Test
     void toJson_complianceSupplement_containsTypeKey() {
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "model-v1";
 
         final String json = LedgerSupplementSerializer.toJson(List.of(cs));
@@ -39,7 +39,7 @@ class LedgerSupplementSerializerTest {
 
     @Test
     void toJson_nullFieldsOmitted() {
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "rule-engine-v2";
         // confidenceScore, contestationUri, humanOverrideAvailable all null
 
@@ -53,7 +53,7 @@ class LedgerSupplementSerializerTest {
 
     @Test
     void toJson_allComplianceFields_serialisedCorrectly() {
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.planRef = "policy-2026-q1";
         cs.rationale = "Risk threshold exceeded";
         cs.algorithmRef = "gpt-4o";
@@ -75,7 +75,7 @@ class LedgerSupplementSerializerTest {
 
     @Test
     void toJson_provenanceSupplement_serialisedCorrectly() {
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wf-123";
         ps.sourceEntityType = "Flow:WorkflowInstance";
         ps.sourceEntitySystem = "quarkus-flow";
@@ -88,9 +88,9 @@ class LedgerSupplementSerializerTest {
 
     @Test
     void toJson_multipleSupplements_allPresent() {
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "v1";
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntitySystem = "quarkus-flow";
 
         final String json = LedgerSupplementSerializer.toJson(List.of(cs, ps));

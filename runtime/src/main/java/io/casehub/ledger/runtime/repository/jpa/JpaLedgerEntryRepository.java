@@ -1,7 +1,9 @@
 package io.casehub.ledger.runtime.repository.jpa;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,13 +17,15 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.privacy.DecisionContextSanitiser;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
@@ -137,6 +141,21 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
 
         em.persist(entry);
 
+        // Supplements are @Transient on api LedgerEntry — persist each JPA supplement explicitly.
+        // JpaLedgerEntry has @OneToMany with cascade but we persist explicitly for entries
+        // that may not have used attach() (e.g. supplements added directly to the list).
+        final io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry jpaEntry =
+                (entry instanceof io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry jpa) ? jpa : null;
+        for (final io.casehub.ledger.api.model.supplement.LedgerSupplement supplement : entry.supplements) {
+            if (supplement instanceof final io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement jcs) {
+                if (jpaEntry != null) jcs.jpaLedgerEntry = jpaEntry;
+                em.persist(jcs);
+            } else if (supplement instanceof final io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement jps) {
+                if (jpaEntry != null) jps.jpaLedgerEntry = jpaEntry;
+                em.persist(jps);
+            }
+        }
+
         if (ledgerConfig.hashChain().enabled()) {
             updateMerkleFrontier(entry, tenancyId);
         }
@@ -156,19 +175,21 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
     /** {@inheritDoc} */
     @Override
     public List<LedgerEntry> findBySubjectId(final UUID subjectId, final String tenancyId) {
-        return em.createQuery(
+        final List<LedgerEntry> results = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber ASC",
                 LedgerEntry.class)
                 .setParameter("subjectId", subjectId)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+        loadSupplements(results);
+        return results;
     }
 
     /** {@inheritDoc} */
     @Override
     public List<LedgerEntry> findBySubjectIdAndTimeRange(final UUID subjectId, final Instant from, final Instant to,
             final String tenancyId) {
-        return em.createQuery(
+        final List<LedgerEntry> results = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId" +
                 " AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC",
                 LedgerEntry.class)
@@ -177,12 +198,14 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setParameter("to", to)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+        loadSupplements(results);
+        return results;
     }
 
     /** {@inheritDoc} */
     @Override
     public Optional<LedgerEntry> findLatestBySubjectId(final UUID subjectId, final String tenancyId) {
-        return em.createQuery(
+        final Optional<LedgerEntry> result = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber DESC",
                 LedgerEntry.class)
                 .setParameter("subjectId", subjectId)
@@ -190,18 +213,22 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setMaxResults(1)
                 .getResultStream()
                 .findFirst();
+        result.ifPresent(this::loadSupplements);
+        return result;
     }
 
     /** {@inheritDoc} */
     @Override
     public Optional<LedgerEntry> findEntryById(final UUID id, final String tenancyId) {
-        return em.createQuery(
+        final Optional<LedgerEntry> result = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.id = :id AND e.tenancyId = :tenancyId",
                 LedgerEntry.class)
                 .setParameter("id", id)
                 .setParameter("tenancyId", tenancyId)
                 .getResultStream()
                 .findFirst();
+        result.ifPresent(this::loadSupplements);
+        return result;
     }
 
     /** {@inheritDoc} */
@@ -255,7 +282,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
             return List.of();
         }
         final String token = tokenOpt.get();
-        return em.createQuery(
+        final List<LedgerEntry> results = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.actorId = :actorId" +
                         " AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC",
                 LedgerEntry.class)
@@ -264,13 +291,15 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setParameter("to", to)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+        loadSupplements(results);
+        return results;
     }
 
     /** {@inheritDoc} */
     @Override
     public List<LedgerEntry> findByActorRole(final String actorRole,
             final Instant from, final Instant to, final String tenancyId) {
-        return em.createQuery(
+        final List<LedgerEntry> results = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.actorRole = :actorRole" +
                         " AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC",
                 LedgerEntry.class)
@@ -279,17 +308,21 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setParameter("to", to)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+        loadSupplements(results);
+        return results;
     }
 
     /** {@inheritDoc} */
     @Override
     public List<LedgerEntry> findCausedBy(final UUID entryId, final String tenancyId) {
-        return em.createQuery(
+        final List<LedgerEntry> results = em.createQuery(
                 "SELECT e FROM LedgerEntry e WHERE e.causedByEntryId = :entryId AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC",
                 LedgerEntry.class)
                 .setParameter("entryId", entryId)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+        loadSupplements(results);
+        return results;
     }
 
     /** {@inheritDoc} */
@@ -335,5 +368,53 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setParameter("capabilityTag", capabilityTag)
                 .setParameter("tenancyId", tenancyId)
                 .getResultList();
+    }
+
+    // ── Supplement loading ────────────────────────────────────────────────────
+
+    /**
+     * Loads supplements from their self-contained tables and attaches them to entries.
+     * Called after JPQL queries since supplements are {@code @Transient} on LedgerEntry.
+     */
+    private void loadSupplements(final List<LedgerEntry> entries) {
+        if (entries.isEmpty()) {
+            return;
+        }
+        final List<UUID> entryIds = entries.stream().map(e -> e.id).toList();
+        final Map<UUID, LedgerEntry> byId = new HashMap<>();
+        for (final LedgerEntry e : entries) {
+            byId.put(e.id, e);
+        }
+
+        final List<JpaComplianceSupplement> complianceSupplements = em.createQuery(
+                "SELECT cs FROM JpaComplianceSupplement cs WHERE cs.jpaLedgerEntry.id IN :ids",
+                JpaComplianceSupplement.class)
+                .setParameter("ids", entryIds)
+                .getResultList();
+        for (final JpaComplianceSupplement cs : complianceSupplements) {
+            final LedgerEntry entry = byId.get(cs.jpaLedgerEntry.id);
+            if (entry != null) {
+                entry.supplements.add(cs);
+            }
+        }
+
+        final List<JpaProvenanceSupplement> provenanceSupplements = em.createQuery(
+                "SELECT ps FROM JpaProvenanceSupplement ps WHERE ps.jpaLedgerEntry.id IN :ids",
+                JpaProvenanceSupplement.class)
+                .setParameter("ids", entryIds)
+                .getResultList();
+        for (final JpaProvenanceSupplement ps : provenanceSupplements) {
+            final LedgerEntry entry = byId.get(ps.jpaLedgerEntry.id);
+            if (entry != null) {
+                entry.supplements.add(ps);
+            }
+        }
+    }
+
+    /**
+     * Loads supplements for a single entry.
+     */
+    private void loadSupplements(final LedgerEntry entry) {
+        loadSupplements(List.of(entry));
     }
 }

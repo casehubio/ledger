@@ -14,9 +14,10 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.intercept.ProvenanceCapture;
 import io.casehub.ledger.runtime.service.intercept.ProvenanceContext;
 import io.casehub.ledger.runtime.service.intercept.SourceEntityId;
@@ -81,8 +82,8 @@ class ProvenanceCaptureIT {
             final TestEntry e = entry(workItemId);
             // Manually attach a supplement with agentConfigHash before repo.save(DEFAULT_TENANT_ID).
             // The enricher must preserve this hash when it attaches the provenance context.
-            final io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement existing =
-                    new io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement();
+            final JpaProvenanceSupplement existing =
+                    new JpaProvenanceSupplement();
             existing.agentConfigHash = configHash;
             e.attach(existing);
             return repo.save(e, DEFAULT_TENANT_ID);

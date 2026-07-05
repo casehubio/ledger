@@ -7,8 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * CDI bean exporting a subject's audit history as W3C PROV-DM JSON-LD.
@@ -40,8 +40,6 @@ public class LedgerProvExportService {
         if (entries.isEmpty()) {
             throw new IllegalArgumentException("No entries found for subject: " + subjectId);
         }
-        // Trigger lazy loading of supplements within the transaction boundary
-        entries.forEach(e -> e.supplements.size());
         return LedgerProvSerializer.toProvJsonLd(subjectId, entries);
     }
 }

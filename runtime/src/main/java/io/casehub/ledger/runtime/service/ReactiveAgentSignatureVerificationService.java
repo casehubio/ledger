@@ -12,8 +12,7 @@ import org.jboss.logging.Logger;
 
 import io.smallrye.mutiny.Uni;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.repository.ReactiveLedgerEntryRepository;
+import io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.model.CompromisedWindow;
 import io.casehub.ledger.runtime.service.model.VerificationResult;
 

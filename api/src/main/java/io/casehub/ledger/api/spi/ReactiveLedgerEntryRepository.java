@@ -1,14 +1,12 @@
-package io.casehub.ledger.runtime.repository;
+package io.casehub.ledger.api.spi;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -21,7 +19,7 @@ import io.smallrye.mutiny.Uni;
  *
  * <p>
  * All methods accept a {@code tenancyId} as the final parameter, enforcing tenant-scoped
- * queries and writes. For cross-tenant queries, see {@link CrossTenantReactiveLedgerEntryRepository}.
+ * queries and writes. For cross-tenant queries, see {@code CrossTenantReactiveLedgerEntryRepository}.
  *
  * <p>
  * The default implementation {@code ReactiveJpaLedgerEntryRepository} is annotated

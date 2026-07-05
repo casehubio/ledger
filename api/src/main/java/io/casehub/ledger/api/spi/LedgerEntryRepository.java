@@ -1,14 +1,12 @@
-package io.casehub.ledger.runtime.repository;
+package io.casehub.ledger.api.spi;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * SPI for persisting and querying {@link LedgerEntry} and {@link LedgerAttestation} records.

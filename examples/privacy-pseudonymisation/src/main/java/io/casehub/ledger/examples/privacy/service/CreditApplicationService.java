@@ -11,11 +11,11 @@ import jakarta.transaction.Transactional;
 import io.casehub.ledger.examples.privacy.ledger.CreditApplicationLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService.ErasureResult;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * Records credit application decisions with full privacy and supplement usage.
@@ -26,9 +26,9 @@ import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
  * <li>Actor identity pseudonymisation — raw IDs (email addresses, personnel IDs) are replaced
  *     with UUID tokens by {@code JpaLedgerEntryRepository.save()} automatically when
  *     {@code casehub.ledger.identity.tokenisation.enabled=true}.</li>
- * <li>{@link ComplianceSupplement#detail} — free-text explanation of the decision logic
+ * <li>{@link io.casehub.ledger.api.model.supplement.ComplianceSupplement#detail} — free-text explanation of the decision logic
  *     (the field most often missing from example code).</li>
- * <li>{@link ProvenanceSupplement#agentConfigHash} — SHA-256 of the LLM agent's configuration,
+ * <li>{@link io.casehub.ledger.api.model.supplement.ProvenanceSupplement#agentConfigHash} — SHA-256 of the LLM agent's configuration,
  *     enabling forensic detection of config drift within a persona version.</li>
  * <li>GDPR Art.17 erasure — severs the token→identity mapping; the audit record survives
  *     but the raw identity becomes permanently unresolvable.</li>
@@ -48,8 +48,8 @@ public class CreditApplicationService {
      *
      * <p>
      * The agent's persona name ({@code "claude:risk-agent@v1"}) is pseudonymised on save.
-     * The {@link ComplianceSupplement} captures GDPR Art.22 fields including the {@code detail}
-     * field that explains the scoring logic in plain language. The {@link ProvenanceSupplement}
+     * The {@link io.casehub.ledger.api.model.supplement.ComplianceSupplement} captures GDPR Art.22 fields including the {@code detail}
+     * field that explains the scoring logic in plain language. The {@link io.casehub.ledger.api.model.supplement.ProvenanceSupplement}
      * binds this entry to the agent's configuration hash for forensic auditability.
      *
      * @param applicationId the credit application UUID (used as the ledger subject)
@@ -74,7 +74,7 @@ public class CreditApplicationService {
         entry.outcome = riskScore > 0.7 ? "REFERRED" : "APPROVED";
 
         // ComplianceSupplement — GDPR Art.22 fields including 'detail'
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "credit-risk-model-v3";
         cs.confidenceScore = riskScore;
         cs.humanOverrideAvailable = true;
@@ -87,7 +87,7 @@ public class CreditApplicationService {
         entry.attach(cs);
 
         // ProvenanceSupplement — agentConfigHash binds this entry to the agent's config at session start
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntitySystem = "credit-risk-platform";
         ps.sourceEntityType = "CreditApplication";
         ps.sourceEntityId = applicationId.toString();
@@ -127,7 +127,7 @@ public class CreditApplicationService {
         entry.decisionType = "ReviewDecision";
         entry.outcome = approved ? "APPROVED" : "DECLINED";
 
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.humanOverrideAvailable = false;  // this IS the human override
         cs.decisionContext = String.format(
                 "{\"reviewerId\":\"%s\",\"decision\":\"%s\"}", officerId, entry.outcome);

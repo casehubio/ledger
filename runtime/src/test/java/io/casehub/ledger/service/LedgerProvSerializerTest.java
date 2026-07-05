@@ -14,8 +14,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.service.LedgerProvSerializer;
 import io.casehub.ledger.service.supplement.TestEntry;
 
@@ -182,7 +182,7 @@ class LedgerProvSerializerTest {
     void complianceSupplement_allFieldsMappedToEntity() throws Exception {
         UUID sub = UUID.randomUUID();
         TestEntry e = entry(sub, 1, "a");
-        ComplianceSupplement cs = new ComplianceSupplement();
+        JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "gpt-4o";
         cs.confidenceScore = 0.92;
         cs.contestationUri = "https://example.com/challenge";
@@ -208,7 +208,7 @@ class LedgerProvSerializerTest {
     void complianceSupplement_nullFieldsOmitted() throws Exception {
         UUID sub = UUID.randomUUID();
         TestEntry e = entry(sub, 1, "a");
-        ComplianceSupplement cs = new ComplianceSupplement();
+        JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "gpt-4o";
         e.attach(cs);
         Map<String, Object> doc = parse(LedgerProvSerializer.toProvJsonLd(sub, List.of(e)));
@@ -224,7 +224,7 @@ class LedgerProvSerializerTest {
     void provenanceSupplement_producesHadPrimarySource() throws Exception {
         UUID sub = UUID.randomUUID();
         TestEntry e = entry(sub, 1, "a");
-        ProvenanceSupplement ps = new ProvenanceSupplement();
+        JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wi-uuid-123";
         ps.sourceEntityType = "WorkItem";
         ps.sourceEntitySystem = "tarkus";

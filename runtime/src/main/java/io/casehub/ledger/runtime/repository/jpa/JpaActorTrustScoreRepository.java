@@ -12,7 +12,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;

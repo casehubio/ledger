@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.runtime.service.model.InclusionProof;
 import io.casehub.ledger.runtime.service.model.ProofStep;

@@ -10,8 +10,8 @@ import jakarta.enterprise.util.Nonbinding;
 import jakarta.interceptor.InterceptorBinding;
 
 /**
- * CDI interceptor binding that automatically attaches a {@link io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement}
- * to any {@link io.casehub.ledger.runtime.model.LedgerEntry} persisted during the annotated method's execution.
+ * CDI interceptor binding that automatically attaches a {@link io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement}
+ * to any {@link io.casehub.ledger.api.model.LedgerEntry} persisted during the annotated method's execution.
  *
  * <p>
  * The interceptor resolves {@code sourceEntityId} from a {@link SourceEntityId}-annotated parameter

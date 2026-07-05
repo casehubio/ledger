@@ -18,7 +18,7 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.KeyRotationEntry;
-import io.casehub.ledger.runtime.repository.ReactiveLedgerEntryRepository;
+import io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.ReactiveKeyRotationRepository;
 import io.casehub.ledger.runtime.service.model.CompromisedWindow;
 

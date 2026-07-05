@@ -5,12 +5,12 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 @Entity
 @Table(name = "art12_decision_entry")
 @DiscriminatorValue("ART12_DECISION")
-public class DecisionEntry extends LedgerEntry {
+public class DecisionEntry extends JpaLedgerEntry {
 
     @Column(name = "decision_category", length = 100)
     public String decisionCategory;

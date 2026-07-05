@@ -7,10 +7,10 @@ import java.util.UUID;
  * A single automated decision record in a {@link ComplianceReport}.
  *
  * <p>
- * Populated from a {@link io.casehub.ledger.runtime.model.LedgerEntry} that carries a
- * {@link io.casehub.ledger.runtime.model.supplement.ComplianceSupplement}. Provenance
+ * Populated from a {@link io.casehub.ledger.api.model.LedgerEntry} that carries a
+ * {@link io.casehub.ledger.api.model.supplement.ComplianceSupplement}. Provenance
  * fields ({@link #sourceEntityType}, {@link #sourceEntityId}) are populated when the entry
- * also has a {@link io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement}.
+ * also has a {@link io.casehub.ledger.api.model.supplement.ProvenanceSupplement}.
  *
  * @param entryId                 UUID of the ledger entry (for Merkle inclusion proof look-up)
  * @param occurredAt              when the automated decision was recorded

@@ -6,7 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * Domain-specific ledger entry for credit application decisions.
@@ -17,7 +17,7 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
  */
 @Entity
 @Table(name = "credit_application_ledger_entry")
-public class CreditApplicationLedgerEntry extends LedgerEntry {
+public class CreditApplicationLedgerEntry extends JpaLedgerEntry {
 
     /** The credit application this entry belongs to. */
     @Column(name = "application_id", nullable = false)

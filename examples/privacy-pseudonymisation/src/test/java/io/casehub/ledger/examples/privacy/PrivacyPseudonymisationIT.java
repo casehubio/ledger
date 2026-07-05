@@ -14,10 +14,10 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.examples.privacy.service.CreditApplicationService;
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService.ErasureResult;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**

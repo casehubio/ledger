@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  *
  * <p>Applied to implementations of {@link io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository}
  * and its reactive counterpart. The qualifier disambiguates between the tenant-scoped
- * {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository} and the cross-tenant variant.
+ * {@link io.casehub.ledger.api.spi.LedgerEntryRepository} and the cross-tenant variant.
  * Unqualified injection of {@code CrossTenantLedgerEntryRepository} fails at startup —
  * the qualifier is mandatory.
  *

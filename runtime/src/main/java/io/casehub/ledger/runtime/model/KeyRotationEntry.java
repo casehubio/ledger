@@ -12,6 +12,7 @@ import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 
 import io.casehub.ledger.api.model.KeyRotationReason;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * A first-class immutable ledger entry recording a signing key rotation or revocation.
@@ -42,7 +43,7 @@ import io.casehub.ledger.api.model.KeyRotationReason;
 @Entity
 @Table(name = "key_rotation_entry")
 @DiscriminatorValue("KEY_ROTATION")
-public class KeyRotationEntry extends LedgerEntry {
+public class KeyRotationEntry extends JpaLedgerEntry {
 
     /** keyRef of the key being retired. Null when the previous key is unknown. */
     @Column(name = "previous_key_ref")

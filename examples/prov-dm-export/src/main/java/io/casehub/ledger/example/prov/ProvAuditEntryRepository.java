@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import io.casehub.ledger.runtime.repository.jpa.JpaLedgerEntryRepository;
 
 /**
- * CDI bean providing the {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository}
+ * CDI bean providing the {@link io.casehub.ledger.api.spi.LedgerEntryRepository}
  * SPI for the prov-dm-export example.
  *
  * <p>

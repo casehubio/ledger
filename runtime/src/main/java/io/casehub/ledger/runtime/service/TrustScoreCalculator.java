@@ -13,7 +13,7 @@ import jakarta.inject.Inject;
 
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * Pure trust score computation — no persistence, no CDI events.

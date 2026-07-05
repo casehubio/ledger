@@ -19,14 +19,14 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * REST resource for recording events into the ledger.
  *
  * <p>
  * Each inbound HTTP request carries an OTel server span created automatically by
- * Quarkus. When {@link LedgerEntryRepository#save(io.casehub.ledger.runtime.model.LedgerEntry)}
+ * Quarkus. When {@link LedgerEntryRepository#save(io.casehub.ledger.api.model.LedgerEntry)}
  * triggers JPA persist, {@link io.casehub.ledger.runtime.service.LedgerTraceListener}
  * reads the active span via {@link io.casehub.ledger.runtime.service.OtelTraceIdProvider}
  * and populates {@code LedgerEntry.traceId} — no code at this call site is required.

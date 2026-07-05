@@ -4,12 +4,12 @@ import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.service.LedgerEntryEnricher;
 
 /**
- * {@link LedgerEntryEnricher} that auto-attaches a {@link ProvenanceSupplement} when a
+ * {@link LedgerEntryEnricher} that auto-attaches a {@link JpaProvenanceSupplement} when a
  * {@link ProvenanceCapture}-annotated method is active on the current thread.
  *
  * <p>
@@ -17,7 +17,7 @@ import io.casehub.ledger.runtime.service.LedgerEntryEnricher;
  * When no {@link ProvenanceCapture} is active, this enricher is a no-op (zero overhead).
  *
  * <p>
- * If the entry already carries a {@link ProvenanceSupplement} (attached manually by the caller),
+ * If the entry already carries a provenance supplement (attached manually by the caller),
  * it is replaced — the interceptor's context takes precedence to ensure consistency across
  * all entries persisted within the annotated scope.
  */
@@ -34,7 +34,7 @@ public class ProvenanceCaptureEnricher implements LedgerEntryEnricher {
             return;
         }
         final ProvenanceContext.SourceState state = context.current();
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityType = emptyToNull(state.entityType());
         ps.sourceEntityId = state.entityId();
         ps.sourceEntitySystem = emptyToNull(state.entitySystem());

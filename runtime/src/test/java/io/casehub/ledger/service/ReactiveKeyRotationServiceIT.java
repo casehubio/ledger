@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import io.casehub.ledger.api.model.KeyRotationReason;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.KeyRotationEntry;
-import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.KeyRotationService;
 import io.casehub.ledger.runtime.service.ReactiveKeyRotationService;
@@ -30,7 +29,7 @@ import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_I
  * <p>
  * {@code @Transactional} on each test method is required for the <em>setup</em>
  * operations that use the blocking {@link KeyRotationService} and
- * {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository} — those
+ * {@link io.casehub.ledger.api.spi.LedgerEntryRepository} — those
  * blocking saves need a JTA transaction context. The reactive calls under test
  * ({@code await().atMost(...)}) go through the
  * {@link BlockingReactiveKeyRotationRepository} test shim, which delegates to the

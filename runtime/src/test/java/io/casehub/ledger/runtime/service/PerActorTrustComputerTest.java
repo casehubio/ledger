@@ -17,9 +17,10 @@ import org.junit.jupiter.api.Test;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.platform.api.identity.ActorType;
 
@@ -58,7 +59,7 @@ class PerActorTrustComputerTest {
 
         final ActorTrustScore global = trustRepo.findByActorId(actorId).orElse(null);
         assertThat(global).isNotNull();
-        assertThat(global.scoreType).isEqualTo(ActorTrustScore.ScoreType.GLOBAL);
+        assertThat(global.scoreType).isEqualTo(ScoreType.GLOBAL);
         assertThat(global.trustScore).isCloseTo(0.5, within(0.01));
         assertThat(global.alpha).isCloseTo(1.0, within(0.01));
         assertThat(global.beta).isCloseTo(1.0, within(0.01));
@@ -101,7 +102,7 @@ class PerActorTrustComputerTest {
         // Should have both CAPABILITY and GLOBAL rows
         final Optional<ActorTrustScore> capScore = trustRepo.findCapabilityScore(actorId, "security-review");
         assertThat(capScore).isPresent();
-        assertThat(capScore.get().scoreType).isEqualTo(ActorTrustScore.ScoreType.CAPABILITY);
+        assertThat(capScore.get().scoreType).isEqualTo(ScoreType.CAPABILITY);
         assertThat(capScore.get().capabilityKey).isEqualTo("security-review");
         assertThat(capScore.get().trustScore).isGreaterThan(0.6);
 
@@ -123,7 +124,7 @@ class PerActorTrustComputerTest {
 
         final Optional<ActorTrustScore> dimScore = trustRepo.findDimensionScore(actorId, "review-thoroughness");
         assertThat(dimScore).isPresent();
-        assertThat(dimScore.get().scoreType).isEqualTo(ActorTrustScore.ScoreType.DIMENSION);
+        assertThat(dimScore.get().scoreType).isEqualTo(ScoreType.DIMENSION);
         assertThat(dimScore.get().dimensionKey).isEqualTo("review-thoroughness");
         assertThat(dimScore.get().trustScore).isCloseTo(0.8, within(0.05));
     }
@@ -143,7 +144,7 @@ class PerActorTrustComputerTest {
         final Optional<ActorTrustScore> cdScore =
                 trustRepo.findCapabilityDimension(actorId, "code-review", "review-thoroughness");
         assertThat(cdScore).isPresent();
-        assertThat(cdScore.get().scoreType).isEqualTo(ActorTrustScore.ScoreType.CAPABILITY_DIMENSION);
+        assertThat(cdScore.get().scoreType).isEqualTo(ScoreType.CAPABILITY_DIMENSION);
         assertThat(cdScore.get().capabilityKey).isEqualTo("code-review");
         assertThat(cdScore.get().dimensionKey).isEqualTo("review-thoroughness");
         assertThat(cdScore.get().trustScore).isCloseTo(0.9, within(0.05));
@@ -168,7 +169,7 @@ class PerActorTrustComputerTest {
 
         final Optional<ActorTrustScore> capScore = trustRepo.findCapabilityScore(actorId, "security-review");
         assertThat(capScore).isPresent();
-        assertThat(capScore.get().scoreType).isEqualTo(ActorTrustScore.ScoreType.CAPABILITY);
+        assertThat(capScore.get().scoreType).isEqualTo(ScoreType.CAPABILITY);
         assertThat(capScore.get().trustScore).isLessThan(0.5);
         assertThat(capScore.get().beta).isGreaterThan(capScore.get().alpha);
         assertThat(capScore.get().attestationNegative).isEqualTo(1);
@@ -303,7 +304,7 @@ class PerActorTrustComputerTest {
         private final java.util.concurrent.ConcurrentHashMap<String, ActorTrustScore> store =
                 new java.util.concurrent.ConcurrentHashMap<>();
 
-        private static String key(String actorId, ActorTrustScore.ScoreType type, String cap, String dim) {
+        private static String key(String actorId, ScoreType type, String cap, String dim) {
             return actorId + "|" + type + "|" + nvl(cap) + "|" + nvl(dim);
         }
 
@@ -317,35 +318,35 @@ class PerActorTrustComputerTest {
 
         @Override
         public Optional<ActorTrustScore> findByActorId(String actorId) {
-            return Optional.ofNullable(store.get(key(actorId, ActorTrustScore.ScoreType.GLOBAL, null, null)));
+            return Optional.ofNullable(store.get(key(actorId, ScoreType.GLOBAL, null, null)));
         }
 
         @Override
         public Optional<ActorTrustScore> findCapabilityScore(String actorId, String capabilityTag) {
-            return Optional.ofNullable(store.get(key(actorId, ActorTrustScore.ScoreType.CAPABILITY, capabilityTag, null)));
+            return Optional.ofNullable(store.get(key(actorId, ScoreType.CAPABILITY, capabilityTag, null)));
         }
 
         @Override
         public Optional<ActorTrustScore> findDimensionScore(String actorId, String dimension) {
-            return Optional.ofNullable(store.get(key(actorId, ActorTrustScore.ScoreType.DIMENSION, null, dimension)));
+            return Optional.ofNullable(store.get(key(actorId, ScoreType.DIMENSION, null, dimension)));
         }
 
         @Override
         public Optional<ActorTrustScore> findCapabilityDimension(String actorId, String capabilityTag, String dimension) {
-            return Optional.ofNullable(store.get(key(actorId, ActorTrustScore.ScoreType.CAPABILITY_DIMENSION, capabilityTag, dimension)));
+            return Optional.ofNullable(store.get(key(actorId, ScoreType.CAPABILITY_DIMENSION, capabilityTag, dimension)));
         }
 
         @Override
         public List<ActorTrustScore> findCapabilityDimensions(String actorId, String capabilityTag) {
             return store.values().stream()
                     .filter(s -> actorId.equals(s.actorId))
-                    .filter(s -> ActorTrustScore.ScoreType.CAPABILITY_DIMENSION.equals(s.scoreType))
+                    .filter(s -> ScoreType.CAPABILITY_DIMENSION.equals(s.scoreType))
                     .filter(s -> capabilityTag.equals(s.capabilityKey))
                     .toList();
         }
 
         @Override
-        public List<ActorTrustScore> findByActorIdAndScoreType(String actorId, ActorTrustScore.ScoreType scoreType) {
+        public List<ActorTrustScore> findByActorIdAndScoreType(String actorId, ScoreType scoreType) {
             return store.values().stream()
                     .filter(s -> actorId.equals(s.actorId))
                     .filter(s -> scoreType.equals(s.scoreType))
@@ -353,7 +354,7 @@ class PerActorTrustComputerTest {
         }
 
         @Override
-        public void upsert(String actorId, ActorTrustScore.ScoreType scoreType,
+        public void upsert(String actorId, ScoreType scoreType,
                            String capabilityKey, String dimensionKey,
                            ActorType actorType, double trustScore,
                            int decisionCount, int overturnedCount,
@@ -385,7 +386,7 @@ class PerActorTrustComputerTest {
 
         @Override
         public void updateGlobalTrustScore(String actorId, double globalTrustScore) {
-            store.computeIfPresent(key(actorId, ActorTrustScore.ScoreType.GLOBAL, null, null),
+            store.computeIfPresent(key(actorId, ScoreType.GLOBAL, null, null),
                     (k, score) -> { score.globalTrustScore = globalTrustScore; return score; });
         }
 

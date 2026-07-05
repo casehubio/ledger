@@ -6,7 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * Domain-specific ledger entry for document risk classification decisions.
@@ -14,7 +14,7 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
  */
 @Entity
 @Table(name = "document_classification_ledger_entry")
-public class DocumentClassificationLedgerEntry extends LedgerEntry {
+public class DocumentClassificationLedgerEntry extends JpaLedgerEntry {
 
     /** The document being classified. */
     @Column(name = "document_id")

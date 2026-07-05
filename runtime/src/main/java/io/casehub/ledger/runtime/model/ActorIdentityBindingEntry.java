@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 
 import io.casehub.platform.api.identity.CredentialValidationResult;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * A first-class immutable ledger entry recording an actor DID identity binding event.
@@ -46,7 +47,7 @@ import io.casehub.platform.api.identity.IdentityBindingStatus;
 @Entity
 @Table(name = "actor_identity_binding")
 @DiscriminatorValue("IDENTITY_BINDING")
-public class ActorIdentityBindingEntry extends LedgerEntry {
+public class ActorIdentityBindingEntry extends JpaLedgerEntry {
 
     /** The DID URI claimed by the actor at bind time. */
     @Column(name = "bound_did", nullable = false)

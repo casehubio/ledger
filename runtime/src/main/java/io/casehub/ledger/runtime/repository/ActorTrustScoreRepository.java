@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 

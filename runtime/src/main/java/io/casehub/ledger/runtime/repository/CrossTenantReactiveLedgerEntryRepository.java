@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -18,7 +18,7 @@ import io.smallrye.mutiny.Uni;
  * All methods query across tenant boundaries. These operations are intended for
  * infrastructure use cases (reporting, global dashboards, analytics pipelines)
  * where cross-tenant aggregation is explicitly required. Application logic that
- * operates within a single tenant scope should use {@link ReactiveLedgerEntryRepository}.
+ * operates within a single tenant scope should use {@link io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository}.
  *
  * <p>
  * Access control is the caller's responsibility — this interface does not enforce

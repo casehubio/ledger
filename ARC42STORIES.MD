@@ -168,8 +168,8 @@ C4Context
 
 | Module | artifactId | Purpose |
 |---|---|---|
-| `api/` | `casehub-ledger-api` | Model classes, enums, SPI interfaces — zero framework dependencies |
-| `runtime/` | `casehub-ledger` | CDI beans, services, JPA implementations, Flyway migrations, enricher pipeline |
+| `api/` | `casehub-ledger-api` | Model classes (`@MappedSuperclass` entity hierarchy, supplements), enums, SPI interfaces (repositories, appenders, enrichers) — zero framework dependencies |
+| `runtime/` | `casehub-ledger` | JPA `@Entity` implementations (`JpaLedgerEntry`, `Jpa*Supplement`), CDI beans, services, Flyway migrations, enricher pipeline |
 | `deployment/` | `casehub-ledger-deployment` | Quarkus build-time processors (`@BuildStep`), reactive tier exclusion |
 | `persistence-memory/` | `casehub-ledger-memory` | In-memory `@Alternative @Priority(1)` repositories for zero-datasource installs and test isolation |
 | `consumer-compat-test/` | (test only) | Boot guard — verifies CDI graph integrity without JPA alternatives selected |
@@ -181,10 +181,12 @@ C4Container
     title casehub-ledger — Layer Architecture
 
     Container_Boundary(l1, "L1: Core Entity Model") {
-        Container(entry, "LedgerEntry", "JPA JOINED", "Abstract base — subjectId, sequenceNumber, digest, tenancyId")
+        Container(entry, "LedgerEntry", "@MappedSuperclass (api)", "Abstract base — subjectId, sequenceNumber, digest, tenancyId, canonicalBytes()")
+        Container(jpaentry, "JpaLedgerEntry", "@Entity JOINED (runtime)", "JPA persistence layer extending LedgerEntry")
         Container(attest, "LedgerAttestation", "JPA", "Peer verdict — capabilityTag, trustDimension, dimensionScore")
-        Container(supp, "Supplements", "JPA JOINED", "ComplianceSupplement, ProvenanceSupplement")
-        Container(repo, "Repository SPIs", "CDI", "LedgerEntryRepository, CrossTenantLedgerEntryRepository")
+        Container(supp, "Supplements", "@MappedSuperclass (api) + @Entity (runtime)", "ComplianceSupplement, ProvenanceSupplement — two-tier hierarchy")
+        Container(repo, "Repository SPIs", "api/spi", "LedgerEntryRepository, ReactiveLedgerEntryRepository, CrossTenantLedgerEntryRepository")
+        Container(appender, "LedgerAppender SPIs", "api/spi", "LedgerAppender, ReactiveLedgerAppender — write-path facade")
         Container(enricher, "Enricher Pipeline", "CDI", "LedgerEntryEnricher with @Priority ordering")
         Container(seqalloc, "LedgerSequenceAllocator", "CDI", "Atomic per-(subject, tenant) sequence allocation")
     }
@@ -255,7 +257,7 @@ C4Container
 
 ### Entry Save Pipeline
 
-Five phases execute in sequence within `LedgerEntryRepository.save()`:
+Five phases execute in sequence within `LedgerEntryRepository.save()` (JPA implementation). Consumers may also use `LedgerAppender.append(AuditRecord)` as a higher-level write-path facade that constructs `JpaLedgerEntry` from domain-agnostic fields.
 
 ```mermaid
 C4Dynamic
@@ -263,23 +265,23 @@ C4Dynamic
 
     ContainerDb(db, "Database", "PostgreSQL / H2")
     Container(caller, "Consumer", "Quarkus App")
-    Container(repo, "LedgerEntryRepository", "CDI")
+    Container(repo, "LedgerEntryRepository", "api/spi → JPA impl")
     Container(enricher, "Enricher Pipeline", "CDI")
     Container(merkle, "LedgerMerkleTree", "Static")
     Container(signer, "AgentEntrySigner", "CDI")
     Container(seqalloc, "LedgerSequenceAllocator", "CDI")
     Container(frontier, "LedgerMerkleFrontier", "JPA")
 
-    Rel(caller, repo, "1. save(entry)")
+    Rel(caller, repo, "1. save(entry) — entry extends api LedgerEntry @MappedSuperclass")
     Rel(repo, enricher, "2. Content enrichment — TraceIdEnricher, ActorDIDEnricher, ActorIdentityValidationEnricher, ProvenanceCaptureEnricher")
-    Rel(repo, merkle, "3. Hashing — canonicalBytes() → SHA-256 leaf hash → entry.digest")
+    Rel(repo, merkle, "3. Hashing — entry.canonicalBytes() → SHA-256 leaf hash → entry.digest")
     Rel(repo, signer, "4. Agent signing — signs canonicalBytes(), stores agentSignature + agentPublicKey + agentKeyRef")
     Rel(repo, seqalloc, "5a. Sequence allocation — atomic per-(subject, tenant) via INSERT ON CONFLICT / MERGE")
     Rel(repo, frontier, "5b. Merkle frontier update — append leaf hash to MMR")
-    Rel(repo, db, "5c. Persist entry + frontier")
+    Rel(repo, db, "5c. Persist entry + frontier — runtime JpaLedgerEntry (or consumer subclass) persisted via JOINED inheritance")
 ```
 
-**Phase ordering is structural.** Enrichment populates fields that feed canonicalBytes(). Hashing seals the content. Signing seals the hash. Sequence allocation and Merkle update happen at persist time.
+**Phase ordering is structural.** Enrichment populates fields that feed `canonicalBytes()` (defined on api `LedgerEntry`). Hashing seals the content. Signing seals the hash. Sequence allocation and Merkle update happen at persist time. The two-tier model (`@MappedSuperclass` in api, `@Entity` in runtime) keeps domain logic framework-free while enabling JPA persistence.
 
 ### Trust Score Computation
 

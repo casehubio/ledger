@@ -4,8 +4,10 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
+
 /**
- * Concrete {@link LedgerEntry} subclass for domain-agnostic event writes.
+ * Concrete {@link JpaLedgerEntry} subclass for domain-agnostic event writes.
  *
  * <p>Used by {@link io.casehub.ledger.runtime.service.OutcomeRecordSaveService} to persist
  * generic EVENT entries via {@link io.casehub.ledger.api.spi.OutcomeRecorder}. Has no
@@ -18,5 +20,5 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "plain_ledger_entry")
 @DiscriminatorValue("PLAIN")
-public class PlainLedgerEntry extends LedgerEntry {
+public class PlainLedgerEntry extends JpaLedgerEntry {
 }

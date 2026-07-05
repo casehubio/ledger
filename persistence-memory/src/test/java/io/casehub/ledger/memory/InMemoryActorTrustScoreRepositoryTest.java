@@ -11,7 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.platform.api.identity.ActorType;
 import io.quarkus.test.junit.QuarkusTest;

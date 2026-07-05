@@ -14,7 +14,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntry;
 import io.casehub.ledger.examples.art22.service.DecisionService;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 
 @Path("/decisions")
@@ -49,7 +49,7 @@ public class DecisionResource {
     }
 
     private Map<String, Object> toView(final DecisionLedgerEntry e) {
-        final ComplianceSupplement cs = e.compliance().orElse(null);
+        final JpaComplianceSupplement cs = e.compliance().orElse(null);
         return Map.of(
                 "id", e.id,
                 "decisionId", e.decisionId,

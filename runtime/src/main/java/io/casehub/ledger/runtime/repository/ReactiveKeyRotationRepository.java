@@ -11,7 +11,7 @@ import io.smallrye.mutiny.Uni;
  * <p>
  * Mirrors {@link KeyRotationRepository} with all return types wrapped in {@link Uni}.
  * Rotation entries are persisted via
- * {@link io.casehub.ledger.runtime.repository.ReactiveLedgerEntryRepository#save},
+ * {@link io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository#save},
  * which ensures Merkle chain inclusion, pseudonymisation, and enricher pipeline execution.
  *
  * <p>

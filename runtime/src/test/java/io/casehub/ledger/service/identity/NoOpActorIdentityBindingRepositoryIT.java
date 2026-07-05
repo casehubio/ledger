@@ -18,10 +18,11 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.ActorIdentityBindingEntry;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.runtime.repository.ActorIdentityBindingRepository;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
 import io.casehub.ledger.runtime.service.AgentSigner;
 import io.casehub.ledger.runtime.service.identity.ActorIdentityValidationEnricher;
@@ -109,7 +110,7 @@ class NoOpActorIdentityBindingRepositoryIT {
             saved[0] = ledgerRepo.save(e, DEFAULT_TENANT_ID);
         });
 
-        assertThat(saved[0].pendingIdentityStatus).isEqualTo(IdentityBindingStatus.DID_UNRESOLVABLE);
+        assertThat(((JpaLedgerEntry) saved[0]).pendingIdentityStatus).isEqualTo(IdentityBindingStatus.DID_UNRESOLVABLE);
 
         // Assert 1: binding entry IS written via JpaLedgerEntryRepository
         await().atMost(Duration.ofSeconds(3))

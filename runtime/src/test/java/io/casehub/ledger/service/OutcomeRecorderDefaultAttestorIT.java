@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.platform.api.identity.ActorType;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;

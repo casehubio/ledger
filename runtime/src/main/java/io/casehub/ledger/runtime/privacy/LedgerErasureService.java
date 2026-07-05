@@ -19,7 +19,7 @@ import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.ActorIdentity;
 import io.casehub.ledger.runtime.model.ErasureReceiptLedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.platform.api.identity.TenancyConstants;
 

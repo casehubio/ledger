@@ -7,7 +7,7 @@ import java.util.Optional;
 /**
  * SPI for querying {@link ActorIdentityBindingEntry} records.
  *
- * <p>Binding entries are persisted via {@link io.casehub.ledger.runtime.repository.LedgerEntryRepository#save},
+ * <p>Binding entries are persisted via {@link io.casehub.ledger.api.spi.LedgerEntryRepository#save},
  * which ensures Merkle chain inclusion, sequence allocation, enricher pipeline execution,
  * and agent signing. {@code ActorIdentityBindingObserver} is the sole writer.
  *

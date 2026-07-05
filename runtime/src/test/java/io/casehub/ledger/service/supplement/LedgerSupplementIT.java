@@ -12,10 +12,11 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.LedgerSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 
@@ -43,11 +44,16 @@ class LedgerSupplementIT {
         final TestEntry entry = bareEntry();
         repo.save(entry, DEFAULT_TENANT_ID);
 
-        final long count = (Long) em.createQuery(
-                "SELECT COUNT(s) FROM LedgerSupplement s WHERE s.ledgerEntry.id = :id")
+        final long complianceCount = (Long) em.createQuery(
+                "SELECT COUNT(cs) FROM JpaComplianceSupplement cs WHERE cs.jpaLedgerEntry.id = :id")
                 .setParameter("id", entry.id)
                 .getSingleResult();
-        assertThat(count).isZero();
+        final long provenanceCount = (Long) em.createQuery(
+                "SELECT COUNT(ps) FROM JpaProvenanceSupplement ps WHERE ps.jpaLedgerEntry.id = :id")
+                .setParameter("id", entry.id)
+                .getSingleResult();
+        assertThat(complianceCount).isZero();
+        assertThat(provenanceCount).isZero();
         assertThat(entry.supplementJson).isNull();
     }
 
@@ -58,7 +64,7 @@ class LedgerSupplementIT {
     void complianceSupplement_persistsAndLoadsAllFields() {
         final TestEntry entry = bareEntry();
 
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.planRef = "policy-v3";
         cs.rationale = "Risk threshold exceeded";
         cs.algorithmRef = "classifier-v2";
@@ -91,11 +97,11 @@ class LedgerSupplementIT {
     void supplementJson_containsTwoSupplementTypes() {
         final TestEntry entry = bareEntry();
 
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = "v1";
         entry.attach(cs);
 
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntitySystem = "quarkus-flow";
         entry.attach(ps);
         repo.save(entry, DEFAULT_TENANT_ID);
@@ -113,7 +119,7 @@ class LedgerSupplementIT {
     void provenanceSupplement_persistsAndLoads() {
         final TestEntry entry = bareEntry();
 
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wf-42";
         ps.sourceEntityType = "Flow:WorkflowInstance";
         ps.sourceEntitySystem = "quarkus-flow";
@@ -134,7 +140,7 @@ class LedgerSupplementIT {
         final TestEntry entry = bareEntry();
         entry.actorId = "claude:tarkus-reviewer@v1";
 
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.agentConfigHash = "a".repeat(64); // simulated sha256 hex
         entry.attach(ps);
         repo.save(entry, DEFAULT_TENANT_ID);
@@ -150,7 +156,7 @@ class LedgerSupplementIT {
     void provenanceSupplement_agentConfigHash_nullableForNonAgentEntries() {
         final TestEntry entry = bareEntry();
 
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityId = "wf-99";
         ps.sourceEntitySystem = "quarkus-flow";
         // no agentConfigHash — workflow entry, not an LLM agent entry
@@ -170,11 +176,11 @@ class LedgerSupplementIT {
     void attach_replacesExistingSupplementOfSameType() {
         final TestEntry entry = bareEntry();
 
-        final ComplianceSupplement first = new ComplianceSupplement();
+        final JpaComplianceSupplement first = new JpaComplianceSupplement();
         first.algorithmRef = "v1";
         entry.attach(first);
 
-        final ComplianceSupplement second = new ComplianceSupplement();
+        final JpaComplianceSupplement second = new JpaComplianceSupplement();
         second.algorithmRef = "v2";
         entry.attach(second);
 

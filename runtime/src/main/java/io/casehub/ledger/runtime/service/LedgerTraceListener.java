@@ -5,7 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.PrePersist;
 
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * JPA entity listener that guards against direct {@code em.persist()} calls on

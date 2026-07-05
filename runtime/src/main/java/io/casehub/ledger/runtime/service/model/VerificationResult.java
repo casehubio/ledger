@@ -1,7 +1,7 @@
 package io.casehub.ledger.runtime.service.model;
 
 /**
- * Result of an agent signature verification on a {@link io.casehub.ledger.runtime.model.LedgerEntry}.
+ * Result of an agent signature verification on a {@link io.casehub.ledger.api.model.LedgerEntry}.
  */
 public enum VerificationResult {
 

@@ -9,10 +9,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
  * CDI bean providing pre-formatted regulatory query output for GDPR Art.22 and

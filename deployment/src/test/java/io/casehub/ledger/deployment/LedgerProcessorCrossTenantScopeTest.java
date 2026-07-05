@@ -35,6 +35,6 @@ class LedgerProcessorCrossTenantScopeTest {
     void ledgerEntryDotName_matchesBaseEntityClass() {
         assertThat(LedgerProcessor.LEDGER_ENTRY)
                 .isEqualTo(DotName.createSimple(
-                        "io.casehub.ledger.runtime.model.LedgerEntry"));
+                        "io.casehub.ledger.api.model.LedgerEntry"));
     }
 }

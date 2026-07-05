@@ -12,7 +12,7 @@ import jakarta.interceptor.InvocationContext;
 /**
  * CDI interceptor that captures provenance context before a {@link ProvenanceCapture}-annotated
  * method executes, making it available to {@link ProvenanceCaptureEnricher} during any
- * {@link io.casehub.ledger.runtime.model.LedgerEntry} persist that occurs within the call.
+ * {@link io.casehub.ledger.api.model.LedgerEntry} persist that occurs within the call.
  *
  * <p>
  * The {@code sourceEntityId} is resolved in priority order:

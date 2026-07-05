@@ -8,7 +8,7 @@ import io.casehub.ledger.runtime.model.ErasureReceiptLedgerEntry;
  * SPI for querying {@link ErasureReceiptLedgerEntry} records.
  *
  * <p>Receipt entries are persisted via
- * {@link LedgerEntryRepository#save(io.casehub.ledger.runtime.model.LedgerEntry, String)},
+ * {@link io.casehub.ledger.api.spi.LedgerEntryRepository#save(io.casehub.ledger.api.model.LedgerEntry, String)},
  * which ensures Merkle chain inclusion, pseudonymisation, and enricher pipeline execution.
  * This SPI covers read access only.
  */

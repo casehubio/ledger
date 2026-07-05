@@ -2,7 +2,7 @@ package io.casehub.ledger.runtime.service.federation;
 
 import java.time.Instant;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;

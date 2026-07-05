@@ -43,7 +43,7 @@ import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
  * so {@code getDatabaseProductName()} alone is insufficient. Refs casehubio/ledger#150.
  *
  * <p>Shared by all JPA repositories that persist
- * {@link io.casehub.ledger.runtime.model.LedgerEntry} subclasses.
+ * {@link io.casehub.ledger.api.model.LedgerEntry} subclasses.
  */
 @ApplicationScoped
 class LedgerSequenceAllocator {

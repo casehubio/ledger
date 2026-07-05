@@ -2,7 +2,7 @@
 --
 -- 1. Remove optional fields migrated to supplements from ledger_entry.
 -- 2. Add supplement_json column for fast denormalised reads.
--- 3. Create ledger_supplement base table and three joined subclass tables.
+-- 3. Create self-contained supplement tables (no JOINED inheritance base table).
 --
 -- Compatible with H2 (dev/test) and PostgreSQL (production).
 -- No data migration required — all consumers are pre-release (v1.0.0-SNAPSHOT).
@@ -23,24 +23,12 @@ ALTER TABLE ledger_entry DROP COLUMN IF EXISTS source_entity_system;
 
 ALTER TABLE ledger_entry ADD COLUMN supplement_json TEXT;
 
--- ── ledger_supplement base table ─────────────────────────────────────────────
-
-CREATE TABLE ledger_supplement (
-    id               UUID         NOT NULL,
-    ledger_entry_id  UUID         NOT NULL,
-    supplement_type  VARCHAR(30)  NOT NULL,
-    CONSTRAINT pk_ledger_supplement PRIMARY KEY (id),
-    CONSTRAINT fk_supplement_entry FOREIGN KEY (ledger_entry_id)
-        REFERENCES ledger_entry (id)
-);
-
-CREATE INDEX idx_ledger_supplement_entry ON ledger_supplement (ledger_entry_id);
-CREATE INDEX idx_ledger_supplement_type  ON ledger_supplement (supplement_type);
-
--- ── ComplianceSupplement ──────────────────────────────────────────────────────
+-- ── ComplianceSupplement (self-contained) ────────────────────────────────────
 
 CREATE TABLE ledger_supplement_compliance (
     id                       UUID          NOT NULL,
+    ledger_entry_id          UUID          NOT NULL,
+    supplement_type          VARCHAR(30)   NOT NULL,
     -- Governance
     plan_ref                 VARCHAR(500),
     rationale                TEXT,
@@ -53,14 +41,18 @@ CREATE TABLE ledger_supplement_compliance (
     contestation_uri         VARCHAR(2000),
     human_override_available BOOLEAN,
     CONSTRAINT pk_ledger_supplement_compliance PRIMARY KEY (id),
-    CONSTRAINT fk_compliance_base FOREIGN KEY (id)
-        REFERENCES ledger_supplement (id)
+    CONSTRAINT fk_compliance_entry FOREIGN KEY (ledger_entry_id)
+        REFERENCES ledger_entry (id)
 );
 
--- ── ProvenanceSupplement ──────────────────────────────────────────────────────
+CREATE INDEX idx_compliance_entry ON ledger_supplement_compliance (ledger_entry_id);
+
+-- ── ProvenanceSupplement (self-contained) ────────────────────────────────────
 
 CREATE TABLE ledger_supplement_provenance (
     id                   UUID          NOT NULL,
+    ledger_entry_id      UUID          NOT NULL,
+    supplement_type      VARCHAR(30)   NOT NULL,
     source_entity_id     VARCHAR(255),
     source_entity_type   VARCHAR(255),
     source_entity_system VARCHAR(100),
@@ -68,7 +60,8 @@ CREATE TABLE ledger_supplement_provenance (
     -- populated for LLM agent entries only; forensic drift detection, not trust key.
     agent_config_hash    VARCHAR(64),
     CONSTRAINT pk_ledger_supplement_provenance PRIMARY KEY (id),
-    CONSTRAINT fk_provenance_base FOREIGN KEY (id)
-        REFERENCES ledger_supplement (id)
+    CONSTRAINT fk_provenance_entry FOREIGN KEY (ledger_entry_id)
+        REFERENCES ledger_entry (id)
 );
 
+CREATE INDEX idx_provenance_entry ON ledger_supplement_provenance (ledger_entry_id);

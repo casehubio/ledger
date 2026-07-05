@@ -12,6 +12,7 @@ import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 
 import io.casehub.ledger.api.model.ErasureReason;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * A first-class immutable ledger entry recording a GDPR Art.17 erasure event.
@@ -46,7 +47,7 @@ import io.casehub.ledger.api.model.ErasureReason;
 @Entity
 @Table(name = "erasure_receipt_entry")
 @DiscriminatorValue("ERASURE_RECEIPT")
-public class ErasureReceiptLedgerEntry extends LedgerEntry {
+public class ErasureReceiptLedgerEntry extends JpaLedgerEntry {
 
     /** The raw actor identity that was erased. Stored before the token→identity mapping is severed. */
     @Column(name = "erased_actor_id", nullable = false)

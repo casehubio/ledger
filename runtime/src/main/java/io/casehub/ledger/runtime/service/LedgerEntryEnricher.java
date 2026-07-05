@@ -1,6 +1,6 @@
 package io.casehub.ledger.runtime.service;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * SPI for auto-populating fields on {@link LedgerEntry} at persist time.
@@ -28,7 +28,7 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
  *       {@link io.casehub.ledger.runtime.service.intercept.ProvenanceCaptureEnricher}.</li>
  *   <li>Enrichers that modify supplement fields in-place MUST call
  *       {@link LedgerEntry#refreshSupplementJson()} or
- *       {@link LedgerEntry#attach(io.casehub.ledger.runtime.model.supplement.LedgerSupplement)}
+ *       {@link LedgerEntry#attach(io.casehub.ledger.api.model.supplement.LedgerSupplement)}
  *       — direct field mutation leaves {@code supplementJson} stale, and the hash
  *       will cover the stale value.</li>
  * </ul>

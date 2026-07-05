@@ -9,7 +9,8 @@ import io.casehub.platform.identity.AbstractCachingIdentityProvider;
 import io.casehub.platform.api.identity.DIDResolver;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 import io.casehub.ledger.runtime.service.AgentKeyRotatedEvent;
 import io.casehub.ledger.runtime.service.LedgerEntryEnricher;
 import jakarta.annotation.Priority;
@@ -86,7 +87,9 @@ public class ActorIdentityValidationEnricher implements LedgerEntryEnricher {
                 statusCache.put(entry.actorId, Optional.of(status));
                 fireEvent(entry, status);
             }
-            entry.pendingIdentityStatus = status;
+            if (entry instanceof final JpaLedgerEntry jpa) {
+                jpa.pendingIdentityStatus = status;
+            }
         } catch (final Exception e) {
             LOG.warnf("ActorIdentityValidationEnricher failed for actor %s: %s",
                 entry.actorId, e.getMessage());

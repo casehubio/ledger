@@ -13,12 +13,12 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.ComplianceReport;
 import io.casehub.ledger.runtime.service.LedgerComplianceReportService;
 import io.casehub.ledger.runtime.service.ReportFormat;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -178,7 +178,7 @@ class LedgerComplianceReportServiceIT {
 
     private TestEntry entryWithCompliance(final String actorId, final String algorithmRef, final double confidence) {
         final TestEntry e = base(UUID.randomUUID(), actorId);
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = algorithmRef;
         cs.confidenceScore = confidence;
         cs.contestationUri = "https://example.com/challenge";
@@ -190,7 +190,7 @@ class LedgerComplianceReportServiceIT {
     private TestEntry entryWithComplianceForSubject(final UUID subjectId, final String actorId,
             final String algorithmRef, final double confidence) {
         final TestEntry e = base(subjectId, actorId);
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = algorithmRef;
         cs.confidenceScore = confidence;
         e.attach(cs);
@@ -200,11 +200,11 @@ class LedgerComplianceReportServiceIT {
     private TestEntry entryWithComplianceAndProvenance(final String actorId, final String algorithmRef,
             final double confidence, final String entityType, final UUID entityId) {
         final TestEntry e = base(UUID.randomUUID(), actorId);
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = algorithmRef;
         cs.confidenceScore = confidence;
         e.attach(cs);
-        final ProvenanceSupplement ps = new ProvenanceSupplement();
+        final JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
         ps.sourceEntityType = entityType;
         ps.sourceEntityId = entityId.toString();
         e.attach(ps);

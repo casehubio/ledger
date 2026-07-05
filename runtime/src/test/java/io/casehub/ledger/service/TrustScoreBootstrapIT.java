@@ -17,9 +17,10 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.casehub.ledger.runtime.service.federation.ActorExport;
 import io.casehub.ledger.runtime.service.federation.GlobalScoreExport;
@@ -93,7 +94,7 @@ class TrustScoreBootstrapIT {
         final String actorId = "bootstrap-existing-" + UUID.randomUUID();
 
         // Pre-seed a trust score so actor is "existing"
-        trustRepo.upsert(actorId, io.casehub.ledger.api.model.ActorTrustScore.ScoreType.GLOBAL,
+        trustRepo.upsert(actorId, ScoreType.GLOBAL,
                 null, null, ActorType.AGENT, 0.60, 5, 0, 3.0, 2.0, 5, 0, Instant.now());
 
         // Write a ledger entry so actor appears in byActor map

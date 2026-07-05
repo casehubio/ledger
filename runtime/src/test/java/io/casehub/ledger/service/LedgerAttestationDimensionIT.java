@@ -17,8 +17,8 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
@@ -79,7 +79,7 @@ class LedgerAttestationDimensionIT {
     @Transactional
     void ordinaryAttestation_nullDimensionFields() {
         final TestEntry entry = savedEntry();
-        final LedgerAttestation att = new LedgerAttestation();
+        final LedgerAttestation att = new io.casehub.ledger.runtime.model.LedgerAttestation();
         att.id = UUID.randomUUID();
         att.ledgerEntryId = entry.id;
         att.subjectId = entry.subjectId;
@@ -107,7 +107,7 @@ class LedgerAttestationDimensionIT {
     void dimensionAndOrdinaryAttestations_coexistOnSameEntry() {
         final TestEntry entry = savedEntry();
 
-        final LedgerAttestation ordinary = new LedgerAttestation();
+        final LedgerAttestation ordinary = new io.casehub.ledger.runtime.model.LedgerAttestation();
         ordinary.id = UUID.randomUUID();
         ordinary.ledgerEntryId = entry.id;
         ordinary.subjectId = entry.subjectId;
@@ -166,7 +166,7 @@ class LedgerAttestationDimensionIT {
 
     private LedgerAttestation dimensionAttestation(final UUID entryId, final UUID subjectId,
             final String dimension, final double score) {
-        final LedgerAttestation att = new LedgerAttestation();
+        final LedgerAttestation att = new io.casehub.ledger.runtime.model.LedgerAttestation();
         att.id = UUID.randomUUID();
         att.ledgerEntryId = entryId;
         att.subjectId = subjectId;

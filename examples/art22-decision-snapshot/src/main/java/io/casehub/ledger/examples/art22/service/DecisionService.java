@@ -13,7 +13,7 @@ import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntry;
 import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntryRepository;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 
 /**
  * Simulates an AI decision service that records each decision with a full
@@ -53,7 +53,7 @@ public class DecisionService {
         entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         // Attach GDPR Art.22 compliance supplement — all four structured fields
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.algorithmRef = algorithmRef;
         cs.confidenceScore = confidence;
         cs.contestationUri = "https://decisions.example.com/challenge/" + entry.decisionId;

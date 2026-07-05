@@ -2,7 +2,7 @@ package io.casehub.ledger.runtime.service.identity;
 
 import io.casehub.platform.api.identity.IdentityBindingStatus;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.PrePersist;
@@ -10,7 +10,7 @@ import jakarta.persistence.PrePersist;
 /**
  * JPA entity listener enforcing ENFORCE validation mode.
  *
- * <p>Reads {@link LedgerEntry#pendingIdentityStatus} (transient, set by
+ * <p>Reads {@link JpaLedgerEntry#pendingIdentityStatus} (transient, set by
  * {@link ActorIdentityValidationEnricher}) in a {@code @PrePersist} callback.
  * Throws {@link LedgerIdentityViolationException} only when:
  * <ul>
@@ -20,7 +20,7 @@ import jakarta.persistence.PrePersist;
  * </ul>
  *
  * <p><strong>ENFORCE is JPA-only.</strong> This listener is registered via
- * {@code @EntityListeners} on {@link LedgerEntry} and does not fire in
+ * {@code @EntityListeners} on {@link JpaLedgerEntry} and does not fire in
  * {@code InMemoryLedgerEntryRepository}.
  *
  * <p><strong>No sequence gap risk.</strong> Sequence numbers are computed via
@@ -35,7 +35,7 @@ public class LedgerIdentityEnforcementListener {
 
     @PrePersist
     public void enforceIdentity(final Object entity) {
-        if (!(entity instanceof LedgerEntry entry)) return;
+        if (!(entity instanceof final JpaLedgerEntry entry)) return;
         if (entry.pendingIdentityStatus == null) return; // no DID binding configured
         if (config.agentIdentity().validationMode()
                 != LedgerConfig.AgentIdentityConfig.ValidationMode.ENFORCE) return;

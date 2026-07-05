@@ -7,7 +7,7 @@ import java.util.UUID;
  * Returned by {@code CrossTenantLedgerEntryRepository.findSequenceStats()} for gap detection.
  *
  * <p>{@code min} and {@code max} are {@code int} to match the {@code int} type of
- * {@link io.casehub.ledger.runtime.model.LedgerEntry#sequenceNumber} exactly — no
+ * {@link io.casehub.ledger.api.model.LedgerEntry#sequenceNumber} exactly — no
  * widening through Hibernate's constructor invocation path.
  */
 public record SubjectSequenceStats(

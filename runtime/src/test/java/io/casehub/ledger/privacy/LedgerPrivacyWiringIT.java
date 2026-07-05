@@ -17,9 +17,10 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -51,7 +52,7 @@ class LedgerPrivacyWiringIT {
         final TestEntry entry = entry(rawActorId);
         repo.save(entry, DEFAULT_TENANT_ID);
 
-        final LedgerEntry stored = em.find(LedgerEntry.class, entry.id);
+        final LedgerEntry stored = em.find(JpaLedgerEntry.class, entry.id);
         assertThat(stored.actorId)
                 .isNotNull()
                 .isNotEqualTo(rawActorId);
@@ -106,14 +107,13 @@ class LedgerPrivacyWiringIT {
     void save_decisionContext_storedUnchanged_withPassThroughSanitiser() {
         final String rawActorId = "dave-" + UUID.randomUUID();
         final TestEntry entry = entry(rawActorId);
-        final ComplianceSupplement cs = new ComplianceSupplement();
+        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
         cs.decisionContext = "{\"riskScore\":42,\"region\":\"EU\"}";
         entry.attach(cs);
 
         repo.save(entry, DEFAULT_TENANT_ID);
 
-        final LedgerEntry stored = em.find(LedgerEntry.class, entry.id);
-        stored.supplements.size(); // force lazy load
+        final LedgerEntry stored = em.find(JpaLedgerEntry.class, entry.id);
         assertThat(stored.compliance())
                 .isPresent()
                 .hasValueSatisfying(c -> assertThat(c.decisionContext).isEqualTo("{\"riskScore\":42,\"region\":\"EU\"}"));
@@ -130,8 +130,8 @@ class LedgerPrivacyWiringIT {
         repo.save(e1, DEFAULT_TENANT_ID);
         repo.save(e2, DEFAULT_TENANT_ID);
 
-        final String token1 = em.find(LedgerEntry.class, e1.id).actorId;
-        final String token2 = em.find(LedgerEntry.class, e2.id).actorId;
+        final String token1 = em.find(JpaLedgerEntry.class, e1.id).actorId;
+        final String token2 = em.find(JpaLedgerEntry.class, e2.id).actorId;
         assertThat(token1).isEqualTo(token2);
     }
 
@@ -200,7 +200,7 @@ class LedgerPrivacyWiringIT {
         final TestEntry entry = entry(rawActorId, ActorType.SYSTEM);
         repo.save(entry, DEFAULT_TENANT_ID);
 
-        final LedgerEntry stored = em.find(LedgerEntry.class, entry.id);
+        final LedgerEntry stored = em.find(JpaLedgerEntry.class, entry.id);
         assertThat(stored.actorId).isEqualTo(rawActorId);
     }
 

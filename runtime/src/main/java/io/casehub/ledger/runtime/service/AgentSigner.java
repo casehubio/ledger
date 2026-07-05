@@ -3,7 +3,7 @@ package io.casehub.ledger.runtime.service;
 import java.util.Optional;
 
 /**
- * SPI: performs (or delegates) the signing of a {@link io.casehub.ledger.runtime.model.LedgerEntry}
+ * SPI: performs (or delegates) the signing of a {@link io.casehub.ledger.api.model.LedgerEntry}
  * on behalf of the given actorId, returning the complete signature result.
  *
  * <p>Return {@link Optional#empty()} for actors that do not participate in bilateral signing —
@@ -26,14 +26,14 @@ public interface AgentSigner {
 
     /**
      * @param actorId the actor identity (e.g. {@code "claude:reviewer@v1"})
-     * @param data    canonical bytes to sign ({@link io.casehub.ledger.runtime.model.LedgerEntry#canonicalBytes()})
+     * @param data    canonical bytes to sign ({@link io.casehub.ledger.api.model.LedgerEntry#canonicalBytes()})
      * @return signed result, or empty if this actor does not sign entries
      */
     Optional<AgentSignature> sign(String actorId, byte[] data);
 
     /**
      * Retrieve key material without signing. Avoids wasted cloud KMS sign calls in
-     * {@link AgentEntrySigner#prepareKey(io.casehub.ledger.runtime.model.LedgerEntry)}.
+     * {@link AgentEntrySigner#prepareKey(io.casehub.ledger.api.model.LedgerEntry)}.
      *
      * <p>Default implementation calls {@link #sign(String, byte[])} with dummy data
      * and extracts the key material. Concrete implementations that cache public keys

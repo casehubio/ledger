@@ -18,7 +18,7 @@ import io.casehub.ledger.examples.order.model.OrderStatus;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 
 /**
  * Order domain service.
@@ -97,7 +97,7 @@ public class OrderService {
                         entry.refreshSupplementJson(); // required after in-place field mutation
                     },
                     () -> {
-                        final ComplianceSupplement cs = new ComplianceSupplement();
+                        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
                         cs.rationale = reason;
                         entry.attach(cs);
                     });
@@ -134,7 +134,7 @@ public class OrderService {
         entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         if (ledgerConfig.decisionContext().enabled()) {
-            final ComplianceSupplement cs = new ComplianceSupplement();
+            final JpaComplianceSupplement cs = new JpaComplianceSupplement();
             cs.decisionContext = String.format(
                     "{\"status\":\"%s\",\"total\":%s,\"customerId\":\"%s\"}",
                     order.status, order.total, order.customerId);

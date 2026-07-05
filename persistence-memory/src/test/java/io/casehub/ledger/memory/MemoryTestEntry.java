@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 
 /**

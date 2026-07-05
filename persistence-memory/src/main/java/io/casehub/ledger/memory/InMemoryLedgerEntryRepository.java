@@ -20,12 +20,12 @@ import org.jboss.logging.Logger;
 
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.privacy.DecisionContextSanitiser;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
@@ -311,9 +311,15 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
         return entries.values();
     }
 
-    /** Package-private accessor — called by cross-tenant delegate for attestation queries. */
-    Collection<LedgerAttestation> allAttestations() {
-        return attestations.values();
+    /**
+     * Package-private accessor — called by cross-tenant delegate for attestation queries.
+     * Returns {@code Collection<runtime.LedgerAttestation>} because cross-tenant consumers
+     * operate on the concrete JPA entity type. The stored objects are always
+     * {@code runtime.model.LedgerAttestation} instances (passed in via {@code saveAttestation}).
+     */
+    @SuppressWarnings("unchecked")
+    Collection<io.casehub.ledger.runtime.model.LedgerAttestation> allAttestations() {
+        return (Collection<io.casehub.ledger.runtime.model.LedgerAttestation>) (Collection<?>) attestations.values();
     }
 
     /**

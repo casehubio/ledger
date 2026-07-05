@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import io.casehub.ledger.api.spi.LedgerTraceIdProvider;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * Enricher that auto-populates {@link LedgerEntry#traceId} from the active OTel span.

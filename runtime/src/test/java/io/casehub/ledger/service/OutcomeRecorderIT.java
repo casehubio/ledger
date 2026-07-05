@@ -13,7 +13,7 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;

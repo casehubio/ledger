@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.casehub.ledger.api.model.ActorTrustScore.ScoreType;
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.platform.api.identity.ActorType;
 import io.quarkus.arc.DefaultBean;

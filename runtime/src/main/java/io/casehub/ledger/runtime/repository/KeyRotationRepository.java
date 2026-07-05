@@ -6,7 +6,7 @@ import io.casehub.ledger.runtime.model.KeyRotationEntry;
 
 /**
  * SPI for querying {@link KeyRotationEntry} records.
- * Rotation entries are persisted via {@link LedgerEntryRepository#save(io.casehub.ledger.runtime.model.LedgerEntry)},
+ * Rotation entries are persisted via {@link io.casehub.ledger.api.spi.LedgerEntryRepository#save(io.casehub.ledger.api.model.LedgerEntry)},
  * which ensures Merkle chain inclusion, pseudonymisation, and enricher pipeline execution.
  */
 public interface KeyRotationRepository {

@@ -14,10 +14,11 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
+import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
@@ -89,7 +90,7 @@ public class TrustScoreJob {
         final Map<String, ActorTrustScore> previousSnapshot;
         if (routingPublisher.needsPreviousSnapshot()) {
             previousSnapshot = trustRepo.findAll().stream()
-                    .filter(s -> s.scoreType == ActorTrustScore.ScoreType.GLOBAL)
+                    .filter(s -> s.scoreType == ScoreType.GLOBAL)
                     .peek(s -> em.detach(s))
                     .collect(Collectors.toMap(s -> s.actorId, s -> s));
         } else {

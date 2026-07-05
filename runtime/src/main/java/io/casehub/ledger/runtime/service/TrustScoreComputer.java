@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * Computes Bayesian Beta trust scores from ledger attestation history.

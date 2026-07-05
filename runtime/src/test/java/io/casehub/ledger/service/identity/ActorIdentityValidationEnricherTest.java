@@ -6,7 +6,7 @@ import io.casehub.platform.api.identity.AgentCredentialValidator;
 import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.VerificationMethod;
 import io.casehub.platform.api.identity.DIDResolver;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 import io.casehub.ledger.runtime.service.identity.ActorIdentityValidationEnricher;
 import io.casehub.platform.api.identity.AgentIdentityValidatedEvent;
 import io.casehub.platform.api.identity.AgentIdentityViolationEvent;
@@ -44,7 +44,7 @@ class ActorIdentityValidationEnricherTest {
             Duration.ofMinutes(5));
     }
 
-    LedgerEntry entry(String actorId, String actorDid, byte[] pubKey) {
+    JpaLedgerEntry entry(String actorId, String actorDid, byte[] pubKey) {
         var e = new ConcreteEntry();
         e.actorId = actorId;
         e.actorDid = actorDid;
@@ -239,5 +239,5 @@ class ActorIdentityValidationEnricherTest {
             && "tenant-beta".equals(violation.tenancyId())));
     }
 
-    static class ConcreteEntry extends LedgerEntry {}
+    static class ConcreteEntry extends JpaLedgerEntry {}
 }

@@ -233,7 +233,7 @@ public interface LedgerConfig {
     interface HashChainConfig {
 
         /**
-         * When {@code true}, each {@link io.casehub.ledger.runtime.model.LedgerEntry} carries
+         * When {@code true}, each {@link io.casehub.ledger.api.model.LedgerEntry} carries
          * a Merkle leaf hash ({@code SHA-256(0x00 | canonical fields)}) and the per-subject
          * Merkle Mountain Range frontier is updated on every save. Setting this to {@code false}
          * skips leaf hash computation and frontier updates entirely — {@code LedgerEntry.digest}
@@ -252,7 +252,7 @@ public interface LedgerConfig {
          * When {@code true}, a JSON snapshot of observable state is captured at each transition
          * and stored in {@code ComplianceSupplement.decisionContext}.
          * Addresses GDPR Article 22 and EU AI Act Article 12 explainability requirements.
-         * Attach a {@link io.casehub.ledger.runtime.model.supplement.ComplianceSupplement}
+         * Attach a {@link io.casehub.ledger.api.model.supplement.ComplianceSupplement}
          * to the entry and populate its {@code decisionContext} field.
          *
          * @return {@code true} if decision context snapshots are enabled (default)

@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
-import io.casehub.ledger.runtime.repository.ReactiveLedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.ReactiveLedgerEntryRepository;
 
 /**
  * Structural verification of the reactive SPI.

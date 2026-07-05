@@ -7,7 +7,7 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * Domain-specific ledger entry for the Order aggregate.
@@ -25,7 +25,7 @@ import io.casehub.ledger.runtime.model.LedgerEntry;
 @Entity
 @Table(name = "order_ledger_entry")
 @DiscriminatorValue("ORDER")
-public class OrderLedgerEntry extends LedgerEntry {
+public class OrderLedgerEntry extends JpaLedgerEntry {
 
     /** The Order this entry belongs to — mirrors subjectId with explicit typing. */
     @Column(name = "order_id", nullable = false)

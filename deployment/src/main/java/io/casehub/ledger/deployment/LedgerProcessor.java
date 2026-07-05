@@ -43,13 +43,17 @@ class LedgerProcessor {
 
     static final DotName JAVA_LANG_OBJECT = DotName.createSimple("java.lang.Object");
     static final DotName LEDGER_ENTRY = DotName.createSimple(
-            "io.casehub.ledger.runtime.model.LedgerEntry");
+            "io.casehub.ledger.api.model.LedgerEntry");
     static final DotName CROSS_TENANT = DotName.createSimple(
             "io.casehub.ledger.runtime.qualifier.CrossTenant");
     static final DotName REQUEST_SCOPED = DotName.createSimple(
             "jakarta.enterprise.context.RequestScoped");
     static final DotName ENTITY = DotName.createSimple("jakarta.persistence.Entity");
     static final DotName TRANSIENT = DotName.createSimple("jakarta.persistence.Transient");
+    static final DotName ONE_TO_MANY = DotName.createSimple("jakarta.persistence.OneToMany");
+    static final DotName ONE_TO_ONE = DotName.createSimple("jakarta.persistence.OneToOne");
+    static final DotName MANY_TO_ONE = DotName.createSimple("jakarta.persistence.ManyToOne");
+    static final DotName MANY_TO_MANY = DotName.createSimple("jakarta.persistence.ManyToMany");
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -115,7 +119,7 @@ class LedgerProcessor {
     }
 
     /**
-     * Scans all {@link io.casehub.ledger.runtime.model.LedgerEntry} subclasses for fields
+     * Scans all {@link io.casehub.ledger.api.model.LedgerEntry} subclasses for fields
      * that shadow base class fields. Field shadowing in a JOINED-inheritance JPA hierarchy
      * causes duplicate column mapping, silent data loss, and Hibernate runtime errors.
      *
@@ -208,7 +212,7 @@ class LedgerProcessor {
     }
 
     /**
-     * Validates that all {@link io.casehub.ledger.runtime.model.LedgerEntry} subclasses
+     * Validates that all {@link io.casehub.ledger.api.model.LedgerEntry} subclasses
      * with persistent fields override {@code domainContentBytes()}. Persistent fields
      * on subclasses must be included in the Merkle leaf hash and agent signature —
      * {@code domainContentBytes()} is where subclasses declare their canonical content.
@@ -234,7 +238,7 @@ class LedgerProcessor {
             }
 
             final boolean hasPersistentFields = subclass.fields().stream()
-                    .anyMatch(f -> !f.hasAnnotation(TRANSIENT));
+                    .anyMatch(LedgerProcessor::isDomainPersistentField);
 
             if (!hasPersistentFields) {
                 continue;
@@ -244,7 +248,7 @@ class LedgerProcessor {
 
             if (!overrides) {
                 final String fieldNames = subclass.fields().stream()
-                        .filter(f -> !f.hasAnnotation(TRANSIENT))
+                        .filter(LedgerProcessor::isDomainPersistentField)
                         .map(FieldInfo::name)
                         .collect(Collectors.joining(", "));
                 errors.produce(new ValidationPhaseBuildItem.ValidationErrorBuildItem(
@@ -256,5 +260,19 @@ class LedgerProcessor {
                                         + "to include them in the Merkle leaf hash and agent signature.")));
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if the field is a domain-persistent column — a scalar JPA field
+     * that should be hash-protected. Excludes {@code @Transient} fields (not persisted)
+     * and JPA relationship fields ({@code @OneToMany}, {@code @ManyToOne}, {@code @OneToOne},
+     * {@code @ManyToMany}) which are association metadata, not domain content.
+     */
+    private static boolean isDomainPersistentField(final FieldInfo field) {
+        return !field.hasAnnotation(TRANSIENT)
+                && !field.hasAnnotation(ONE_TO_MANY)
+                && !field.hasAnnotation(ONE_TO_ONE)
+                && !field.hasAnnotation(MANY_TO_ONE)
+                && !field.hasAnnotation(MANY_TO_MANY);
     }
 }

@@ -1,5 +1,8 @@
 package io.casehub.ledger.api.model.supplement;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+
 /**
  * Supplement carrying workflow provenance — the external entity that originated
  * this ledger entry's subject — and optional LLM agent configuration binding.
@@ -10,7 +13,7 @@ package io.casehub.ledger.api.model.supplement;
  * identify the source entity precisely enough to correlate across systems:
  *
  * <pre>{@code
- * ProvenanceSupplement ps = new ProvenanceSupplement();
+ * JpaProvenanceSupplement ps = new JpaProvenanceSupplement();
  * ps.sourceEntityId = workflowInstance.id.toString();
  * ps.sourceEntityType = "Flow:WorkflowInstance";
  * ps.sourceEntitySystem = "quarkus-flow";
@@ -23,21 +26,25 @@ package io.casehub.ledger.api.model.supplement;
  * configuration drift detection within a persona version. This field does not
  * affect trust scoring — it is a forensic audit field only. See ADR 0004.
  */
-public class ProvenanceSupplement extends LedgerSupplement {
+@MappedSuperclass
+public abstract class ProvenanceSupplement extends LedgerSupplement {
 
     /** Identifier of the external entity that originated this subject. */
+    @Column(name = "source_entity_id", length = 255)
     public String sourceEntityId;
 
     /**
      * Type of the external entity.
      * Convention: {@code "System:TypeName"}, e.g. {@code "Flow:WorkflowInstance"}.
      */
+    @Column(name = "source_entity_type", length = 255)
     public String sourceEntityType;
 
     /**
      * The system that owns the external entity.
      * Example: {@code "quarkus-flow"}, {@code "casehub-work"}.
      */
+    @Column(name = "source_entity_system", length = 100)
     public String sourceEntitySystem;
 
     /**
@@ -46,5 +53,6 @@ public class ProvenanceSupplement extends LedgerSupplement {
      * for entries produced by LLM agents. Used for configuration drift detection;
      * not the trust key (trust accumulates on {@code actorId}). See ADR 0004.
      */
+    @Column(name = "agent_config_hash", length = 64)
     public String agentConfigHash;
 }

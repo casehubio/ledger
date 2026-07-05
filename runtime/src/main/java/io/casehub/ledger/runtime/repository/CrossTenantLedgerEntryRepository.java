@@ -1,7 +1,7 @@
 package io.casehub.ledger.runtime.repository;
 
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.service.model.SubjectSequenceStats;
 
 import java.time.Instant;

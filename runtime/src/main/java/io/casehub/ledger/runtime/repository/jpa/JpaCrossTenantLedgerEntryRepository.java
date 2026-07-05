@@ -15,7 +15,7 @@ import jakarta.persistence.EntityManager;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;

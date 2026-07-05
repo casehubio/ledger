@@ -268,46 +268,60 @@ quarkus.arc.selected-alternatives=io.casehub.platform.identity.ScimActorDIDProvi
 
 ```
 casehub-ledger/  (local folder: ~/claude/casehub/ledger)
+├── api/
+│   └── src/main/java/io/casehub/ledger/api/
+│       ├── model/
+│       │   ├── LedgerEntry.java             — @MappedSuperclass: abstract base (all persistent fields, canonicalBytes()); tenancyId (multi-tenancy); agentSignature + agentPublicKey + agentKeyRef (bilateral signing); actorDid (identity binding); consumers extend this or JpaLedgerEntry
+│       │   ├── LedgerEntryType.java         — COMMAND | EVENT | ATTESTATION enum
+│       │   ├── ActorType.java               — HUMAN | AGENT | SYSTEM enum
+│       │   ├── KeyRotationReason.java       — SCHEDULED | COMPROMISED enum (NIST SP 800-57 lifecycle distinction)
+│       │   ├── ErasureReason.java           — GDPR_ART_17_REQUEST | RETENTION_EXPIRED | ACCOUNT_DELETION enum (legal basis for erasure events)
+│       │   ├── AttestationVerdict.java      — SOUND | FLAGGED | ENDORSED | CHALLENGED enum
+│       │   ├── CapabilityTag.java           — sentinel constants: GLOBAL = "*" for cross-capability attestations
+│       │   ├── ScoreType.java               — GLOBAL | CAPABILITY | DIMENSION | CAPABILITY_DIMENSION enum (trust score type; see ADR 0010)
+│       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path
+│       │   └── supplement/
+│       │       ├── LedgerSupplement.java        — @MappedSuperclass: abstract base for supplements
+│       │       ├── ComplianceSupplement.java    — @MappedSuperclass: GDPR Art.22, governance fields
+│       │       └── ProvenanceSupplement.java    — @MappedSuperclass: workflow source entity; agentConfigHash for LLM config drift detection
+│       └── spi/
+│           ├── LedgerEntryRepository.java        — tenant-scoped SPI (all methods take tenancyId); findEntryById (not findById — no Panache conflict)
+│           ├── ReactiveLedgerEntryRepository.java — tenant-scoped reactive SPI (Uni<T> return types; all methods take tenancyId)
+│           ├── LedgerAppender.java              — write-path SPI: append(AuditRecord) → LedgerEntry (higher-level facade over repository.save())
+│           ├── ReactiveLedgerAppender.java      — reactive write-path SPI: appendAsync(AuditRecord) → Uni<LedgerEntry>
+│           ├── ActorIdentityProvider.java       — SPI: tokenise/resolve/erase actor identities (moved from runtime.privacy; see #142)
+│           ├── OutcomeRecorder.java             — write-path SPI: record(outcome, actorId, subjectId, tenancyId) → UUID entryId
+│           ├── ReactiveOutcomeRecorder.java     — reactive write-path SPI: recordAsync(outcome, actorId, subjectId, tenancyId) → Uni<UUID>
+│           ├── TrustScoreSource.java            — read-path SPI: globalScore(actorId), capabilityScore(actorId, capabilityTag), dimensionScore(actorId, dimension), capabilityDimensionScore(actorId, capability, dimension)
+│           └── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
 ├── runtime/
 │   └── src/main/java/io/casehub/ledger/runtime/
 │       ├── config/LedgerConfig.java         — @ConfigMapping(prefix = "casehub.ledger")
 │       ├── model/
-│       │   ├── LedgerEntry.java             — abstract base entity (JOINED inheritance); tenancyId (multi-tenancy, V1000); agentSignature + agentPublicKey + agentKeyRef for bilateral signing (V1005/V1006); actorDid + @Transient pendingIdentityStatus (V1008)
-│       │   ├── LedgerAttestation.java       — peer attestation entity
-│       │   ├── ActorTrustScore.java         — trust score entity; four ScoreType values (GLOBAL|CAPABILITY|DIMENSION|CAPABILITY_DIMENSION) × two-column key (capability_key, dimension_key); see ADR 0010
-│       │   ├── LedgerMerkleFrontier.java    — Merkle frontier node entity (log₂(N) rows per subject per tenant); tenancyId column added in #139
+│       │   ├── jpa/
+│       │   │   └── JpaLedgerEntry.java          — @Entity: runtime JPA persistence layer extending api LedgerEntry; JOINED inheritance root for runtime; consumers can extend this instead of api LedgerEntry when they need JPA features in the base class
+│       │   ├── LedgerAttestation.java       — @Entity: peer attestation entity
+│       │   ├── ActorTrustScore.java         — @Entity: trust score entity; four ScoreType values (GLOBAL|CAPABILITY|DIMENSION|CAPABILITY_DIMENSION) × two-column key (capability_key, dimension_key); see ADR 0010
+│       │   ├── LedgerMerkleFrontier.java    — @Entity: Merkle frontier node (log₂(N) rows per subject per tenant); tenancyId column added in #139
 │       │   ├── LedgerEntryArchiveRecord.java — archive snapshot record for retention-deleted entries (V1003)
-│       │   ├── KeyRotationEntry.java         — LedgerEntry subclass: key rotation/revocation event; subjectId=UUID.nameUUIDFromBytes(actorId); see ADR 0012
-│       │   ├── ActorIdentityBindingEntry.java — LedgerEntry subclass: DID/VC binding validation event; subjectId=nameUUIDFromBytes(actorId); entryType=EVENT; see ADR 0015
-│       │   ├── ErasureReceiptLedgerEntry.java — LedgerEntry subclass: tamper-evident GDPR Art.17 erasure record; subjectId=nameUUIDFromBytes(erasedActorId); entryType=EVENT; opt-in via casehub.ledger.erasure-receipt.enabled
-│       │   ├── LedgerEntryType.java         — COMMAND | EVENT | ATTESTATION (api module)
-│       │   ├── ActorType.java               — HUMAN | AGENT | SYSTEM (api module)
-│       │   ├── KeyRotationReason.java       — SCHEDULED | COMPROMISED (api module); NIST SP 800-57 lifecycle distinction
-│       │   ├── ErasureReason.java           — GDPR_ART_17_REQUEST | RETENTION_EXPIRED | ACCOUNT_DELETION (api module); legal basis for erasure events
-│       │   ├── AttestationVerdict.java      — SOUND | FLAGGED | ENDORSED | CHALLENGED (api module)
-│       │   ├── CapabilityTag.java           — sentinel constants: GLOBAL = "*" for cross-capability attestations (api module)
-│       │   ├── ActorIdentity.java           — token↔identity mapping for pseudonymisation
+│       │   ├── KeyRotationEntry.java         — @Entity: LedgerEntry subclass: key rotation/revocation event; subjectId=UUID.nameUUIDFromBytes(actorId); see ADR 0012
+│       │   ├── ActorIdentityBindingEntry.java — @Entity: LedgerEntry subclass: DID/VC binding validation event; subjectId=nameUUIDFromBytes(actorId); entryType=EVENT; see ADR 0015
+│       │   ├── PlainLedgerEntry.java         — @Entity: LedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder (V1009)
+│       │   ├── ErasureReceiptLedgerEntry.java — @Entity: LedgerEntry subclass: tamper-evident GDPR Art.17 erasure record; subjectId=nameUUIDFromBytes(erasedActorId); entryType=EVENT; opt-in via casehub.ledger.erasure-receipt.enabled (V1010)
+│       │   ├── ActorIdentity.java           — @Entity: token↔identity mapping for pseudonymisation
 │       │   └── supplement/
-│       │       ├── LedgerSupplement.java        — abstract base (JOINED inheritance)
-│       │       ├── ComplianceSupplement.java    — GDPR Art.22, governance fields
-│       │       ├── ProvenanceSupplement.java    — workflow source entity; agentConfigHash for LLM config drift detection
+│       │       ├── JpaLedgerSupplement.java      — @Entity: runtime JPA base extending api LedgerSupplement; JOINED inheritance
+│       │       ├── JpaComplianceSupplement.java  — @Entity: runtime JPA layer extending api ComplianceSupplement
+│       │       ├── JpaProvenanceSupplement.java  — @Entity: runtime JPA layer extending api ProvenanceSupplement
 │       │       └── LedgerSupplementSerializer.java — JSON serialiser for supplementJson
 │       ├── repository/
-│       │   ├── LedgerEntryRepository.java        — tenant-scoped SPI (all methods take tenancyId); findById → findEntryById
-│       │   ├── ReactiveLedgerEntryRepository.java — tenant-scoped reactive SPI (Uni<T> return types; all methods take tenancyId)
-│       │   ├── CrossTenantLedgerEntryRepository.java — cross-tenant read operations (trust, health, retention)
-│       │   ├── CrossTenantReactiveLedgerEntryRepository.java — reactive cross-tenant counterpart
-│       │   ├── ActorTrustScoreRepository.java     — SPI
-│       │   ├── NoOpActorTrustScoreRepository.java — @DefaultBean: CDI-satisfaction no-op; all reads return empty/empty-list, upsert/updateGlobalTrustScore are no-ops; active when neither JPA nor in-memory alternative is selected (see #143)
-│       │   ├── KeyRotationRepository.java         — SPI: query-only; findByActorId(actorId, tenancyId) tenant-scoped; findCompromisedByActorIdAndKeyRef cross-tenant (compromised key = global security signal); save via LedgerEntryRepository
-│       │   ├── ReactiveKeyRotationRepository.java — reactive SPI: same two query methods with Uni<List<>> returns; no bundled JPA impl — consumers provide; test suite uses BlockingReactiveKeyRotationRepository shim
-│       │   ├── ActorIdentityBindingRepository.java         — SPI: query-only — latestBindingFor(actorId, tenancyId) / bindingHistoryFor(actorId, tenancyId); save via LedgerEntryRepository (mirrors KeyRotationRepository; see #144, #145)
 │       │   ├── NoOpLedgerEntryRepository.java    — @DefaultBean: CDI-satisfaction no-op; all reads return empty, save/saveAttestation return argument unchanged; active when neither JPA nor in-memory alternative is selected (see #138)
+│       │   ├── NoOpActorTrustScoreRepository.java — @DefaultBean: CDI-satisfaction no-op; all reads return empty/empty-list, upsert/updateGlobalTrustScore are no-ops; active when neither JPA nor in-memory alternative is selected (see #143)
 │       │   ├── NoOpActorIdentityBindingRepository.java — @DefaultBean: CDI-satisfaction no-op for ActorIdentityBindingRepository read methods; write path uses LedgerEntryRepository (observer no longer injects this bean)
 │       │   ├── NoOpLedgerMerkleFrontierRepository.java — @DefaultBean: CDI-satisfaction no-op; findBySubjectId() returns empty, replace() is a no-op
-│       │   ├── ErasureReceiptRepository.java  — SPI: query-only; findByErasedActorId(erasedActorId, tenancyId), countByTenant(tenancyId); save via LedgerEntryRepository
 │       │   ├── NoOpErasureReceiptRepository.java — @DefaultBean: CDI-satisfaction no-op; returns empty list
 │       │   └── jpa/                              — JPA implementations (EntityManager-based)
+│       │       ├── JpaLedgerEntryRepository.java     — @Alternative: JPA implementation of LedgerEntryRepository; activate via quarkus.arc.selected-alternatives
 │       │       ├── JpaActorIdentityBindingRepository.java — @Alternative: read-only JPA implementation (latestBindingFor, bindingHistoryFor with tenancyId); no save() — saves go through JpaLedgerEntryRepository; activate via quarkus.arc.selected-alternatives
 │       │       ├── JpaActorTrustScoreRepository.java — @Alternative @ApplicationScoped: activate via quarkus.arc.selected-alternatives; was plain @ApplicationScoped before #143 — @Alternative required so NoOpActorTrustScoreRepository @DefaultBean can fill the default slot
 │       │       ├── JpaCrossTenantLedgerEntryRepository.java
@@ -316,7 +330,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       ├── qualifier/
 │       │   └── CrossTenant.java              — CDI qualifier: disambiguates CrossTenantLedgerEntryRepository from LedgerEntryRepository (Category 1 only; build-time scope validation)
 │       ├── service/
-│       │   ├── LedgerEntryEnricher.java         — SPI: pluggable @PrePersist enrichment pipeline
+│       │   ├── DefaultLedgerAppender.java       — CDI bean: default LedgerAppender implementation — constructs PlainLedgerEntry from AuditRecord, delegates to LedgerEntryRepository
+│       │   ├── DefaultReactiveLedgerAppender.java — CDI bean: default ReactiveLedgerAppender implementation — delegates to ReactiveLedgerEntryRepository
 │       │   ├── TraceIdEnricher.java             — auto-populates traceId from active OTel span
 │       │   ├── OtelTraceIdProvider.java         — OTel span reader for TraceIdEnricher
 │       │   ├── LedgerTraceListener.java         — @EntityListeners runner: iterates LedgerEntryEnricher pipeline, non-fatal
