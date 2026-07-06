@@ -145,6 +145,7 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Deployment artifactId | `casehub-ledger-deployment` |
 | persistence-memory artifactId | `casehub-ledger-memory` |
 | Testing artifactId | `casehub-ledger-testing` |
+| REST artifactId | `casehub-ledger-rest` |
 | Vault Transit artifactId | `casehub-ledger-vault-transit` / `casehub-ledger-vault-transit-quarkus` |
 | AWS KMS artifactId | `casehub-ledger-aws-kms` / `casehub-ledger-aws-kms-quarkus` |
 | GCP Cloud KMS artifactId | `casehub-ledger-gcp-kms` / `casehub-ledger-gcp-kms-quarkus` |
@@ -466,6 +467,23 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
     └── src/main/java/io/casehub/ledger/testing/
         ├── NoOpLedgerEntryRepository.java           — @Alternative @Priority(1); no-op LedgerEntryRepository for consumer test profiles
         └── NoOpReactiveLedgerEntryRepository.java   — @Alternative @Priority(1); no-op ReactiveLedgerEntryRepository for consumer test profiles
+└── rest/                                 — opt-in JAX-RS REST endpoints (plain JAR, not a Quarkus extension)
+    └── src/main/java/io/casehub/ledger/rest/
+        ├── LedgerEntryResource.java             — GET /api/v1/ledger/entries — query by subject or actor; GET /{id}; GET /{id}/caused-by
+        ├── MerkleVerificationResource.java      — GET /api/v1/ledger/verify — integrity check; GET /entries/{id}/proof — inclusion proof
+        ├── TrustScoreResource.java              — GET /api/v1/ledger/trust/{actorId} — global, capability, dimension scores
+        ├── AttestationResource.java             — GET/POST /api/v1/ledger/entries/{id}/attestations — list and create
+        ├── LedgerExceptionMapper.java           — @Provider: maps domain exceptions to HTTP 400/404/409/500
+        ├── LedgerNotFoundException.java         — 404 signal
+        ├── LedgerRestUtil.java                  — tenancy ID defaulting
+        └── dto/                                 — request/response records (decoupled from JPA entities)
+            ├── LedgerEntryResponse.java
+            ├── AttestationResponse.java
+            ├── CreateAttestationRequest.java
+            ├── InclusionProofResponse.java
+            ├── TrustScoreResponse.java
+            ├── VerificationResponse.java
+            └── LedgerDtoMapper.java             — entity → DTO conversion
 └── signing/                              — first-class signing adapter modules (profile: with-signing)
     ├── pom.xml                           — aggregator POM
     ├── vault-transit/                    → io.casehub:casehub-ledger-vault-transit (pure Java; HttpClient + Jackson)
