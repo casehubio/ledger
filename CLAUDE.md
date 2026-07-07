@@ -63,30 +63,10 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 
 # CaseHub Ledger — Claude Code Project Guide
 
-## Platform Context
-
-This repo is one component of the casehubio multi-repo platform. **Before implementing anything — any feature, SPI, data model, or abstraction — run the Platform Coherence Protocol.**
-
-The protocol asks: Does this already exist elsewhere? Is this the right repo for it? Does this create a consolidation opportunity? Is this consistent with how the platform handles the same concern in other repos?
-
-**Platform architecture (fetch before any implementation decision):**
-```
-https://raw.githubusercontent.com/casehubio/parent/main/docs/PLATFORM.md
-```
-
-**This repo's deep-dive:**
-```
-https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-ledger.md
-```
-
-**Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
-- casehub-work: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-work.md`
-- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-qhorus.md`
-- casehub-engine: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-engine.md`
-- claudony: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/claudony.md`
-- casehub-connectors: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-connectors.md`
-
----
+## Platform Docs
+- [Platform Index](https://raw.githubusercontent.com/casehubio/parent/main/docs/INDEX.md) — discovery index (start here)
+- [Building Platform](https://raw.githubusercontent.com/casehubio/parent/main/docs/guides/building-platform.md) — platform contributor guide
+- [This repo's deep-dive](https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-ledger.md)
 
 ## Reference Documents (casehub-parent)
 
