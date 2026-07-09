@@ -15,6 +15,7 @@ import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.model.SubjectSequenceStats;
+import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.scheduler.Scheduled;
 
 /**
@@ -46,6 +47,7 @@ import io.quarkus.scheduler.Scheduled;
  * integration tests where the scheduler is disabled via the {@code health-test} profile.
  */
 @ApplicationScoped
+@IfBuildProperty(name = "casehub.ledger.health.enabled", stringValue = "true", enableIfMissing = false)
 public class LedgerHealthJob {
 
     private static final Logger LOG = Logger.getLogger(LedgerHealthJob.class);
