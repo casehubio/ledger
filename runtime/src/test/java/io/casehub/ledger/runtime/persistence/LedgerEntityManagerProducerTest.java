@@ -180,6 +180,11 @@ class LedgerEntityManagerProducerTest {
         public ErasureReceiptConfig erasureReceipt() {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public MetadataConfig metadata() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private LedgerEntityManagerProducer producerWith(final LedgerConfig config) {

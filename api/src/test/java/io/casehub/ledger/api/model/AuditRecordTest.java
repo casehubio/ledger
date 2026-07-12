@@ -19,7 +19,7 @@ class AuditRecordTest {
     @Test
     void rejectsAttestationType() {
         assertThatThrownBy(() -> new AuditRecord(subjectId, "actor", ActorType.AGENT,
-                null, LedgerEntryType.ATTESTATION, null, null))
+                null, LedgerEntryType.ATTESTATION, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ATTESTATION");
     }
@@ -27,7 +27,7 @@ class AuditRecordTest {
     @Test
     void nullActorId_throwsNPE() {
         assertThatThrownBy(() -> new AuditRecord(subjectId, null, ActorType.AGENT,
-                null, LedgerEntryType.EVENT, null, null))
+                null, LedgerEntryType.EVENT, null, null, null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("actorId");
     }
@@ -35,7 +35,7 @@ class AuditRecordTest {
     @Test
     void nullSubjectId_throwsNPE() {
         assertThatThrownBy(() -> new AuditRecord(null, "actor", ActorType.AGENT,
-                null, LedgerEntryType.EVENT, null, null))
+                null, LedgerEntryType.EVENT, null, null, null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("subjectId");
     }
@@ -43,21 +43,21 @@ class AuditRecordTest {
     @Test
     void nullActorType_defaultsToAgent() {
         AuditRecord r = new AuditRecord(subjectId, "actor", null,
-                null, LedgerEntryType.EVENT, null, null);
+                null, LedgerEntryType.EVENT, null, null, null);
         assertThat(r.actorType()).isEqualTo(ActorType.AGENT);
     }
 
     @Test
     void nullEntryType_defaultsToEvent() {
         AuditRecord r = new AuditRecord(subjectId, "actor", ActorType.AGENT,
-                null, null, null, null);
+                null, null, null, null, null);
         assertThat(r.entryType()).isEqualTo(LedgerEntryType.EVENT);
     }
 
     @Test
     void commandEntryType_accepted() {
         AuditRecord r = new AuditRecord(subjectId, "actor", ActorType.AGENT,
-                null, LedgerEntryType.COMMAND, null, null);
+                null, LedgerEntryType.COMMAND, null, null, null);
         assertThat(r.entryType()).isEqualTo(LedgerEntryType.COMMAND);
     }
 
@@ -142,5 +142,37 @@ class AuditRecordTest {
         assertThat(r.actorRole()).isEqualTo("reviewer");
         assertThat(r.causedByEntryId()).isEqualTo(causeId);
         assertThat(r.occurredAt()).isEqualTo(ts);
+    }
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+
+    @Test
+    void withMetadata_setsValue() {
+        AuditRecord r = AuditRecord.event("actor", subjectId)
+                .withMetadata("{\"trigger\":\"sla\"}");
+        assertThat(r.metadata()).isEqualTo("{\"trigger\":\"sla\"}");
+    }
+
+    @Test
+    void withMetadata_preservesOtherFields() {
+        AuditRecord r = AuditRecord.event("actor", subjectId)
+                .withActorRole("orchestrator")
+                .withMetadata("{\"k\":1}");
+        assertThat(r.actorId()).isEqualTo("actor");
+        assertThat(r.actorRole()).isEqualTo("orchestrator");
+        assertThat(r.metadata()).isEqualTo("{\"k\":1}");
+    }
+
+    @Test
+    void withMetadata_null_throwsNPE() {
+        AuditRecord r = AuditRecord.event("actor", subjectId);
+        assertThatThrownBy(() -> r.withMetadata(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void eventFactory_metadataIsNull() {
+        AuditRecord r = AuditRecord.event("actor", subjectId);
+        assertThat(r.metadata()).isNull();
     }
 }

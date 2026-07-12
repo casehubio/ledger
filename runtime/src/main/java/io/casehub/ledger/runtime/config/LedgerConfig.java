@@ -145,6 +145,13 @@ public interface LedgerConfig {
     ErasureReceiptConfig erasureReceipt();
 
     /**
+     * Consumer-provided metadata size and validation settings.
+     *
+     * @return metadata sub-configuration
+     */
+    MetadataConfig metadata();
+
+    /**
      * Reactive service tier — controls whether {@code ReactiveKeyRotationService} and
      * {@code ReactiveAgentSignatureVerificationService} are present in the CDI graph. Set
      * {@code casehub.ledger.reactive.enabled=true} only in deployments that provide a
@@ -761,5 +768,20 @@ public interface LedgerConfig {
          */
         @WithDefault("false")
         boolean enabled();
+    }
+
+    /** Consumer-provided metadata settings. */
+    interface MetadataConfig {
+
+        /**
+         * Maximum allowed size (in characters) for the {@code metadata} field on
+         * {@link io.casehub.ledger.api.model.LedgerEntry}. Writes exceeding this
+         * limit are rejected with {@code IllegalArgumentException}. Defaults to
+         * 65,536 (64 KB).
+         *
+         * @return the maximum metadata size in characters
+         */
+        @WithDefault("65536")
+        int maxSize();
     }
 }

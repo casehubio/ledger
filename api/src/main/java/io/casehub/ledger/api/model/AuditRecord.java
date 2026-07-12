@@ -25,7 +25,8 @@ public record AuditRecord(
         String actorRole,
         LedgerEntryType entryType,
         Instant occurredAt,
-        UUID causedByEntryId
+        UUID causedByEntryId,
+        String metadata
 ) {
     public AuditRecord {
         Objects.requireNonNull(actorId, "actorId required");
@@ -47,24 +48,37 @@ public record AuditRecord(
      */
     public static AuditRecord event(final String actorId, final UUID subjectId) {
         return new AuditRecord(subjectId, actorId, ActorType.AGENT,
-                null, LedgerEntryType.EVENT, null, null);
+                null, LedgerEntryType.EVENT, null, null, null);
     }
 
     /** @throws NullPointerException if role is null */
     public AuditRecord withActorRole(final String role) {
         return new AuditRecord(subjectId, actorId, actorType,
-                Objects.requireNonNull(role, "role"), entryType, occurredAt, causedByEntryId);
+                Objects.requireNonNull(role, "role"), entryType, occurredAt, causedByEntryId, metadata);
     }
 
     /** @throws NullPointerException if entryId is null */
     public AuditRecord withCausedBy(final UUID entryId) {
         return new AuditRecord(subjectId, actorId, actorType,
-                actorRole, entryType, occurredAt, Objects.requireNonNull(entryId, "entryId"));
+                actorRole, entryType, occurredAt, Objects.requireNonNull(entryId, "entryId"), metadata);
     }
 
     /** @throws NullPointerException if ts is null */
     public AuditRecord withOccurredAt(final Instant ts) {
         return new AuditRecord(subjectId, actorId, actorType,
-                actorRole, entryType, Objects.requireNonNull(ts, "ts"), causedByEntryId);
+                actorRole, entryType, Objects.requireNonNull(ts, "ts"), causedByEntryId, metadata);
+    }
+
+    /**
+     * Attach consumer-provided freeform JSON context.
+     *
+     * <p>Must be valid JSON. Must NOT contain personally identifiable information (PII) —
+     * the GDPR Art.17 erasure mechanism does not scan field contents.
+     *
+     * @throws NullPointerException if m is null
+     */
+    public AuditRecord withMetadata(final String m) {
+        return new AuditRecord(subjectId, actorId, actorType,
+                actorRole, entryType, occurredAt, causedByEntryId, Objects.requireNonNull(m, "metadata"));
     }
 }

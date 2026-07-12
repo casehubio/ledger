@@ -1,6 +1,7 @@
 package io.casehub.ledger.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static io.casehub.ledger.api.model.AttestationVerdict.SOUND;
 
 import java.util.UUID;
@@ -61,5 +62,58 @@ class OutcomeRecorderIT {
         final var score = trustRepo.findCapabilityScore(pluginId, "strategy");
         assertThat(score).isPresent();
         assertThat(score.get().trustScore).isGreaterThan(0.5);
+    }
+
+    @Test
+    void record_metadataFlowsToPersistedEntry() {
+        final String pluginId = "test-agent-" + UUID.randomUUID();
+        final UUID subjectId = UUID.randomUUID();
+
+        recorder.record(OutcomeRecord.of(pluginId, subjectId, "routing", SOUND, 0.8)
+                .withMetadata("{\"rationale\":\"highest score\",\"candidates\":[\"a\",\"b\"]}"));
+
+        final var entries = ledgerRepo.findBySubjectId(subjectId, DEFAULT_TENANT_ID);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).metadata)
+                .isEqualTo("{\"rationale\":\"highest score\",\"candidates\":[\"a\",\"b\"]}");
+    }
+
+    @Test
+    void record_nullMetadata_persistsNull() {
+        final String pluginId = "test-agent-" + UUID.randomUUID();
+        final UUID subjectId = UUID.randomUUID();
+
+        recorder.record(OutcomeRecord.of(pluginId, subjectId, "strategy", SOUND, 0.7));
+
+        final var entries = ledgerRepo.findBySubjectId(subjectId, DEFAULT_TENANT_ID);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).metadata).isNull();
+    }
+
+    @Test
+    void record_metadataWithinLimit_persists() {
+        final String pluginId = "test-agent-" + UUID.randomUUID();
+        final UUID subjectId = UUID.randomUUID();
+        final String metadata = "{\"k\":\"" + "x".repeat(100) + "\"}";
+
+        recorder.record(OutcomeRecord.of(pluginId, subjectId, "strategy", SOUND, 0.7)
+                .withMetadata(metadata));
+
+        final var entries = ledgerRepo.findBySubjectId(subjectId, DEFAULT_TENANT_ID);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).metadata).isEqualTo(metadata);
+    }
+
+    @Test
+    void record_metadataExceedingLimit_throwsIAE() {
+        final String pluginId = "test-agent-" + UUID.randomUUID();
+        final UUID subjectId = UUID.randomUUID();
+        final String oversized = "x".repeat(65537);
+
+        assertThatThrownBy(() -> recorder.record(
+                OutcomeRecord.of(pluginId, subjectId, "strategy", SOUND, 0.7)
+                        .withMetadata(oversized)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("metadata exceeds maximum size");
     }
 }

@@ -166,6 +166,14 @@ from the active OTel span at persist time via the `LedgerEntryEnricher` pipeline
 traverses causal chains one hop at a time. The test for core vs supplement: is the field
 relevant to every consumer, every entry, every time? If yes → core. If no → supplement.
 
+**Three data channels on `LedgerEntry`**
+Core fields (universal, typed, fixed — actorId, subjectId, entryType, etc.), supplements
+(optional cross-cutting concerns with fixed schemas — `ComplianceSupplement`, `ProvenanceSupplement`),
+and metadata (consumer-provided freeform JSON audit context — routing rationale, candidate lists,
+decision explanations). Metadata is opaque to the ledger, stored verbatim, included in
+`canonicalBytes()` as a positional field, and size-limited via `casehub.ledger.metadata.max-size`
+(default 64KB). Must not contain PII (GDPR erasure does not scan field contents). See #172.
+
 **All entities are plain `@Entity` — no Panache active-record base**
 No entity in the runtime module extends `PanacheEntityBase`. This allows reactive
 subclassing by consumers (e.g. Qhorus's `MessageLedgerEntry`) and removes the
@@ -253,7 +261,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 ├── api/
 │   └── src/main/java/io/casehub/ledger/api/
 │       ├── model/
-│       │   ├── LedgerEntry.java             — @MappedSuperclass: abstract base (all persistent fields, canonicalBytes()); tenancyId (multi-tenancy); agentSignature + agentPublicKey + agentKeyRef (bilateral signing); actorDid (identity binding); consumers extend this or JpaLedgerEntry
+│       │   ├── LedgerEntry.java             — @MappedSuperclass: abstract base (all persistent fields, canonicalBytes()); tenancyId (multi-tenancy); agentSignature + agentPublicKey + agentKeyRef (bilateral signing); actorDid (identity binding); metadata (consumer-provided freeform JSON audit context, #172); consumers extend this or JpaLedgerEntry
 │       │   ├── LedgerEntryType.java         — COMMAND | EVENT | ATTESTATION enum
 │       │   ├── ActorType.java               — HUMAN | AGENT | SYSTEM enum
 │       │   ├── KeyRotationReason.java       — SCHEDULED | COMPROMISED enum (NIST SP 800-57 lifecycle distinction)
@@ -261,7 +269,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── AttestationVerdict.java      — SOUND | FLAGGED | ENDORSED | CHALLENGED enum
 │       │   ├── CapabilityTag.java           — sentinel constants: GLOBAL = "*" for cross-capability attestations
 │       │   ├── ScoreType.java               — GLOBAL | CAPABILITY | DIMENSION | CAPABILITY_DIMENSION enum (trust score type; see ADR 0010)
-│       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path
+│       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path; metadata component for consumer-provided JSON context (#172)
 │       │   └── supplement/
 │       │       ├── LedgerSupplement.java        — @MappedSuperclass: abstract base for supplements
 │       │       ├── ComplianceSupplement.java    — @MappedSuperclass: GDPR Art.22, governance fields
@@ -425,7 +433,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       ├── V1007__key_rotation_entry.sql    — key_rotation_entry table (KeyRotationEntry subclass: previous_key_ref, new_key_ref, reason, effective_since)
 │       ├── V1008__actor_identity_binding.sql        — actor_did TEXT nullable on ledger_entry; actor_identity_binding join table
 │       ├── V1009__plain_ledger_entry.sql            — plain_ledger_entry join table (PlainLedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder)
-│       └── V1010__erasure_receipt_entry.sql         — erasure_receipt_entry join table (ErasureReceiptLedgerEntry; opt-in via casehub.ledger.erasure-receipt.enabled)
+│       ├── V1010__erasure_receipt_entry.sql         — erasure_receipt_entry join table (ErasureReceiptLedgerEntry; opt-in via casehub.ledger.erasure-receipt.enabled)
+│       └── V1011__ledger_entry_metadata.sql         — metadata TEXT column on ledger_entry for consumer-provided audit context (#172)
 └── deployment/
 │   └── src/main/java/io/casehub/ledger/deployment/
 │       ├── LedgerBuildTimeConfig.java       — @ConfigRoot(BUILD_TIME): casehub.ledger.reactive.enabled (default false)
@@ -547,7 +556,7 @@ casehub-work and casehub-qhorus are siblings — neither depends on the other. B
 ## Schema Convention
 
 **No existing installations** — there are no deployed instances of `casehub-ledger` in production.
-All schema changes go directly into the base migration files (V1000–V1010) or into a new base
+All schema changes go directly into the base migration files (V1000–V1011) or into a new base
 migration file. Do NOT create incremental migration scripts to evolve the schema. Rewrite the
 relevant migration file in place. Treat every schema change as a clean-slate design decision.
 

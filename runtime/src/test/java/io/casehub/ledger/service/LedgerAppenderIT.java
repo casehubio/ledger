@@ -1,6 +1,7 @@
 package io.casehub.ledger.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 
 import java.util.UUID;
@@ -63,7 +64,7 @@ class LedgerAppenderIT {
     void append_commandEntryType() {
         final UUID subjectId = UUID.randomUUID();
         final AuditRecord record = new AuditRecord(subjectId, "actor-2", ActorType.HUMAN,
-                "approver", LedgerEntryType.COMMAND, null, null);
+                "approver", LedgerEntryType.COMMAND, null, null, null);
         final UUID id = appender.append(record, DEFAULT_TENANT_ID);
 
         final var entry = repo.findEntryById(id, DEFAULT_TENANT_ID).orElseThrow();
@@ -81,5 +82,37 @@ class LedgerAppenderIT {
 
         final var entry = repo.findEntryById(effectId, DEFAULT_TENANT_ID).orElseThrow();
         assertThat(entry.causedByEntryId).isEqualTo(causeId);
+    }
+
+    @Test
+    void append_metadataFlowsToPersistedEntry() {
+        final UUID subjectId = UUID.randomUUID();
+        final AuditRecord record = AuditRecord.event("actor-meta", subjectId)
+                .withMetadata("{\"trigger\":\"sla-breach\"}");
+        final UUID id = appender.append(record, DEFAULT_TENANT_ID);
+
+        final var entry = repo.findEntryById(id, DEFAULT_TENANT_ID).orElseThrow();
+        assertThat(entry.metadata).isEqualTo("{\"trigger\":\"sla-breach\"}");
+    }
+
+    @Test
+    void append_nullMetadata_persistsNull() {
+        final UUID subjectId = UUID.randomUUID();
+        final UUID id = appender.append(AuditRecord.event("actor-1", subjectId), DEFAULT_TENANT_ID);
+
+        final var entry = repo.findEntryById(id, DEFAULT_TENANT_ID).orElseThrow();
+        assertThat(entry.metadata).isNull();
+    }
+
+    @Test
+    void append_metadataExceedingLimit_throwsIAE() {
+        final UUID subjectId = UUID.randomUUID();
+        final String oversized = "x".repeat(65537);
+
+        assertThatThrownBy(() -> appender.append(
+                AuditRecord.event("actor-1", subjectId).withMetadata(oversized),
+                DEFAULT_TENANT_ID))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("metadata exceeds maximum size");
     }
 }

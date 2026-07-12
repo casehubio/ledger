@@ -72,14 +72,14 @@ class OutcomeRecordTest {
     @Test
     void nullActorType_defaultsToAgent() {
         OutcomeRecord r = new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", null, null, null, null, null);
+                "strategy", null, null, null, null, null, null);
         assertThat(r.actorType()).isEqualTo(ActorType.AGENT);
     }
 
     @Test
     void attestorIdSetTypeNull_throwsIAE() {
         assertThatThrownBy(() -> new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", ActorType.AGENT, null, null, "some-attestor", null))
+                "strategy", ActorType.AGENT, null, null, "some-attestor", null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("attestorId and attestorType must be provided together");
     }
@@ -87,7 +87,7 @@ class OutcomeRecordTest {
     @Test
     void attestorTypeSetIdNull_throwsIAE() {
         assertThatThrownBy(() -> new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", ActorType.AGENT, null, null, null, ActorType.SYSTEM))
+                "strategy", ActorType.AGENT, null, null, null, ActorType.SYSTEM, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("attestorId and attestorType must be provided together");
     }
@@ -189,5 +189,42 @@ class OutcomeRecordTest {
         OutcomeRecord updated = orig.withActorType(ActorType.HUMAN);
         assertThat(updated).isNotSameAs(orig);
         assertThat(orig.actorType()).isEqualTo(ActorType.AGENT);
+    }
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+
+    @Test
+    void withMetadata_setsValue() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "strategy", SOUND, 0.7)
+                .withMetadata("{\"key\":\"value\"}");
+        assertThat(r.metadata()).isEqualTo("{\"key\":\"value\"}");
+    }
+
+    @Test
+    void withMetadata_preservesOtherFields() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "strategy", SOUND, 0.7)
+                .withActorRole("reviewer")
+                .withMetadata("{\"k\":1}");
+        assertThat(r.actorId()).isEqualTo("actor");
+        assertThat(r.actorRole()).isEqualTo("reviewer");
+        assertThat(r.capabilityTag()).isEqualTo("strategy");
+        assertThat(r.confidence()).isEqualTo(0.7);
+        assertThat(r.metadata()).isEqualTo("{\"k\":1}");
+    }
+
+    @Test
+    void withMetadata_null_throwsNPE() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "strategy", SOUND, 0.7);
+        assertThatThrownBy(() -> r.withMetadata(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void factoryMethods_metadataIsNull() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "strategy", SOUND, 0.7);
+        assertThat(r.metadata()).isNull();
+
+        OutcomeRecord g = OutcomeRecord.ofGlobal("actor", subjectId, SOUND, 0.7);
+        assertThat(g.metadata()).isNull();
     }
 }

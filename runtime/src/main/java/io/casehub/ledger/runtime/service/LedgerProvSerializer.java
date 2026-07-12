@@ -82,6 +82,7 @@ public final class LedgerProvSerializer {
                 putIfNotNull(entity, "ledger:evidence", cs.evidence);
                 putIfNotNull(entity, "ledger:decisionContext", cs.decisionContext);
             });
+            putIfNotNull(entity, "ledger:metadata", entry.metadata);
             entities.put(entryIri, entity);
 
             // Activity

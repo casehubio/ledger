@@ -144,4 +144,25 @@ class LedgerEntryArchiverTest {
         // Should not throw
         new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
     }
+
+    @Test
+    void toJson_metadataPresent_included() {
+        final TestEntry e = entry("agent-1");
+        e.metadata = "{\"rationale\":\"test reason\"}";
+
+        final String json = LedgerEntryArchiver.toJson(e, List.of());
+
+        assertThat(json).contains("\"metadata\"");
+        assertThat(json).contains("test reason");
+    }
+
+    @Test
+    void toJson_metadataNull_omitted() {
+        final TestEntry e = entry("agent-1");
+        e.metadata = null;
+
+        final String json = LedgerEntryArchiver.toJson(e, List.of());
+
+        assertThat(json).doesNotContain("metadata");
+    }
 }

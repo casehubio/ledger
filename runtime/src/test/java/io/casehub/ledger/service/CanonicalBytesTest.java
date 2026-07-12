@@ -82,9 +82,9 @@ class CanonicalBytesTest {
         final byte[] canonical = entry.canonicalBytes();
         final String canonicalStr = new String(canonical, StandardCharsets.UTF_8);
 
-        // Count the pipe separators — should be exactly 8 (9 fields)
+        // Count the pipe separators — should be exactly 9 (10 positional base fields)
         final long pipeCount = canonicalStr.chars().filter(ch -> ch == '|').count();
-        assertEquals(8, pipeCount, "Should have exactly 8 pipes (9 base fields) when no supplements");
+        assertEquals(9, pipeCount, "Should have exactly 9 pipes (10 base fields) when no supplements");
     }
 
     @Test
@@ -279,6 +279,69 @@ class CanonicalBytesTest {
 
         final String canonical = new String(entry.canonicalBytes(), StandardCharsets.UTF_8);
         assertTrue(canonical.endsWith("|custom-domain-data"), "domain content bytes should appear at end");
+    }
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+
+    @Test
+    void metadataNull_rendersEmptyStringInPositionalSlot() {
+        final TestEntry entry = new TestEntry();
+        entry.subjectId = UUID.randomUUID();
+        entry.sequenceNumber = 1;
+        entry.entryType = LedgerEntryType.EVENT;
+        entry.actorId = "actor-1";
+        entry.actorRole = "Tester";
+        entry.occurredAt = Instant.parse("2026-07-12T10:00:00Z");
+        entry.tenancyId = "default";
+        entry.actorType = ActorType.AGENT;
+        entry.metadata = null;
+
+        final byte[] canonical = entry.canonicalBytes();
+        final String canonicalStr = new String(canonical, StandardCharsets.UTF_8);
+
+        // 10 positional base fields = 9 pipes when no optional fields appended
+        final long pipeCount = canonicalStr.chars().filter(ch -> ch == '|').count();
+        assertEquals(9, pipeCount, "Should have 9 pipes (10 base fields) when no supplements");
+    }
+
+    @Test
+    void metadataPresent_appearsInCanonicalBytes() {
+        final TestEntry entry = new TestEntry();
+        entry.subjectId = UUID.randomUUID();
+        entry.sequenceNumber = 1;
+        entry.entryType = LedgerEntryType.EVENT;
+        entry.actorId = "actor-1";
+        entry.actorRole = "Tester";
+        entry.occurredAt = Instant.parse("2026-07-12T10:00:00Z");
+        entry.tenancyId = "default";
+        entry.actorType = ActorType.AGENT;
+        entry.metadata = "{\"rationale\":\"test\"}";
+
+        final byte[] canonical = entry.canonicalBytes();
+        final String canonicalStr = new String(canonical, StandardCharsets.UTF_8);
+
+        assertTrue(canonicalStr.contains("{\"rationale\":\"test\"}"),
+                "metadata should appear in canonical bytes");
+    }
+
+    @Test
+    void mutatingMetadata_changesHash() throws Exception {
+        final TestEntry entry = new TestEntry();
+        entry.subjectId = UUID.randomUUID();
+        entry.sequenceNumber = 1;
+        entry.entryType = LedgerEntryType.EVENT;
+        entry.actorId = "actor-1";
+        entry.actorRole = "Tester";
+        entry.occurredAt = Instant.parse("2026-07-12T10:00:00Z");
+        entry.tenancyId = "default";
+        entry.actorType = ActorType.AGENT;
+        entry.metadata = "{\"v\":1}";
+
+        final String hashBefore = sha256hex(entry.canonicalBytes());
+        entry.metadata = "{\"v\":2}";
+        final String hashAfter = sha256hex(entry.canonicalBytes());
+
+        assertNotEquals(hashBefore, hashAfter, "Changing metadata should change the hash");
     }
 
     // ── Test utilities ────────────────────────────────────────────────────────

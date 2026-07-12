@@ -10,6 +10,7 @@ import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.PlainLedgerEntry;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.runtime.config.LedgerConfig;
 
 /**
  * Transactional inner service for {@link DefaultOutcomeRecorder}.
@@ -28,11 +29,13 @@ class OutcomeRecordSaveService {
     @Inject
     LedgerEntryRepository ledgerRepo;
 
+    @Inject
+    LedgerConfig config;
+
     @Transactional
     void save(final OutcomeRecord record, final AttestorDefaults attestor, final String tenancyId) {
+        validateMetadataSize(record.metadata());
         final LedgerEntry entry = buildEntry(record);
-        // In-memory: repo assigns id, sequenceNumber, occurredAt, and enriches.
-        // JPA: @PrePersist assigns id and occurredAt; sequenceNumber is a pre-existing JPA gap (#116).
         ledgerRepo.save(entry, tenancyId);
         java.util.Objects.requireNonNull(entry.id,
                 "LedgerEntryRepository.save() must assign entry.id before returning — "
@@ -42,6 +45,14 @@ class OutcomeRecordSaveService {
         ledgerRepo.saveAttestation(attestation, tenancyId);
     }
 
+    private void validateMetadataSize(final String metadata) {
+        if (metadata != null && metadata.length() > config.metadata().maxSize()) {
+            throw new IllegalArgumentException(
+                    "metadata exceeds maximum size of " + config.metadata().maxSize()
+                            + " bytes — got " + metadata.length());
+        }
+    }
+
     private PlainLedgerEntry buildEntry(final OutcomeRecord record) {
         final PlainLedgerEntry entry = new PlainLedgerEntry();
         entry.actorId    = record.actorId();
@@ -49,7 +60,8 @@ class OutcomeRecordSaveService {
         entry.actorType  = record.actorType();
         entry.subjectId  = record.subjectId();
         entry.entryType  = LedgerEntryType.EVENT;
-        entry.occurredAt = record.occurredAt();  // null → @PrePersist fills at persist time
+        entry.occurredAt = record.occurredAt();
+        entry.metadata   = record.metadata();
         return entry;
     }
 

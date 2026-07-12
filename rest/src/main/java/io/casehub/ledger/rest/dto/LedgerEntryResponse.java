@@ -15,5 +15,6 @@ public record LedgerEntryResponse(
         Instant occurredAt,
         String digest,
         String traceId,
-        UUID causedByEntryId) {
+        UUID causedByEntryId,
+        String metadata) {
 }

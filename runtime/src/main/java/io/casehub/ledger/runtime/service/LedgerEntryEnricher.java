@@ -21,9 +21,9 @@ import io.casehub.ledger.api.model.LedgerEntry;
  *
  * <p><strong>Contract:</strong>
  * <ul>
- *   <li>Do NOT overwrite fields stamped by the save pipeline:
- *       {@code subjectId}, {@code sequenceNumber}, {@code tenancyId},
- *       {@code occurredAt}.</li>
+ *   <li>Do NOT overwrite fields stamped by the save pipeline or
+ *       provided by the caller: {@code subjectId}, {@code sequenceNumber},
+ *       {@code tenancyId}, {@code occurredAt}, {@code metadata}.</li>
  *   <li>Enrichers MAY attach supplements — that is the point of
  *       {@link io.casehub.ledger.runtime.service.intercept.ProvenanceCaptureEnricher}.</li>
  *   <li>Enrichers that modify supplement fields in-place MUST call
@@ -45,8 +45,8 @@ public interface LedgerEntryEnricher {
      * Called once per save. Must not throw. Must be idempotent.
      *
      * <p><strong>Contract:</strong> Do not overwrite fields stamped by the save
-     * pipeline ({@code subjectId}, {@code sequenceNumber}, {@code tenancyId},
-     * {@code occurredAt}). Enrichers that modify supplements must use
+     * pipeline or provided by the caller ({@code subjectId}, {@code sequenceNumber},
+     * {@code tenancyId}, {@code occurredAt}, {@code metadata}). Enrichers that modify supplements must use
      * {@link LedgerEntry#attach} or {@link LedgerEntry#refreshSupplementJson()}.
      */
     void enrich(LedgerEntry entry);

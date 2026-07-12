@@ -26,7 +26,8 @@ public record OutcomeRecord(
         String actorRole,
         Instant occurredAt,
         String attestorId,
-        ActorType attestorType
+        ActorType attestorType,
+        String metadata
 ) {
     public OutcomeRecord {
         Objects.requireNonNull(actorId,       "actorId required");
@@ -54,7 +55,7 @@ public record OutcomeRecord(
     public static OutcomeRecord of(final String actorId, final UUID subjectId,
             final String capabilityTag, final AttestationVerdict verdict, final double confidence) {
         return new OutcomeRecord(actorId, subjectId, verdict, confidence,
-                capabilityTag, ActorType.AGENT, null, null, null, null);
+                capabilityTag, ActorType.AGENT, null, null, null, null, null);
     }
 
     /**
@@ -64,14 +65,14 @@ public record OutcomeRecord(
     public static OutcomeRecord ofGlobal(final String actorId, final UUID subjectId,
             final AttestationVerdict verdict, final double confidence) {
         return new OutcomeRecord(actorId, subjectId, verdict, confidence,
-                CapabilityTag.GLOBAL, ActorType.AGENT, null, null, null, null);
+                CapabilityTag.GLOBAL, ActorType.AGENT, null, null, null, null, null);
     }
 
     /** @throws NullPointerException if role is null */
     public OutcomeRecord withActorRole(final String role) {
         Objects.requireNonNull(role, "role");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, role, occurredAt, attestorId, attestorType);
+                actorType, role, occurredAt, attestorId, attestorType, metadata);
     }
 
     /**
@@ -81,14 +82,14 @@ public record OutcomeRecord(
     public OutcomeRecord withActorType(final ActorType t) {
         Objects.requireNonNull(t, "actorType — use ActorType.AGENT to set the default explicitly");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                t, actorRole, occurredAt, attestorId, attestorType);
+                t, actorRole, occurredAt, attestorId, attestorType, metadata);
     }
 
     /** @throws NullPointerException if ts is null */
     public OutcomeRecord withOccurredAt(final Instant ts) {
         Objects.requireNonNull(ts, "occurredAt");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, actorRole, ts, attestorId, attestorType);
+                actorType, actorRole, ts, attestorId, attestorType, metadata);
     }
 
     /**
@@ -99,6 +100,20 @@ public record OutcomeRecord(
         Objects.requireNonNull(id, "attestorId");
         Objects.requireNonNull(t,  "attestorType");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, actorRole, occurredAt, id, t);
+                actorType, actorRole, occurredAt, id, t, metadata);
+    }
+
+    /**
+     * Attach consumer-provided freeform JSON context.
+     *
+     * <p>Must be valid JSON. Must NOT contain personally identifiable information (PII) —
+     * the GDPR Art.17 erasure mechanism does not scan field contents.
+     *
+     * @throws NullPointerException if m is null
+     */
+    public OutcomeRecord withMetadata(final String m) {
+        Objects.requireNonNull(m, "metadata");
+        return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
+                actorType, actorRole, occurredAt, attestorId, attestorType, m);
     }
 }

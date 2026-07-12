@@ -237,4 +237,29 @@ class LedgerProvSerializerTest {
         assertThat(rel.get("prov:hadPrimarySource"))
                 .isEqualTo("ledger:external/WorkItem/tarkus/wi-uuid-123");
     }
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+
+    @Test
+    void metadataPresent_mappedToEntity() throws Exception {
+        UUID sub = UUID.randomUUID();
+        TestEntry e = entry(sub, 1, "a");
+        e.metadata = "{\"candidates\":[\"a\",\"b\"]}";
+        Map<String, Object> doc = parse(LedgerProvSerializer.toProvJsonLd(sub, List.of(e)));
+        Map<String, Object> entities = asMap(doc.get("entity"));
+        Map<String, Object> entity = asMap(entities.values().iterator().next());
+        assertThat(entity).containsKey("ledger:metadata");
+        assertThat(entity.get("ledger:metadata")).isEqualTo("{\"candidates\":[\"a\",\"b\"]}");
+    }
+
+    @Test
+    void metadataNull_omittedFromEntity() throws Exception {
+        UUID sub = UUID.randomUUID();
+        TestEntry e = entry(sub, 1, "a");
+        e.metadata = null;
+        Map<String, Object> doc = parse(LedgerProvSerializer.toProvJsonLd(sub, List.of(e)));
+        Map<String, Object> entities = asMap(doc.get("entity"));
+        Map<String, Object> entity = asMap(entities.values().iterator().next());
+        assertThat(entity).doesNotContainKey("ledger:metadata");
+    }
 }

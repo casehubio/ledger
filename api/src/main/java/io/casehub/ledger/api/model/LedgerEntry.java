@@ -180,6 +180,25 @@ public abstract class LedgerEntry {
     @Column(name = "actor_did")
     public String actorDid;
 
+    // ── Consumer metadata ─────────────────────────────────────────────────────
+
+    /**
+     * Consumer-provided freeform JSON context for this entry.
+     *
+     * <p>Carries domain-specific audit data (routing rationale, candidate lists,
+     * decision explanations) that is opaque to the ledger. Stored verbatim,
+     * included in {@link #canonicalBytes()} for tamper evidence, returned on reads.
+     *
+     * <p><strong>Contract:</strong> Must be valid JSON. Must NOT contain personally
+     * identifiable information (PII) — the GDPR Art.17 erasure mechanism severs
+     * the token→identity mapping but does not scan or modify field contents.
+     *
+     * @see io.casehub.ledger.api.model.OutcomeRecord#withMetadata(String)
+     * @see io.casehub.ledger.api.model.AuditRecord#withMetadata(String)
+     */
+    @Column(name = "metadata", columnDefinition = "TEXT")
+    public String metadata;
+
     // ── Supplements ───────────────────────────────────────────────────────────
 
     /**
@@ -278,23 +297,27 @@ public abstract class LedgerEntry {
      * <li>Timing: {@code occurredAt} (truncated to milliseconds)</li>
      * <li>Multi-tenancy: {@code tenancyId}</li>
      * <li>Causality: {@code causedByEntryId}</li>
+     * <li>Consumer metadata: {@code metadata} (always present — empty string when null)</li>
      * <li>Supplements: {@code supplementJson} (if non-null)</li>
      * <li>Domain content: {@code domainContentBytes()} (if non-empty)</li>
      * </ul>
      *
      * <p>
-     * Format: pipe-delimited base fields, followed by optional supplement JSON and domain content:
-     * {@code subjectId|seqNum|entryType|actorId|actorRole|occurredAt|tenancyId|actorType|causedByEntryId[|supplementJson][|domainContent]}
+     * Format: 10 pipe-delimited positional base fields, followed by optional supplement JSON
+     * and domain content:
+     * {@code subjectId|seqNum|entryType|actorId|actorRole|occurredAt|tenancyId|actorType|causedByEntryId|metadata[|supplementJson][|domainContent]}
      *
      * <p>
      * Null fields are rendered as empty strings. Deterministic — same entry produces same bytes.
+     * {@code metadata} is positional (always present) to avoid ambiguity with the conditionally
+     * appended {@code supplementJson}.
      *
      * @return canonical UTF-8 byte array for this entry
      */
     public final byte[] canonicalBytes() {
-        final List<String> parts = new ArrayList<>(9);
+        final List<String> parts = new ArrayList<>(10);
 
-        // Base fields (9 fields, all pipe-delimited)
+        // Base fields (10 positional fields, all pipe-delimited)
         parts.add(subjectId != null ? subjectId.toString() : "");
         parts.add(String.valueOf(sequenceNumber));
         parts.add(entryType != null ? entryType.name() : "");
@@ -306,6 +329,7 @@ public abstract class LedgerEntry {
         parts.add(tenancyId != null ? tenancyId : "");
         parts.add(actorType != null ? actorType.name() : "");
         parts.add(causedByEntryId != null ? causedByEntryId.toString() : "");
+        parts.add(metadata != null ? metadata : "");
 
         // Build base canonical string
         final StringBuilder canonical = new StringBuilder(String.join("|", parts));
@@ -319,7 +343,6 @@ public abstract class LedgerEntry {
         final byte[] domainBytes = domainContentBytes();
         if (domainBytes.length > 0) {
             canonical.append("|");
-            // Convert domain bytes to UTF-8 string for consistent pipe-delimited format
             canonical.append(new String(domainBytes, StandardCharsets.UTF_8));
         }
 
