@@ -1,26 +1,23 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.CapabilityTag;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.service.supplement.TestEntry;
+import io.casehub.platform.api.identity.ActorType;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.CapabilityTag;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.api.model.LedgerAttestation;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
-import io.casehub.ledger.service.supplement.TestEntry;
-import io.quarkus.test.junit.QuarkusTest;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for capability-scoped attestation queries (issue #60).
@@ -36,7 +33,6 @@ class LedgerAttestationCapabilityIT {
     // ── Happy path: specific capability tag stored and retrieved ──────────────
 
     @Test
-    @Transactional
     void findByEntryIdAndCapabilityTag_matchingTag_returnsAttestation() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, "security-review"), DEFAULT_TENANT_ID);
@@ -51,7 +47,6 @@ class LedgerAttestationCapabilityIT {
     // ── Happy path: global attestation retrieved by global query ──────────────
 
     @Test
-    @Transactional
     void save_globalCapabilityTag_retrievedByGlobalQuery() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, CapabilityTag.GLOBAL), DEFAULT_TENANT_ID);
@@ -66,7 +61,6 @@ class LedgerAttestationCapabilityIT {
     // ── Correctness: capability query excludes global attestations ────────────
 
     @Test
-    @Transactional
     void findByEntryIdAndCapabilityTag_doesNotReturnGlobal() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, CapabilityTag.GLOBAL), DEFAULT_TENANT_ID);
@@ -82,7 +76,6 @@ class LedgerAttestationCapabilityIT {
     // ── Correctness: global query excludes capability-specific attestations ───
 
     @Test
-    @Transactional
     void findByEntryIdGlobal_doesNotReturnCapabilitySpecific() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, CapabilityTag.GLOBAL), DEFAULT_TENANT_ID);
@@ -98,7 +91,6 @@ class LedgerAttestationCapabilityIT {
     // ── Correctness: capability query isolates across multiple tags ───────────
 
     @Test
-    @Transactional
     void findByEntryIdAndCapabilityTag_isolatesFromOtherTags() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, "security-review"), DEFAULT_TENANT_ID);
@@ -114,7 +106,6 @@ class LedgerAttestationCapabilityIT {
     // ── Correctness: actor+capability query spans multiple entries ────────────
 
     @Test
-    @Transactional
     void findByAttestorIdAndCapabilityTag_spansMultipleEntries() {
         final String attestorId = "peer-" + UUID.randomUUID();
         final TestEntry e1 = savedEntry();
@@ -137,7 +128,6 @@ class LedgerAttestationCapabilityIT {
     // ── Robustness: no matching tag returns empty ─────────────────────────────
 
     @Test
-    @Transactional
     void findByEntryIdAndCapabilityTag_noMatch_returnsEmpty() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, "security-review"), DEFAULT_TENANT_ID);
@@ -149,7 +139,6 @@ class LedgerAttestationCapabilityIT {
     }
 
     @Test
-    @Transactional
     void findByEntryIdGlobal_noGlobalAttestations_returnsEmpty() {
         final TestEntry entry = savedEntry();
         repo.saveAttestation(attestation(entry.id, entry.subjectId, "security-review"), DEFAULT_TENANT_ID);
@@ -163,7 +152,6 @@ class LedgerAttestationCapabilityIT {
     // ── Backward compatibility: unset capabilityTag defaults to global ────────
 
     @Test
-    @Transactional
     void newAttestation_capabilityTagNotSet_defaultsToGlobalSentinel() {
         final TestEntry entry = savedEntry();
 
