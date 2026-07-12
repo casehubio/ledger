@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.casehub.ledger.examples</groupId>
+  <artifactId>casehub-ledger-examples</artifactId>
+  <version>0.2-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>CaseHub Ledger - Examples</name>
+  <modules>
+    <module>art12-compliance</module>
+    <module>art22-decision-snapshot</module>
+    <module>aws-kms-signing</module>
+    <module>azure-keyvault-signing</module>
+    <module>eigentrust-mesh</module>
+    <module>gcp-kms-signing</module>
+    <module>merkle-verification</module>
+    <module>order-processing</module>
+    <module>otel-trace-wiring</module>
+    <module>privacy-pseudonymisation</module>
+    <module>prov-dm-export</module>
+    <module>trust-score-routing</module>
+    <module>vault-transit-signing</module>
+  </modules>
+</project>
