@@ -1,24 +1,22 @@
 package io.casehub.ledger.runtime.service;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.PlainLedgerEntry;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.config.LedgerConfig;
+import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.runtime.model.PlainLedgerEntry;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
- * Transactional inner service for {@link DefaultOutcomeRecorder}.
+ * Inner service for {@link DefaultOutcomeRecorder}.
  *
- * <p>Package-private: not part of the public API. Exists solely to provide a clean
- * {@code @Transactional} boundary that commits before {@code DefaultOutcomeRecorder.record()}
- * returns — preventing race conditions if a future async trust update observer fires before
- * the writes are visible. See casehubio/ledger#115.
+ * <p>Package-private: not part of the public API. Delegates to
+ * {@link LedgerEntryRepository#save} ({@code @Transactional(REQUIRED)}) and
+ * {@link LedgerEntryRepository#saveAttestation} ({@code @Transactional(REQUIRES_NEW)}).
+ * Each write commits independently — attestation failures do not roll back the entry.
  *
  * <p>Quarkus ArC applies the {@code @Transactional} interceptor to package-private methods
  * via bytecode enhancement — no proxy required.
@@ -32,14 +30,13 @@ class OutcomeRecordSaveService {
     @Inject
     LedgerConfig config;
 
-    @Transactional
     void save(final OutcomeRecord record, final AttestorDefaults attestor, final String tenancyId) {
         validateMetadataSize(record.metadata());
         final LedgerEntry entry = buildEntry(record);
         ledgerRepo.save(entry, tenancyId);
         java.util.Objects.requireNonNull(entry.id,
-                "LedgerEntryRepository.save() must assign entry.id before returning — "
-                        + "custom implementations must honour this contract");
+                                         "LedgerEntryRepository.save() must assign entry.id before returning — "
+                                         + "custom implementations must honour this contract");
 
         final LedgerAttestation attestation = buildAttestation(record, entry, attestor);
         ledgerRepo.saveAttestation(attestation, tenancyId);
@@ -49,7 +46,7 @@ class OutcomeRecordSaveService {
         if (metadata != null && metadata.length() > config.metadata().maxSize()) {
             throw new IllegalArgumentException(
                     "metadata exceeds maximum size of " + config.metadata().maxSize()
-                            + " bytes — got " + metadata.length());
+                    + " bytes — got " + metadata.length());
         }
     }
 
@@ -66,17 +63,16 @@ class OutcomeRecordSaveService {
     }
 
     private LedgerAttestation buildAttestation(final OutcomeRecord record,
-            final LedgerEntry saved, final AttestorDefaults attestor) {
+                                               final LedgerEntry saved, final AttestorDefaults attestor) {
         final LedgerAttestation a = new LedgerAttestation();
-        // id left null — @PrePersist (JPA) or saveAttestation guard (in-memory) assigns it
-        a.ledgerEntryId  = saved.id;
-        a.subjectId      = saved.subjectId;
-        a.attestorId     = attestor.attestorId();
-        a.attestorType   = attestor.attestorType();
-        a.verdict        = record.verdict();
-        a.confidence     = record.confidence();
-        a.capabilityTag  = record.capabilityTag();
-        a.occurredAt     = record.occurredAt();  // null → LedgerAttestation @PrePersist fills it
+        a.ledgerEntryId = saved.id;
+        a.subjectId     = saved.subjectId;
+        a.attestorId    = attestor.attestorId();
+        a.attestorType  = attestor.attestorType();
+        a.verdict       = record.verdict();
+        a.confidence    = record.confidence();
+        a.capabilityTag = record.capabilityTag();
+        a.occurredAt    = record.occurredAt();
         return a;
     }
 }

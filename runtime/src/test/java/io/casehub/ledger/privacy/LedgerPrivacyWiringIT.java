@@ -1,30 +1,28 @@
 package io.casehub.ledger.privacy;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.service.supplement.TestEntry;
+import io.casehub.platform.api.identity.ActorType;
+import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
-import io.casehub.ledger.service.supplement.TestEntry;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests verifying write-path and query-path privacy wiring
@@ -76,7 +74,6 @@ class LedgerPrivacyWiringIT {
     // ── Correctness: attestorId tokenised on saveAttestation ─────────────────
 
     @Test
-    @Transactional
     void saveAttestation_attestorIdStoredAsToken() {
         final String rawActorId = "carol-" + UUID.randomUUID();
         final String rawAttestorId = "attestor-" + UUID.randomUUID();
@@ -149,7 +146,6 @@ class LedgerPrivacyWiringIT {
     // ── Happy path: findAttestationsByAttestorIdAndCapabilityTag uses tokenised attestorId ──
 
     @Test
-    @Transactional
     void findByAttestorIdAndCapabilityTag_withPseudonymisation_findsTokenisedAttestation() {
         final String rawAttestorId = "attestor-" + UUID.randomUUID();
         final TestEntry entry = entry(rawAttestorId);
@@ -205,7 +201,6 @@ class LedgerPrivacyWiringIT {
     }
 
     @Test
-    @Transactional
     void saveAttestation_systemAttestor_storedRaw_notTokenised() {
         final String rawAttestorId = "system:compliance-engine";
         final TestEntry entry = entry("human-actor-" + UUID.randomUUID());
@@ -241,7 +236,6 @@ class LedgerPrivacyWiringIT {
     }
 
     @Test
-    @Transactional
     void outcomeRecorder_systemAttestor_storedRaw_underTokenisation() {
         final UUID subjectId = UUID.randomUUID();
         final var record = io.casehub.ledger.api.model.OutcomeRecord.of(

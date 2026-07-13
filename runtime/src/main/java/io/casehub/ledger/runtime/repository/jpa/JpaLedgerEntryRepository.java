@@ -1,37 +1,35 @@
 package io.casehub.ledger.runtime.repository.jpa;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Event;
-import jakarta.enterprise.inject.Alternative;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-
-import org.jboss.logging.Logger;
-
-import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.ActorIdentityProvider;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
-import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.privacy.DecisionContextSanitiser;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Hibernate ORM implementation of {@link LedgerEntryRepository} using EntityManager directly.
@@ -217,16 +215,16 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
         return result;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<LedgerEntry> findEntryById(final UUID id, final String tenancyId) {
-        final Optional<LedgerEntry> result = em.createQuery(
-                "SELECT e FROM LedgerEntry e WHERE e.id = :id AND e.tenancyId = :tenancyId",
-                LedgerEntry.class)
-                .setParameter("id", id)
-                .setParameter("tenancyId", tenancyId)
-                .getResultStream()
-                .findFirst();
+        final Optional<LedgerEntry> result = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
+                                               .setParameter("id", id)
+                                               .setParameter("tenancyId", tenancyId)
+                                               .getResultStream()
+                                               .findFirst();
         result.ifPresent(this::loadSupplements);
         return result;
     }
@@ -243,16 +241,16 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                 .getResultList();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    @Transactional
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public LedgerAttestation saveAttestation(final LedgerAttestation attestation, final String tenancyId) {
-        // Validate the referenced entry belongs to this tenant before persisting
-        final LedgerEntry entry = em.createQuery(
-                "SELECT e FROM LedgerEntry e WHERE e.id = :id AND e.tenancyId = :tenancyId", LedgerEntry.class)
-                .setParameter("id", attestation.ledgerEntryId)
-                .setParameter("tenancyId", tenancyId)
-                .getResultStream().findFirst().orElse(null);
+        final LedgerEntry entry = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
+                                    .setParameter("id", attestation.ledgerEntryId)
+                                    .setParameter("tenancyId", tenancyId)
+                                    .getResultStream().findFirst().orElse(null);
         if (entry == null) {
             throw new IllegalArgumentException(
                     "LedgerEntry " + attestation.ledgerEntryId + " not found in tenant " + tenancyId);
@@ -267,7 +265,10 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                     new AttestationRecordedEvent(entry.actorId, entry.id, attestation.id);
             attestationRecordedEvent.fire(payload);
             attestationRecordedEvent.fireAsync(payload)
-                    .exceptionally(ex -> { log.debugf(ex, "AttestationRecordedEvent async observer failed"); return null; });
+                                    .exceptionally(ex -> {
+                                        log.debugf(ex, "AttestationRecordedEvent async observer failed");
+                                        return null;
+                                    });
         }
 
         return attestation;

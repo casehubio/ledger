@@ -1,10 +1,12 @@
 package io.casehub.ledger.runtime.model.jpa;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.supplement.LedgerSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.runtime.service.LedgerTraceListener;
+import io.casehub.ledger.runtime.service.identity.LedgerIdentityEnforcementListener;
+import io.casehub.platform.api.identity.IdentityBindingStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.DiscriminatorType;
@@ -19,14 +21,10 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
-import io.casehub.platform.api.identity.IdentityBindingStatus;
-
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.api.model.supplement.LedgerSupplement;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
-import io.casehub.ledger.runtime.service.LedgerTraceListener;
-import io.casehub.ledger.runtime.service.identity.LedgerIdentityEnforcementListener;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * JPA entity for ledger entries.
@@ -61,6 +59,9 @@ import io.casehub.ledger.runtime.service.identity.LedgerIdentityEnforcementListe
 @NamedQuery(
         name = "LedgerEntry.findByTimeRange",
         query = "SELECT e FROM LedgerEntry e WHERE e.occurredAt >= :from AND e.occurredAt <= :to ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.findByIdAndTenancyId",
+        query = "SELECT e FROM LedgerEntry e WHERE e.id = :id AND e.tenancyId = :tenancyId")
 @NamedQuery(
         name = "LedgerEntry.findSequenceStats",
         query = """
