@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 
 import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
@@ -27,6 +28,9 @@ import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
  */
 @Entity
 @Table(name = "ledger_supplement_provenance")
+@NamedQuery(
+        name = "JpaProvenanceSupplement.findByEntryIds",
+        query = "SELECT ps FROM JpaProvenanceSupplement ps WHERE ps.jpaLedgerEntry.id IN :ids")
 public class JpaProvenanceSupplement extends ProvenanceSupplement {
 
     /**

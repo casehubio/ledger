@@ -71,6 +71,24 @@ import java.util.UUID;
                 FROM LedgerEntry e
                 GROUP BY e.subjectId, e.tenancyId
                 """)
+@NamedQuery(
+        name = "LedgerEntry.findBySubjectId",
+        query = "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber ASC")
+@NamedQuery(
+        name = "LedgerEntry.findBySubjectIdAndTimeRange",
+        query = "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.findLatestBySubjectId",
+        query = "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber DESC")
+@NamedQuery(
+        name = "LedgerEntry.findByActorIdAndTimeRange",
+        query = "SELECT e FROM LedgerEntry e WHERE e.actorId = :actorId AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.findByActorRoleAndTimeRange",
+        query = "SELECT e FROM LedgerEntry e WHERE e.actorRole = :actorRole AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.findCausedBy",
+        query = "SELECT e FROM LedgerEntry e WHERE e.causedByEntryId = :entryId AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
 @Entity(name = "LedgerEntry")
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)

@@ -37,6 +37,22 @@ import jakarta.persistence.Table;
         name = "LedgerAttestation.findByActorIdEvents",
         query = "SELECT a FROM LedgerAttestation a WHERE a.ledgerEntryId IN ("
               + "SELECT e.id FROM LedgerEntry e WHERE e.actorId = :actorId AND e.entryType = :type)")
+@NamedQuery(
+        name = "LedgerAttestation.findByEntryIdAndTenancyId",
+        query = "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id "
+              + "WHERE a.ledgerEntryId = :entryId AND e.tenancyId = :tenancyId ORDER BY a.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerAttestation.findByEntryIdAndCapabilityTagAndTenancyId",
+        query = "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id "
+              + "WHERE a.ledgerEntryId = :entryId AND a.capabilityTag = :capabilityTag AND e.tenancyId = :tenancyId ORDER BY a.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerAttestation.findGlobalByEntryIdAndTenancyId",
+        query = "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id "
+              + "WHERE a.ledgerEntryId = :entryId AND a.capabilityTag = '*' AND e.tenancyId = :tenancyId ORDER BY a.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerAttestation.findByAttestorIdAndCapabilityTagAndTenancyId",
+        query = "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id "
+              + "WHERE a.attestorId = :attestorId AND a.capabilityTag = :capabilityTag AND e.tenancyId = :tenancyId ORDER BY a.occurredAt ASC")
 public class LedgerAttestation extends io.casehub.ledger.api.model.LedgerAttestation {
 
     @PrePersist
