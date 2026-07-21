@@ -117,7 +117,7 @@ class WebDIDResolverTest {
         final var kp = gen.generateKeyPair();
         final byte[] encoded = kp.getPublic().getEncoded();
         // Our convention: 'z' prefix + base64url-encoded key bytes
-        final String multibase = "z" + Base64.getUrlEncoder().withoutPadding().encodeToString(encoded);
+        final String multibase = "u" + Base64.getUrlEncoder().withoutPadding().encodeToString(encoded);
 
         final String doc = """
                 {
