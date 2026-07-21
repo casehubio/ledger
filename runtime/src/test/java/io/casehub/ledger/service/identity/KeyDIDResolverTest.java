@@ -18,7 +18,7 @@ class KeyDIDResolverTest {
         multicodec[0] = (byte) 0xed;
         multicodec[1] = 0x01;
         System.arraycopy(rawKey, 0, multicodec, 2, rawKey.length);
-        return "did:key:z" + Base64.getUrlEncoder().withoutPadding().encodeToString(multicodec);
+        return "did:key:u" + Base64.getUrlEncoder().withoutPadding().encodeToString(multicodec);
     }
 
     private static byte[] rawEd25519Key(byte[] spki) {
