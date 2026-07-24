@@ -32,13 +32,6 @@
       <artifactId>jackson-databind</artifactId>
       <scope>provided</scope>
     </dependency>
-    <!-- Mutiny for reactive SPI -->
-    <dependency>
-      <groupId>io.smallrye.reactive</groupId>
-      <artifactId>mutiny</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
     <!-- Testing — pure JUnit 5, no Quarkus runtime -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
