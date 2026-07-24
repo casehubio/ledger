@@ -36,23 +36,6 @@ public interface LedgerConfig {
     java.util.Optional<String> datasource();
 
     /**
-     * Reactive service tier settings.
-     *
-     * <p>
-     * <strong>Note:</strong> This interface exists solely to satisfy Quarkus runtime config
-     * validation — {@code casehub.ledger.reactive.enabled} must be declared in the runtime
-     * config root to prevent {@code SRCFG00050} errors in consumers that set it. The
-     * authoritative source for the reactive-tier gating decision is
-     * {@code LedgerBuildTimeConfig.reactive().enabled()}, read during Quarkus augmentation.
-     * Do <em>not</em> read {@code LedgerConfig.reactive().enabled()} at runtime to gate CDI
-     * behaviour — the reactive beans may or may not be present in the CDI graph regardless
-     * of the runtime value.
-     *
-     * @return the reactive sub-configuration
-     */
-    ReactiveConfig reactive();
-
-    /**
      * Hash chain tamper-evidence settings.
      *
      * @return the hash chain sub-configuration
@@ -151,18 +134,6 @@ public interface LedgerConfig {
      */
     MetadataConfig metadata();
 
-    /**
-     * Reactive service tier — controls whether {@code ReactiveKeyRotationService} and
-     * {@code ReactiveAgentSignatureVerificationService} are present in the CDI graph. Set
-     * {@code casehub.ledger.reactive.enabled=true} only in deployments that provide a
-     * reactive datasource implementation.
-     */
-    interface ReactiveConfig {
-        /** Whether the reactive service tier is activated. Defaults to {@code false}. */
-        @WithDefault("false")
-        boolean enabled();
-    }
-
     /** Merkle Mountain Range and external publishing settings. */
     interface MerkleConfig {
 
@@ -173,15 +144,18 @@ public interface LedgerConfig {
          */
         MerklePublishConfig publish();
 
-        /** External checkpoint publishing settings. */
+        /**
+         * External checkpoint publishing settings.
+         */
         interface MerklePublishConfig {
 
             /**
              * POST endpoint to receive signed tlog-checkpoint on each frontier update.
-             * When absent, the publisher is inactive — zero overhead.
+             * When absent, the publisher is inactive.
              *
              * @return the publish URL, if configured
              */
+            @WithDefault("")
             java.util.Optional<String> url();
 
             /**
@@ -190,6 +164,7 @@ public interface LedgerConfig {
              *
              * @return path to the private key file
              */
+            @WithDefault("")
             java.util.Optional<String> privateKey();
 
             /**
@@ -201,6 +176,8 @@ public interface LedgerConfig {
             @WithDefault("default")
             String keyId();
         }
+
+
     }
 
     /** Retention enforcement settings. */

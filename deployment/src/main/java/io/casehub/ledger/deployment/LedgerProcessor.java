@@ -1,17 +1,6 @@
 package io.casehub.ledger.deployment;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
-import org.jboss.jandex.FieldInfo;
-import org.jboss.jandex.IndexView;
-import org.jboss.logging.Logger;
-
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
-import io.quarkus.arc.deployment.ExcludedTypeBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InjectionPointInfo;
@@ -23,9 +12,15 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBuildItem;
 import io.quarkus.deployment.pkg.builditem.ArtifactResultBuildItem;
 import io.quarkus.flyway.runtime.FlywayBuildTimeConfig;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.IndexView;
+import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.service.ReactiveAgentSignatureVerificationService;
-import io.casehub.ledger.runtime.service.ReactiveKeyRotationService;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Quarkus build-time processor for the Ledger extension.
@@ -65,27 +60,6 @@ class LedgerProcessor {
         return NativeImageResourcePatternsBuildItem.builder()
                 .includeGlob("db/ledger/migration/*.sql")
                 .build();
-    }
-
-    /**
-     * Excludes reactive-tier service beans from CDI when
-     * {@code casehub.ledger.reactive.enabled} is not {@code true}.
-     *
-     * <p>
-     * This is a build-time decision — reactive beans are absent from the CDI graph
-     * in JDBC-only consumers, preventing unsatisfied-dependency failures at
-     * augmentation time.
-     */
-    @BuildStep
-    void excludeReactiveBeans(
-            final LedgerBuildTimeConfig config,
-            final BuildProducer<ExcludedTypeBuildItem> excluded) {
-        if (!config.reactive().enabled()) {
-            excluded.produce(
-                    new ExcludedTypeBuildItem(ReactiveKeyRotationService.class.getName()));
-            excluded.produce(
-                    new ExcludedTypeBuildItem(ReactiveAgentSignatureVerificationService.class.getName()));
-        }
     }
 
     /**

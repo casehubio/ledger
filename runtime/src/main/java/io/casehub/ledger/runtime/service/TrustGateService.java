@@ -1,15 +1,12 @@
 package io.casehub.ledger.runtime.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.OptionalDouble;
-
+import io.casehub.ledger.api.spi.TrustScoreSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.ledger.api.spi.TrustScoreSource;
-import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
+import java.util.List;
+import java.util.Map;
+import java.util.OptionalDouble;
 
 /**
  * CDI bean for trust threshold enforcement.
@@ -27,11 +24,6 @@ public class TrustGateService {
     @Inject
     public TrustGateService(final TrustScoreSource source) {
         this.source = source;
-    }
-
-    public Uni<Boolean> meetsThresholdAsync(final String actorId, final double minTrust) {
-        return Uni.createFrom().item(() -> meetsThreshold(actorId, minTrust))
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     public boolean meetsThreshold(final String actorId, final double minTrust) {
@@ -101,12 +93,6 @@ public class TrustGateService {
         return source.scoresFor(candidateIds, capabilityTag);
     }
 
-    public Uni<Map<String, OptionalDouble>> scoresForAsync(final List<String> candidateIds,
-            final String capabilityTag) {
-        return Uni.createFrom().item(() -> source.scoresFor(candidateIds, capabilityTag))
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
-    }
-
     /**
      * Batch decision counts for multiple candidates. Every candidate appears in the result;
      * 0 indicates BOOTSTRAP phase.
@@ -116,9 +102,4 @@ public class TrustGateService {
         return source.decisionCountsFor(candidateIds, capabilityTag);
     }
 
-    public Uni<Map<String, Integer>> decisionCountsForAsync(final List<String> candidateIds,
-            final String capabilityTag) {
-        return Uni.createFrom().item(() -> source.decisionCountsFor(candidateIds, capabilityTag))
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
-    }
 }

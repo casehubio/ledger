@@ -107,11 +107,6 @@ class LedgerEntityManagerProducerTest {
         }
 
         @Override
-        public ReactiveConfig reactive() {
-            return () -> false;
-        }
-
-        @Override
         public HashChainConfig hashChain() {
             throw new UnsupportedOperationException();
         }

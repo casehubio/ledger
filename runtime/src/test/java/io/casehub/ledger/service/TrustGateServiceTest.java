@@ -1,15 +1,14 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.ledger.api.spi.TrustScoreSource;
+import io.casehub.ledger.runtime.service.TrustGateService;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.ledger.api.spi.TrustScoreSource;
-import io.casehub.ledger.runtime.service.TrustGateService;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pure unit tests for {@link TrustGateService} — no Quarkus runtime, no CDI.
@@ -49,24 +48,6 @@ class TrustGateServiceTest {
     }
 
     // ── meetsThresholdAsync (global) ─────────────────────────────────────────
-
-    @Test
-    void meetsThresholdAsync_true_whenScoreAboveMin() {
-        final TrustGateService gate = new TrustGateService(sourceWith("actor-a", 0.8));
-        assertThat(gate.meetsThresholdAsync("actor-a", 0.7).await().indefinitely()).isTrue();
-    }
-
-    @Test
-    void meetsThresholdAsync_false_whenScoreBelowMin() {
-        final TrustGateService gate = new TrustGateService(sourceWith("actor-a", 0.6));
-        assertThat(gate.meetsThresholdAsync("actor-a", 0.7).await().indefinitely()).isFalse();
-    }
-
-    @Test
-    void meetsThresholdAsync_false_whenNoScoreExists() {
-        final TrustGateService gate = new TrustGateService(emptySource());
-        assertThat(gate.meetsThresholdAsync("unknown-actor", 0.5).await().indefinitely()).isFalse();
-    }
 
     // ── meetsThreshold (global) ───────────────────────────────────────────────
 
@@ -357,22 +338,6 @@ class TrustGateServiceTest {
     void scoresFor_emptyList_returnsEmptyMap() {
         final TrustGateService gate = new TrustGateService(emptySource());
         assertThat(gate.scoresFor(List.of(), "review")).isEmpty();
-    }
-
-    @Test
-    void scoresForAsync_returnsEquivalentResult() {
-        final TrustGateService gate = new TrustGateService(new StubTrustScoreSource() {
-            @Override
-            public OptionalDouble capabilityScore(final String id, final String cap) {
-                return "x".equals(id) && "review".equals(cap)
-                        ? OptionalDouble.of(0.7) : OptionalDouble.empty();
-            }
-        });
-
-        final Map<String, OptionalDouble> scores =
-                gate.scoresForAsync(List.of("x", "y"), "review").await().indefinitely();
-        assertThat(scores.get("x")).hasValue(0.7);
-        assertThat(scores.get("y")).isEmpty();
     }
 
     // ── decisionCountsFor ────────────────────────────────────────────────────

@@ -25,10 +25,8 @@ public interface ActorIdentityProvider {
      * they are not natural persons and have no GDPR pseudonymisation obligation.
      *
      * <p>
-     * <strong>Reactive constraint:</strong> implementations must be non-blocking. In reactive
-     * persistence paths this method is called synchronously on the Vert.x event loop without
-     * a worker-pool hop. A blocking implementation (e.g. one backed by a JPA query) will
-     * stall the event loop. The built-in implementations are non-blocking. Refs #106.
+     * Implementations should avoid expensive blocking operations (e.g. JPA queries) in
+     * hot persistence paths. The built-in implementations are non-blocking.
      *
      * @param rawActorId the real actor identity; may be {@code null}
      * @param actorType the type of actor; {@code null} is treated as potentially human (tokenised)
