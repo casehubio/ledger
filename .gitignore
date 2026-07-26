@@ -26,3 +26,5 @@ target/
 wksp
 docs/squash-plan-*.md
 .mvn/maven.config
+.claude
+package-lock.json
