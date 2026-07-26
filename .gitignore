@@ -25,3 +25,4 @@ target/
 # Local dev conveniences (not project content)
 wksp
 docs/squash-plan-*.md
+.mvn/maven.config
