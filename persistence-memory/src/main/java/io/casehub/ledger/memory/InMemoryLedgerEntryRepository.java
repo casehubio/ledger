@@ -24,7 +24,7 @@ import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
-import io.casehub.ledger.runtime.privacy.DecisionContextSanitiser;
+import io.casehub.ledger.runtime.privacy.ContentSanitiser;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
@@ -69,7 +69,7 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
     ActorIdentityProvider actorIdentityProvider;
 
     @Inject
-    DecisionContextSanitiser decisionContextSanitiser;
+    ContentSanitiser contentSanitiser;
 
     @Inject
     LedgerMerklePublisher merklePublisher;
@@ -104,7 +104,7 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
         entry.actorId = actorIdentityProvider.tokenise(entry.actorId, entry.actorType);
         entry.compliance().ifPresent(cs -> {
             if (cs.decisionContext != null) {
-                cs.decisionContext = decisionContextSanitiser.sanitise(cs.decisionContext);
+                cs.decisionContext = contentSanitiser.sanitise(cs.decisionContext);
                 entry.refreshSupplementJson();
             }
         });

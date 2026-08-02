@@ -7,7 +7,7 @@ package io.casehub.ledger.runtime.privacy;
  * The default implementation is pass-through. Replace with a custom CDI bean to strip
  * PII from decision context blobs before they reach the ledger.
  */
-public interface DecisionContextSanitiser {
+public interface ContentSanitiser {
 
     /**
      * Sanitise a decision context JSON string before it is persisted.
