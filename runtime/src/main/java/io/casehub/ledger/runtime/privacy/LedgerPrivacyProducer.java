@@ -12,7 +12,7 @@ import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.arc.DefaultBean;
 
 /**
- * CDI producer for {@link io.casehub.ledger.api.spi.ActorIdentityProvider} and {@link DecisionContextSanitiser}.
+ * CDI producer for {@link io.casehub.ledger.api.spi.ActorIdentityProvider} and {@link ContentSanitiser}.
  *
  * <p>
  * Both producers are annotated {@link DefaultBean} — a consumer-supplied CDI bean of the
@@ -21,7 +21,7 @@ import io.quarkus.arc.DefaultBean;
  * <p>
  * {@link io.casehub.ledger.api.spi.ActorIdentityProvider}: returns {@link InternalActorIdentityProvider} when
  * {@code casehub.ledger.identity.tokenisation.enabled=true}; otherwise pass-through.
- * {@link DecisionContextSanitiser}: always returns pass-through; replace with a
+ * {@link ContentSanitiser}: always returns pass-through; replace with a
  * custom bean to scrub PII from decision context blobs.
  */
 @ApplicationScoped
@@ -47,7 +47,7 @@ public class LedgerPrivacyProducer {
     @Produces
     @DefaultBean
     @ApplicationScoped
-    public DecisionContextSanitiser decisionContextSanitiser() {
-        return new PassThroughDecisionContextSanitiser();
+    public ContentSanitiser decisionContextSanitiser() {
+        return new PassThroughContentSanitiser();
     }
 }

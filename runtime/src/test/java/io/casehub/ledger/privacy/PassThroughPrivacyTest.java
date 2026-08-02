@@ -7,13 +7,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.runtime.privacy.PassThroughActorIdentityProvider;
-import io.casehub.ledger.runtime.privacy.PassThroughDecisionContextSanitiser;
+import io.casehub.ledger.runtime.privacy.PassThroughContentSanitiser;
 import io.casehub.platform.api.identity.ActorType;
 
 class PassThroughPrivacyTest {
 
-    private final PassThroughActorIdentityProvider provider = new PassThroughActorIdentityProvider();
-    private final PassThroughDecisionContextSanitiser sanitiser = new PassThroughDecisionContextSanitiser();
+    private final PassThroughActorIdentityProvider provider  = new PassThroughActorIdentityProvider();
+    private final PassThroughContentSanitiser      sanitiser = new PassThroughContentSanitiser();
 
     @Test
     void tokenise_returnsRawActorId_unchanged() {

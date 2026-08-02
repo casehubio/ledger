@@ -9,7 +9,7 @@ import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
-import io.casehub.ledger.runtime.privacy.DecisionContextSanitiser;
+import io.casehub.ledger.runtime.privacy.ContentSanitiser;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
@@ -89,7 +89,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
     ActorIdentityProvider actorIdentityProvider;
 
     @Inject
-    DecisionContextSanitiser decisionContextSanitiser;
+    ContentSanitiser contentSanitiser;
 
     @Inject
     LedgerSequenceAllocator sequenceAllocator;
@@ -122,7 +122,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
 
         entry.compliance().ifPresent(cs -> {
             if (cs.decisionContext != null) {
-                cs.decisionContext = decisionContextSanitiser.sanitise(cs.decisionContext);
+                cs.decisionContext = contentSanitiser.sanitise(cs.decisionContext);
                 entry.refreshSupplementJson();
             }
         });
