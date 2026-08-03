@@ -1,25 +1,24 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static io.casehub.ledger.api.model.AttestationVerdict.SOUND;
-
-import java.util.UUID;
-
-import jakarta.inject.Inject;
-
-import org.junit.jupiter.api.Test;
-
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
+
+import static io.casehub.ledger.api.model.AttestationVerdict.SOUND;
+import io.casehub.ledger.api.model.AttestationVerdict;
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @QuarkusTest
 @TestProfile(OutcomeRecorderIT.Profile.class)
@@ -116,4 +115,45 @@ class OutcomeRecorderIT {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("metadata exceeds maximum size");
     }
+
+    @Test
+    void record_returnsEntryId() {
+        final String pluginId  = "test-agent-" + UUID.randomUUID();
+        final UUID   subjectId = UUID.randomUUID();
+
+        final UUID entryId = recorder.record(OutcomeRecord.of(pluginId, subjectId, "strategy", SOUND, 0.7));
+
+        assertThat(entryId).isNotNull();
+        final var entries = ledgerRepo.findBySubjectId(subjectId, DEFAULT_TENANT_ID);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).id).isEqualTo(entryId);
+    }
+
+    @Test
+    void addAttestation_appendsToExistingEntry() {
+        final String pluginId  = "test-agent-" + UUID.randomUUID();
+        final UUID   subjectId = UUID.randomUUID();
+
+        final UUID entryId = recorder.record(OutcomeRecord.of(pluginId, subjectId, "strategy", SOUND, 0.7));
+
+        recorder.addAttestation(entryId, AttestationVerdict.ENDORSED, 1.0, "strategy");
+
+        final var attestations = ledgerRepo.findAttestationsByEntryId(entryId, DEFAULT_TENANT_ID);
+        assertThat(attestations).hasSize(2);
+        assertThat(attestations.get(1).verdict).isEqualTo(AttestationVerdict.ENDORSED);
+        assertThat(attestations.get(1).confidence).isEqualTo(1.0);
+        assertThat(attestations.get(1).capabilityTag).isEqualTo("strategy");
+        assertThat(attestations.get(1).subjectId).isEqualTo(subjectId);
+    }
+
+    @Test
+    void addAttestation_nonexistentEntry_throwsIAE() {
+        final UUID fakeId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> recorder.addAttestation(fakeId, SOUND, 0.7, "strategy"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not exist");
+    }
+
+
 }

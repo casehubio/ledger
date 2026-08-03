@@ -1,15 +1,16 @@
 package io.casehub.ledger.runtime.service;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import io.quarkus.arc.DefaultBean;
-
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
 import io.casehub.ledger.runtime.config.LedgerConfig;
+import io.casehub.platform.api.identity.ActorType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import java.util.UUID;
+
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.quarkus.arc.DefaultBean;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * Default blocking implementation of {@link OutcomeRecorder}.
@@ -36,10 +37,19 @@ public class DefaultOutcomeRecorder implements OutcomeRecorder {
     CurrentPrincipal currentPrincipal;
 
     @Override
-    public void record(final OutcomeRecord record) {
+    public UUID record(final OutcomeRecord record) {
         final AttestorDefaults attestor = resolveAttestor(record);
-        saveService.save(record, attestor, currentPrincipal.tenancyId());
+        return saveService.save(record, attestor, currentPrincipal.tenancyId());
     }
+
+    @Override
+    public void addAttestation(final UUID entryId, final AttestationVerdict verdict,
+                               final double confidence, final String capabilityTag) {
+        final AttestorDefaults attestor = resolveDefaultAttestor();
+        saveService.saveAttestationOnly(entryId, verdict, confidence, capabilityTag,
+                                        attestor, currentPrincipal.tenancyId());
+    }
+
 
     private AttestorDefaults resolveAttestor(final OutcomeRecord record) {
         if (record.attestorId() != null) {
@@ -53,4 +63,14 @@ public class DefaultOutcomeRecorder implements OutcomeRecorder {
         final ActorType type = config.outcome().defaultAttestorType();
         return new AttestorDefaults(id, type);
     }
+
+    private AttestorDefaults resolveDefaultAttestor() {
+        final String id = config.outcome().defaultAttestorId().orElseThrow(() ->
+                                                                                   new IllegalStateException(
+                                                                                           "casehub.ledger.outcome.default-attestor-id is not configured. "
+                                                                                           + "Set it before calling addAttestation()."));
+        final ActorType type = config.outcome().defaultAttestorType();
+        return new AttestorDefaults(id, type);
+    }
+
 }

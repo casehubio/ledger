@@ -1,5 +1,8 @@
 package io.casehub.ledger.runtime.service;
 
+import java.util.UUID;
+
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
@@ -30,7 +33,7 @@ class OutcomeRecordSaveService {
     @Inject
     LedgerConfig config;
 
-    void save(final OutcomeRecord record, final AttestorDefaults attestor, final String tenancyId) {
+    UUID save(final OutcomeRecord record, final AttestorDefaults attestor, final String tenancyId) {
         validateMetadataSize(record.metadata());
         final LedgerEntry entry = buildEntry(record);
         ledgerRepo.save(entry, tenancyId);
@@ -40,7 +43,28 @@ class OutcomeRecordSaveService {
 
         final LedgerAttestation attestation = buildAttestation(record, entry, attestor);
         ledgerRepo.saveAttestation(attestation, tenancyId);
+        return entry.id;
     }
+
+    void saveAttestationOnly(final UUID entryId, final AttestationVerdict verdict,
+                             final double confidence, final String capabilityTag,
+                             final AttestorDefaults attestor, final String tenancyId) {
+        final LedgerEntry entry = ledgerRepo.findEntryById(entryId, tenancyId)
+                                            .orElseThrow(() -> new IllegalArgumentException(
+                                                    "LedgerEntry " + entryId + " does not exist in tenancy " + tenancyId));
+
+        final LedgerAttestation a = new LedgerAttestation();
+        a.ledgerEntryId = entry.id;
+        a.subjectId     = entry.subjectId;
+        a.attestorId    = attestor.attestorId();
+        a.attestorType  = attestor.attestorType();
+        a.verdict       = verdict;
+        a.confidence    = confidence;
+        a.capabilityTag = capabilityTag;
+        a.occurredAt    = null;
+        ledgerRepo.saveAttestation(a, tenancyId);
+    }
+
 
     private void validateMetadataSize(final String metadata) {
         if (metadata != null && metadata.length() > config.metadata().maxSize()) {
