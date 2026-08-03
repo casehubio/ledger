@@ -1,16 +1,10 @@
 package io.casehub.ledger.api.spi;
 
+import java.util.UUID;
+
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.OutcomeRecord;
 
-/**
- * Records a plugin decision and its outcome as a single atomic operation.
- *
- * <p>The default implementation is {@code DefaultOutcomeRecorder} ({@code @DefaultBean}).
- * Applications may substitute a custom implementation by declaring an {@code @ApplicationScoped}
- * bean implementing this interface — CDI will prefer it over the {@code @DefaultBean}.
- *
- * @see ReactiveOutcomeRecorder
- */
 public interface OutcomeRecorder {
 
     /**
@@ -18,8 +12,23 @@ public interface OutcomeRecorder {
      * {@code LedgerAttestation}. Both writes commit in the same transaction.
      * For JPA consumers, both are visible in the database before this method returns.
      *
+     * @return the UUID of the created {@code LedgerEntry}, for use with {@link #addAttestation}
      * @throws IllegalStateException if {@code record.attestorId()} is null and
-     *         {@code casehub.ledger.outcome.default-attestor-id} is not configured
+     *                               {@code casehub.ledger.outcome.default-attestor-id} is not configured
      */
-    void record(OutcomeRecord record);
+    UUID record(OutcomeRecord record);
+
+    /**
+     * Append an attestation to an existing decision entry.
+     * The entry must exist; {@code subjectId} is inherited from the entry.
+     * The attestor is resolved from the configured default.
+     *
+     * @param entryId       the LedgerEntry ID returned by {@link #record}
+     * @param verdict       ENDORSED / CHALLENGED / SOUND / FLAGGED
+     * @param confidence    weight in (0.0, 1.0]
+     * @param capabilityTag scopes the attestation to a capability
+     * @throws IllegalArgumentException if the entry does not exist
+     * @throws IllegalStateException    if the default attestor is not configured
+     */
+    void addAttestation(UUID entryId, AttestationVerdict verdict, double confidence, String capabilityTag);
 }
