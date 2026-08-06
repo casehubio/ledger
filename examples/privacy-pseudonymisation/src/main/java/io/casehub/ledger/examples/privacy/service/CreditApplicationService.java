@@ -54,7 +54,7 @@ public class CreditApplicationService {
      *
      * @param applicationId the credit application UUID (used as the ledger subject)
      * @param applicantId   raw applicant identity — included in decisionContext (will be sanitised
-     *                      in production via a custom {@code DecisionContextSanitiser})
+     *                      in production via a custom {@code ContentSanitiser})
      * @param riskScore     model risk score in [0.0, 1.0]; above 0.7 triggers human review
      * @return the persisted ledger entry ID
      */
