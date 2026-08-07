@@ -307,6 +307,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── ActorIdentityBindingEntry.java — @Entity: LedgerEntry subclass: DID/VC binding validation event; subjectId=nameUUIDFromBytes(actorId); entryType=EVENT; see ADR 0015
 │       │   ├── PlainLedgerEntry.java         — @Entity: LedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder (V1009)
 │       │   ├── ErasureReceiptLedgerEntry.java — @Entity: LedgerEntry subclass: tamper-evident GDPR Art.17 erasure record; subjectId=nameUUIDFromBytes(erasedActorId); entryType=EVENT; opt-in via casehub.ledger.erasure-receipt.enabled (V1010)
+│       │   ├── TrustScoreSnapshot.java       — @Entity: trust score point-in-time snapshot for trend visibility; (actorId, capabilityTag, score, previousScore, occurredAt); captured by PerActorTrustComputer on every score upsert (V1012)
 │       │   ├── ActorIdentity.java           — @Entity: token↔identity mapping for pseudonymisation
 │       │   └── supplement/
 │       │       ├── JpaLedgerSupplement.java      — @Entity: runtime JPA base extending api LedgerSupplement; JOINED inheritance
@@ -319,12 +320,15 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── NoOpActorIdentityBindingRepository.java — @DefaultBean: CDI-satisfaction no-op for ActorIdentityBindingRepository read methods; write path uses LedgerEntryRepository (observer no longer injects this bean)
 │       │   ├── NoOpLedgerMerkleFrontierRepository.java — @DefaultBean: CDI-satisfaction no-op; findBySubjectId() returns empty, replace() is a no-op
 │       │   ├── NoOpErasureReceiptRepository.java — @DefaultBean: CDI-satisfaction no-op; returns empty list
+│       │   ├── NoOpTrustScoreSnapshotRepository.java — @DefaultBean: CDI-satisfaction no-op; save() discards, find methods return empty
+│       │   ├── TrustScoreSnapshotRepository.java — SPI: save(TrustScoreSnapshot), findGlobalSnapshots(actorId), findCapabilitySnapshots(actorId, capabilityTag)
 │       │   └── jpa/                              — JPA implementations (EntityManager-based)
 │       │       ├── JpaLedgerEntryRepository.java     — @Alternative: JPA implementation of LedgerEntryRepository; activate via quarkus.arc.selected-alternatives
 │       │       ├── JpaActorIdentityBindingRepository.java — @Alternative: read-only JPA implementation (latestBindingFor, bindingHistoryFor with tenancyId); no save() — saves go through JpaLedgerEntryRepository; activate via quarkus.arc.selected-alternatives
 │       │       ├── JpaActorTrustScoreRepository.java — @Alternative @ApplicationScoped: activate via quarkus.arc.selected-alternatives; was plain @ApplicationScoped before #143 — @Alternative required so NoOpActorTrustScoreRepository @DefaultBean can fill the default slot
 │       │       ├── JpaCrossTenantLedgerEntryRepository.java
 │       │       ├── JpaErasureReceiptRepository.java — @Alternative: findByErasedActorId NamedQuery; activate via quarkus.arc.selected-alternatives
+│       │       ├── JpaTrustScoreSnapshotRepository.java — @Alternative: JPA implementation; persist + named query retrieval; activate via quarkus.arc.selected-alternatives
 │       │       └── LedgerSequenceAllocator.java     — CDI bean: atomic per-(subject, tenant) sequence allocation; dialect detected lazily via INFORMATION_SCHEMA.SETTINGS on H2 (getDatabaseProductName() returns "H2" for all modes; getMetaData().getURL() drops connection properties via Agroal — URL not reliable for mode detection); three-way Dialect enum (POSTGRESQL / H2_PG_MODE / H2_STANDARD); PostgreSQL: single-statement INSERT ON CONFLICT DO UPDATE (atomic upsert, DO UPDATE row lock serialises full save pipeline per tenant); H2+MODE=PostgreSQL: INSERT ON CONFLICT DO NOTHING + UPDATE (H2 2.4.240 rejects ON CONFLICT (col) DO UPDATE); H2 standard: full SQL-standard MERGE WHEN MATCHED UPDATE WHEN NOT MATCHED INSERT (single statement, not concurrent-safe for first inserts)
 │       ├── qualifier/
 │       │   └── CrossTenant.java              — CDI qualifier: disambiguates CrossTenantLedgerEntryRepository from LedgerEntryRepository (Category 1 only; build-time scope validation)
@@ -443,7 +447,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       ├── V1008__actor_identity_binding.sql        — actor_did TEXT nullable on ledger_entry; actor_identity_binding join table
 │       ├── V1009__plain_ledger_entry.sql            — plain_ledger_entry join table (PlainLedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder)
 │       ├── V1010__erasure_receipt_entry.sql         — erasure_receipt_entry join table (ErasureReceiptLedgerEntry; opt-in via casehub.ledger.erasure-receipt.enabled)
-│       └── V1011__ledger_entry_metadata.sql         — metadata TEXT column on ledger_entry for consumer-provided audit context (#172)
+│       ├── V1011__ledger_entry_metadata.sql         — metadata TEXT column on ledger_entry for consumer-provided audit context (#172)
+│       └── V1012__trust_score_snapshot.sql          — trust_score_snapshot table for score trend visibility (#183)
 └── deployment/
 │   └── src/main/java/io/casehub/ledger/deployment/
 │       ├── LedgerBuildTimeConfig.java       — @ConfigRoot(BUILD_TIME): casehub.ledger.reactive.enabled (default false)
@@ -456,6 +461,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
         ├── InMemoryKeyRotationRepository.java        — @Alternative @Priority(1); reads via blocking.allEntries()
         ├── InMemoryActorIdentityBindingRepository.java — @Alternative @Priority(1); read-only delegate — reads via blocking.allEntries() filtered by instanceof ActorIdentityBindingEntry + tenancyId; mirrors InMemoryKeyRotationRepository
         ├── InMemoryErasureReceiptRepository.java — @Alternative @Priority(1); read-only delegate — reads via blocking.allEntries() filtered by instanceof ErasureReceiptLedgerEntry + tenancyId
+        ├── InMemoryTrustScoreSnapshotRepository.java — @Alternative @Priority(1); CopyOnWriteArrayList store; sorted DESC retrieval
         ├── InMemoryAgentSigner.java              — @Alternative @Priority(1); ConcurrentHashMap<String,KeyPair>; register(actorId,keyPair) + clear() for session-boundary reset; see #104
         ├── InMemoryReactiveLedgerEntryRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
         ├── InMemoryReactiveKeyRotationRepository.java — @IfBuildProperty(reactive.enabled=true); delegates to blocking
