@@ -22,6 +22,7 @@ import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
+import io.casehub.ledger.runtime.repository.NoOpTrustScoreSnapshotRepository;
 import io.casehub.platform.api.identity.ActorType;
 
 /**
@@ -45,6 +46,7 @@ class PerActorTrustComputerTest {
         computer = new PerActorTrustComputer(
                 (ageInDays, verdict) -> Math.pow(2.0, -(double) ageInDays / 90),
                 trustRepo,
+                new NoOpTrustScoreSnapshotRepository(),
                 new AllAttestationsGlobalStrategy());
     }
 
