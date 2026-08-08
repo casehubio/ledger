@@ -4,6 +4,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
+
+import org.hibernate.exception.ConstraintViolationException;
 
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.model.ActorIdentity;
@@ -46,11 +49,26 @@ public class InternalActorIdentityProvider implements ActorIdentityProvider {
                 .map(a -> a.token)
                 .findFirst()
                 .orElseGet(() -> {
-                    final ActorIdentity identity = new ActorIdentity();
-                    identity.token = UUID.randomUUID().toString();
-                    identity.actorId = rawActorId;
-                    em.persist(identity);
-                    return identity.token;
+                    try {
+                        final ActorIdentity identity = new ActorIdentity();
+                        identity.token = UUID.randomUUID().toString();
+                        identity.actorId = rawActorId;
+                        em.persist(identity);
+                        em.flush();
+                        return identity.token;
+                    } catch (PersistenceException e) {
+                        if (e.getCause() instanceof ConstraintViolationException) {
+                            em.clear();
+                            return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
+                                    .setParameter("actorId", rawActorId)
+                                    .getResultStream()
+                                    .map(a -> a.token)
+                                    .findFirst()
+                                    .orElseThrow(() -> new IllegalStateException(
+                                            "Actor identity race: INSERT failed but SELECT still empty for " + rawActorId, e));
+                        }
+                        throw e;
+                    }
                 });
     }
 
