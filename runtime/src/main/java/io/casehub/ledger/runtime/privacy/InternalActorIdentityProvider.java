@@ -1,17 +1,15 @@
 package io.casehub.ledger.runtime.privacy;
 
-import java.util.Optional;
-import java.util.UUID;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceException;
-
-import org.hibernate.exception.ConstraintViolationException;
-
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.runtime.model.ActorIdentity;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.platform.api.identity.ActorType;
+import io.quarkus.narayana.jta.QuarkusTransaction;
+import jakarta.persistence.EntityManager;
+import org.hibernate.exception.ConstraintViolationException;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Built-in token-based actor identity provider backed by the {@code actor_identity} table.
@@ -19,9 +17,9 @@ import io.casehub.platform.api.identity.ActorType;
  * <p>
  * Not a CDI bean — constructed by {@link LedgerPrivacyProducer} when
  * {@code casehub.ledger.identity.tokenisation.enabled=true}. The EntityManager
- * it receives is a CDI proxy that resolves to the current transaction's session
- * when its methods are called — all callers of this class operate within
- * an existing {@code @Transactional} boundary.
+ * it receives is a CDI proxy that resolves to the current transaction's session.
+ * The insert path in {@link #tokenise} uses {@code REQUIRES_NEW} so a constraint
+ * violation from a concurrent insert does not doom the caller's transaction.
  */
 public class InternalActorIdentityProvider implements ActorIdentityProvider {
 
@@ -44,32 +42,34 @@ public class InternalActorIdentityProvider implements ActorIdentityProvider {
             return rawActorId;
         }
         return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
-                .setParameter("actorId", rawActorId)
-                .getResultStream()
-                .map(a -> a.token)
-                .findFirst()
-                .orElseGet(() -> {
-                    try {
-                        final ActorIdentity identity = new ActorIdentity();
-                        identity.token = UUID.randomUUID().toString();
-                        identity.actorId = rawActorId;
-                        em.persist(identity);
-                        em.flush();
-                        return identity.token;
-                    } catch (PersistenceException e) {
-                        if (e.getCause() instanceof ConstraintViolationException) {
-                            em.clear();
-                            return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
-                                    .setParameter("actorId", rawActorId)
-                                    .getResultStream()
-                                    .map(a -> a.token)
-                                    .findFirst()
-                                    .orElseThrow(() -> new IllegalStateException(
-                                            "Actor identity race: INSERT failed but SELECT still empty for " + rawActorId, e));
-                        }
-                        throw e;
-                    }
-                });
+                 .setParameter("actorId", rawActorId)
+                 .getResultStream()
+                 .map(a -> a.token)
+                 .findFirst()
+                 .orElseGet(() -> {
+                     try {
+                         return QuarkusTransaction.requiringNew().call(() -> {
+                             final ActorIdentity identity = new ActorIdentity();
+                             identity.token   = UUID.randomUUID().toString();
+                             identity.actorId = rawActorId;
+                             em.persist(identity);
+                             em.flush();
+                             return identity.token;
+                         });
+                     } catch (RuntimeException e) {
+                         if (e instanceof ConstraintViolationException
+                             || e.getCause() instanceof ConstraintViolationException) {
+                             return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
+                                      .setParameter("actorId", rawActorId)
+                                      .getResultStream()
+                                      .map(a -> a.token)
+                                      .findFirst()
+                                      .orElseThrow(() -> new IllegalStateException(
+                                              "Actor identity race: INSERT failed but SELECT still empty for " + rawActorId, e));
+                         }
+                         throw e;
+                     }
+                 });
     }
 
     /**
