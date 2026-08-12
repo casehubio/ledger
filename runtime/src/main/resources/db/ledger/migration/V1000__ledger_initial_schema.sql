@@ -110,8 +110,7 @@ CREATE TABLE actor_trust_score (
     attestation_negative INT              NOT NULL,
     last_computed_at     TIMESTAMP,
     CONSTRAINT pk_actor_trust_score PRIMARY KEY (id),
-    CONSTRAINT uq_actor_trust_score_key
-        UNIQUE NULLS NOT DISTINCT (actor_id, capability_key, dimension_key),
+    CONSTRAINT uq_actor_trust_score_key UNIQUE (actor_id, score_type, capability_key, dimension_key),
     CONSTRAINT chk_actor_trust_score_keys CHECK (
         (score_type = 'GLOBAL'               AND capability_key IS NULL      AND dimension_key IS NULL    ) OR
         (score_type = 'CAPABILITY'           AND capability_key IS NOT NULL   AND dimension_key IS NULL    ) OR
