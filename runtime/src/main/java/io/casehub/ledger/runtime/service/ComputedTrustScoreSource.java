@@ -46,7 +46,7 @@ public class ComputedTrustScoreSource implements TrustScoreSource {
     private final TrustScoreCalculator calculator;
     private static final TrustScoreCalculator.ComputedScores EMPTY_SENTINEL =
             new TrustScoreCalculator.ComputedScores(Map.of(), Map.of(), Map.of(),
-                    new TrustScoreComputer.ActorScore(0, 0, 0, 0, 0, 0, 0));
+                    new TrustScoreComputer.ActorScore(0, 0, 0, 0, 0, 0, 0, 1.0));
 
     private final ConcurrentHashMap<String, TrustScoreCalculator.ComputedScores> cache =
             new ConcurrentHashMap<>();

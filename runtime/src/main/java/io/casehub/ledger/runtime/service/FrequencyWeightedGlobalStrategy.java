@@ -94,6 +94,6 @@ public class FrequencyWeightedGlobalStrategy implements GlobalScoreStrategy {
         final double clampedScore = Math.max(0.0, Math.min(1.0, weightedScore));
         return Optional.of(new TrustScoreComputer.ActorScore(
                 clampedScore, combinedAlpha, combinedBeta,
-                totalDecisions, totalOverturned, totalPositive, totalNegative));
+                totalDecisions, totalOverturned, totalPositive, totalNegative, 1.0));
     }
 }
