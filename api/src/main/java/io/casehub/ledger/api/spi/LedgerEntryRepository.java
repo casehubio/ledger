@@ -1,12 +1,14 @@
 package io.casehub.ledger.api.spi;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * SPI for persisting and querying {@link LedgerEntry} and {@link LedgerAttestation} records.
@@ -170,4 +172,14 @@ public interface LedgerEntryRepository {
      * @return ordered list; empty if none match
      */
     List<LedgerAttestation> findAttestationsByAttestorIdAndCapabilityTag(String attestorId, String capabilityTag, String tenancyId);
+
+
+    default List<LedgerAttestation> findPeerAttestationsByAttestorIds(Set<String> attestorIds, String tenancyId) {
+        return List.of();
+    }
+
+    default Map<String, Map<String, Long>> findPeerAttestationPairCounts(Set<String> attestorIds, String tenancyId) {
+        return Map.of();
+    }
+
 }

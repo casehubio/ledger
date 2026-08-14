@@ -368,6 +368,64 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
 
     // ── Supplement loading ────────────────────────────────────────────────────
 
+
+    @Override
+    public List<LedgerAttestation> findPeerAttestationsByAttestorIds(final java.util.Set<String> attestorIds, final String tenancyId) {
+        if (attestorIds == null || attestorIds.isEmpty()) {
+            return List.of();
+        }
+        final java.util.Set<String> tokens = new java.util.LinkedHashSet<>();
+        for (final String id : attestorIds) {
+            actorIdentityProvider.tokeniseForQuery(id).ifPresent(tokens::add);
+        }
+        if (tokens.isEmpty()) {
+            return List.of();
+        }
+        return em.createQuery(
+                         "SELECT a FROM LedgerAttestation a WHERE a.attestorId IN :attestorIds"
+                         + " AND a.verdict IN (io.casehub.ledger.api.model.AttestationVerdict.ENDORSED,"
+                         + " io.casehub.ledger.api.model.AttestationVerdict.CHALLENGED)"
+                         + " AND a.tenancyId = :tenancyId",
+                         LedgerAttestation.class)
+                 .setParameter("attestorIds", tokens)
+                 .setParameter("tenancyId", tenancyId)
+                 .getResultList();
+    }
+
+    @Override
+    public Map<String, Map<String, Long>> findPeerAttestationPairCounts(final java.util.Set<String> attestorIds, final String tenancyId) {
+        if (attestorIds == null || attestorIds.isEmpty()) {
+            return Map.of();
+        }
+        final java.util.Set<String> tokens = new java.util.LinkedHashSet<>();
+        for (final String id : attestorIds) {
+            actorIdentityProvider.tokeniseForQuery(id).ifPresent(tokens::add);
+        }
+        if (tokens.isEmpty()) {
+            return Map.of();
+        }
+        @SuppressWarnings("unchecked") final List<Object[]> rows = em.createQuery(
+                                                                             "SELECT a.attestorId, e.actorId, COUNT(a) FROM LedgerAttestation a"
+                                                                             + " JOIN LedgerEntry e ON a.ledgerEntryId = e.id"
+                                                                             + " WHERE a.attestorId IN :attestorIds"
+                                                                             + " AND a.verdict IN (io.casehub.ledger.api.model.AttestationVerdict.ENDORSED,"
+                                                                             + " io.casehub.ledger.api.model.AttestationVerdict.CHALLENGED)"
+                                                                             + " AND a.tenancyId = :tenancyId"
+                                                                             + " GROUP BY a.attestorId, e.actorId")
+                                                                     .setParameter("attestorIds", tokens)
+                                                                     .setParameter("tenancyId", tenancyId)
+                                                                     .getResultList();
+
+        final Map<String, Map<String, Long>> result = new HashMap<>();
+        for (final Object[] row : rows) {
+            final String attestorId     = (String) row[0];
+            final String subjectActorId = (String) row[1];
+            final Long   count          = (Long) row[2];
+            result.computeIfAbsent(attestorId, k -> new HashMap<>()).put(subjectActorId, count);
+        }
+        return result;
+    }
+
     /**
      * Loads supplements from their self-contained tables and attaches them to entries.
      * Called after JPQL queries since supplements are {@code @Transient} on LedgerEntry.

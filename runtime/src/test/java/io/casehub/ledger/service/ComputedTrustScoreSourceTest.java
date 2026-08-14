@@ -1,32 +1,30 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.Set;
-import java.util.UUID;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AllAttestationsGlobalStrategy;
 import io.casehub.ledger.runtime.service.ComputedTrustScoreSource;
 import io.casehub.ledger.runtime.service.TrustScoreCalculator;
 import io.casehub.ledger.runtime.service.model.SubjectSequenceStats;
 import io.casehub.platform.api.identity.ActorType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Tests for {@link ComputedTrustScoreSource} — on-read computation from attestation history.
@@ -41,7 +39,7 @@ class ComputedTrustScoreSourceTest {
     void setUp() {
         ledgerRepo = new StubLedgerEntryRepository();
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                (age, verdict) -> 1.0, new AllAttestationsGlobalStrategy());
+                (age, verdict) -> 1.0, new AllAttestationsGlobalStrategy(), new io.casehub.ledger.runtime.service.NoOpAttestorCredibilityPolicy());
         source = new ComputedTrustScoreSource(ledgerRepo, calculator);
     }
 
