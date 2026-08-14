@@ -1,32 +1,12 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.CapabilityTag;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.spi.TrustScoreSource;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.runtime.service.AllAttestationsGlobalStrategy;
@@ -38,6 +18,23 @@ import io.casehub.ledger.runtime.service.TrustScoreCalculator;
 import io.casehub.ledger.runtime.service.TrustScoreCalculator.ComputedScores;
 import io.casehub.ledger.runtime.service.model.SubjectSequenceStats;
 import io.casehub.platform.api.identity.ActorType;
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Contract test: verifies all three {@link TrustScoreSource} implementations agree
@@ -75,7 +72,7 @@ class TrustScoreSourceContractTest {
 
     static Stream<Named<TrustScoreSource>> sources() {
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                NO_DECAY, new AllAttestationsGlobalStrategy());
+                NO_DECAY, new AllAttestationsGlobalStrategy(), new io.casehub.ledger.runtime.service.NoOpAttestorCredibilityPolicy());
 
         // --- Materialized: compute scores via calculator, then populate repo ---
         final InlineRepo repo = new InlineRepo();
@@ -175,7 +172,7 @@ class TrustScoreSourceContractTest {
 
     static Stream<Named<TrustScoreSource>> sourcesWithUnattestedActor() {
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                NO_DECAY, new AllAttestationsGlobalStrategy());
+                NO_DECAY, new AllAttestationsGlobalStrategy(), new io.casehub.ledger.runtime.service.NoOpAttestorCredibilityPolicy());
 
         final String unattestedActor = "agent-unattested";
         final TestLedgerEntry unattestedEntry = decision("unattested");

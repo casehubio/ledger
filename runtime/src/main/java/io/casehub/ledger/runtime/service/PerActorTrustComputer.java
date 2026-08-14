@@ -43,8 +43,9 @@ class PerActorTrustComputer {
     PerActorTrustComputer(final DecayFunction decayFunction,
                           final ActorTrustScoreRepository trustRepo,
                           final TrustScoreSnapshotRepository snapshotRepo,
-                          final GlobalScoreStrategy globalScoreStrategy) {
-        this.calculator = new TrustScoreCalculator(decayFunction, globalScoreStrategy);
+                          final GlobalScoreStrategy globalScoreStrategy,
+                          final io.casehub.ledger.api.spi.AttestorCredibilityPolicy credibilityPolicy) {
+        this.calculator = new TrustScoreCalculator(decayFunction, globalScoreStrategy, credibilityPolicy);
         this.trustRepo = trustRepo;
         this.snapshotRepo = snapshotRepo;
     }

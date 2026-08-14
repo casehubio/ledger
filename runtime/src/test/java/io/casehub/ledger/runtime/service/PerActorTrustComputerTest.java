@@ -1,7 +1,17 @@
 package io.casehub.ledger.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.CapabilityTag;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.model.ScoreType;
+import io.casehub.ledger.runtime.model.ActorTrustScore;
+import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
+import io.casehub.ledger.runtime.repository.NoOpTrustScoreSnapshotRepository;
+import io.casehub.platform.api.identity.ActorType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -11,19 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.CapabilityTag;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.api.model.ScoreType;
-import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
-import io.casehub.ledger.runtime.repository.NoOpTrustScoreSnapshotRepository;
-import io.casehub.platform.api.identity.ActorType;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Plain JUnit 5 unit tests for {@link PerActorTrustComputer}.
@@ -47,7 +46,8 @@ class PerActorTrustComputerTest {
                 (ageInDays, verdict) -> Math.pow(2.0, -(double) ageInDays / 90),
                 trustRepo,
                 new NoOpTrustScoreSnapshotRepository(),
-                new AllAttestationsGlobalStrategy());
+                new AllAttestationsGlobalStrategy(),
+                new io.casehub.ledger.runtime.service.NoOpAttestorCredibilityPolicy());
     }
 
     // ── Test 1: No attestations → neutral GLOBAL score ───────────────────────
