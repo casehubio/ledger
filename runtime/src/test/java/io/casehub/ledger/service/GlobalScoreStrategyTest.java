@@ -173,6 +173,6 @@ class GlobalScoreStrategyTest {
     }
 
     private static TrustScoreComputer.ActorScore score(final double trustScore) {
-        return new TrustScoreComputer.ActorScore(trustScore, 2.0, 1.0, 1, 0, 1, 0);
+        return new TrustScoreComputer.ActorScore(trustScore, 2.0, 1.0, 1, 0, 1, 0, 1.0);
     }
 }

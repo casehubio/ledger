@@ -1,7 +1,13 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.runtime.service.DecayFunction;
+import io.casehub.ledger.runtime.service.TrustScoreComputer;
+import io.casehub.platform.api.identity.ActorType;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -11,15 +17,8 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.runtime.service.DecayFunction;
-import io.casehub.ledger.runtime.service.TrustScoreComputer;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Pure JUnit 5 unit tests for {@link TrustScoreComputer} — no Quarkus runtime, no CDI.
@@ -691,4 +690,117 @@ class TrustScoreComputerTest {
         assertThat(result).isPresent();
         assertThat(result.getAsDouble()).isLessThanOrEqualTo(1.0);
     }
+
+
+    // ── Credibility weighting ────────────────────────────────────────────────
+
+    @Test
+    void compute_appliesCredibilityWeight() {
+        final TestLedgerEntry   entry = decision("actor", now);
+        final LedgerAttestation a     = attestation(entry.id, AttestationVerdict.SOUND);
+        a.attestorId = "reviewer-a";
+
+        final var credibility = Map.of("reviewer-a",
+                                       new io.casehub.ledger.api.spi.AttestorCredibilityPolicy.CredibilityAssessment(
+                                               0.5, "low agreement", java.util.Set.of(io.casehub.ledger.api.model.CredibilityFlag.LOW_AGREEMENT)));
+
+        final TrustScoreComputer.ActorScore result = computer.compute(
+                List.of(entry),
+                Map.of(entry.id, List.of(a)),
+                now,
+                credibility);
+
+        // weight = decayWeight(~1.0) × confidence(1.0) × credibility(0.5) = ~0.5
+        // alpha = 1.0 (prior) + 0.5 = 1.5, beta = 1.0 (prior)
+        assertThat(result.alpha()).isCloseTo(1.5, within(0.01));
+        assertThat(result.credibilityRetention()).isCloseTo(0.5, within(0.01));
+    }
+
+    @Test
+    void compute_withoutCredibilityMap_returnsRetentionOne() {
+        final TestLedgerEntry   entry = decision("actor", now);
+        final LedgerAttestation a     = attestation(entry.id, AttestationVerdict.SOUND);
+
+        final TrustScoreComputer.ActorScore result = computer.compute(
+                List.of(entry),
+                Map.of(entry.id, List.of(a)),
+                now);
+
+        assertThat(result.credibilityRetention()).isEqualTo(1.0);
+    }
+
+    @Test
+    void compute_allInsufficientData_returnsNaN() {
+        final TestLedgerEntry   entry = decision("actor", now);
+        final LedgerAttestation a     = attestation(entry.id, AttestationVerdict.SOUND);
+        a.attestorId = "reviewer-a";
+
+        final var credibility = Map.of("reviewer-a",
+                                       new io.casehub.ledger.api.spi.AttestorCredibilityPolicy.CredibilityAssessment(
+                                               1.0, null, java.util.Set.of(io.casehub.ledger.api.model.CredibilityFlag.INSUFFICIENT_DATA)));
+
+        final TrustScoreComputer.ActorScore result = computer.compute(
+                List.of(entry),
+                Map.of(entry.id, List.of(a)),
+                now,
+                credibility);
+
+        assertThat(result.credibilityRetention()).isNaN();
+    }
+
+    @Test
+    void compute_mixedCredibility_retentionReflectsAssessedOnly() {
+        final TestLedgerEntry   entry = decision("actor", now);
+        final LedgerAttestation a1    = attestation(entry.id, AttestationVerdict.SOUND);
+        a1.attestorId = "assessed-reviewer";
+        final LedgerAttestation a2 = attestation(entry.id, AttestationVerdict.ENDORSED);
+        a2.attestorId = "unassessed-reviewer";
+
+        final var credibility = Map.of(
+                "assessed-reviewer",
+                new io.casehub.ledger.api.spi.AttestorCredibilityPolicy.CredibilityAssessment(
+                        0.5, "low", java.util.Set.of(io.casehub.ledger.api.model.CredibilityFlag.LOW_AGREEMENT)),
+                "unassessed-reviewer",
+                new io.casehub.ledger.api.spi.AttestorCredibilityPolicy.CredibilityAssessment(
+                        1.0, null, java.util.Set.of(io.casehub.ledger.api.model.CredibilityFlag.INSUFFICIENT_DATA)));
+
+        final TrustScoreComputer.ActorScore result = computer.compute(
+                List.of(entry),
+                Map.of(entry.id, List.of(a1, a2)),
+                now,
+                credibility);
+
+        // Only assessed-reviewer counts for retention: effective=0.5, raw=1.0 → retention=0.5
+        assertThat(result.credibilityRetention()).isCloseTo(0.5, within(0.01));
+    }
+
+    @Test
+    void computeDimensionScore_appliesCredibilityWeight() {
+        final LedgerAttestation a = new LedgerAttestation();
+        a.id             = UUID.randomUUID();
+        a.ledgerEntryId  = UUID.randomUUID();
+        a.attestorId     = "reviewer-a";
+        a.attestorType   = ActorType.HUMAN;
+        a.verdict        = AttestationVerdict.SOUND;
+        a.confidence     = 1.0;
+        a.occurredAt     = now;
+        a.dimensionScore = 0.9;
+        a.trustDimension = "accuracy";
+
+        final var credibility = Map.of("reviewer-a",
+                                       new io.casehub.ledger.api.spi.AttestorCredibilityPolicy.CredibilityAssessment(
+                                               0.5, "low", java.util.Set.of()));
+
+        final OptionalDouble withCredibility = computer.computeDimensionScore(
+                List.of(a), now, credibility);
+        final OptionalDouble withoutCredibility = computer.computeDimensionScore(
+                List.of(a), now);
+
+        // Both should return the same score (0.9) because it's a single attestation —
+        // credibility weight cancels in the weighted average (numerator and denominator both scaled)
+        assertThat(withCredibility).isPresent();
+        assertThat(withoutCredibility).isPresent();
+        assertThat(withCredibility.getAsDouble()).isCloseTo(0.9, within(0.001));
+    }
+
 }

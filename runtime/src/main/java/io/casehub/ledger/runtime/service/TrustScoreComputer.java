@@ -1,14 +1,16 @@
 package io.casehub.ledger.runtime.service;
 
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.CredibilityFlag;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
+import io.casehub.ledger.runtime.model.LedgerAttestation;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.UUID;
-
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * Computes Bayesian Beta trust scores from ledger attestation history.
@@ -74,7 +76,8 @@ public final class TrustScoreComputer {
             int decisionCount,
             int overturnedCount,
             int attestationPositive,
-            int attestationNegative) {
+            int attestationNegative,
+            double credibilityRetention) {
     }
 
     /**
@@ -89,36 +92,61 @@ public final class TrustScoreComputer {
             final List<LedgerEntry> decisions,
             final Map<UUID, List<LedgerAttestation>> attestationsByEntryId,
             final Instant now) {
+        return compute(decisions, attestationsByEntryId, now, Map.of());
+    }
+
+    public ActorScore compute(
+            final List<LedgerEntry> decisions,
+            final Map<UUID, List<LedgerAttestation>> attestationsByEntryId,
+            final Instant now,
+            final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId) {
 
         if (decisions.isEmpty()) {
-            return new ActorScore(0.5, 1.0, 1.0, 0, 0, 0, 0);
+            return new ActorScore(0.5, 1.0, 1.0, 0, 0, 0, 0, 1.0);
         }
 
-        double alpha = 1.0;
-        double beta = 1.0;
-        int overturnedCount = 0;
-        int totalPositive = 0;
-        int totalNegative = 0;
+        double alpha                    = 1.0;
+        double beta                     = 1.0;
+        int    overturnedCount          = 0;
+        int    totalPositive            = 0;
+        int    totalNegative            = 0;
+        double totalRawWeight           = 0.0;
+        double totalEffectiveWeight     = 0.0;
+        int    assessedAttestationCount = 0;
 
         for (final LedgerEntry entry : decisions) {
             final List<LedgerAttestation> attestations = attestationsByEntryId.getOrDefault(entry.id, List.of());
-            boolean hasNegative = false;
+            boolean                       hasNegative  = false;
 
             for (final LedgerAttestation attestation : attestations) {
                 final Instant attestationTime = attestation.occurredAt != null ? attestation.occurredAt : now;
-                final long ageInDays = Math.max(0, java.time.Duration.between(attestationTime, now).toDays());
-                final double decayWeight = decayFunction.weight(ageInDays, attestation.verdict);
-                final double weight = decayWeight * Math.max(0.0, Math.min(1.0, attestation.confidence));
+                final long    ageInDays       = Math.max(0, java.time.Duration.between(attestationTime, now).toDays());
+                final double  decayWeight     = decayFunction.weight(ageInDays, attestation.verdict);
+                final double  rawWeight       = decayWeight * Math.max(0.0, Math.min(1.0, attestation.confidence));
+
+                final AttestorCredibilityPolicy.CredibilityAssessment assessment =
+                        credibilityByAttestorId.getOrDefault(attestation.attestorId,
+                                                             AttestorCredibilityPolicy.CredibilityAssessment.NEUTRAL);
+                final double credibilityWeight = Math.max(0.0, Math.min(1.0, assessment.weight()));
+                final double effectiveWeight   = rawWeight * credibilityWeight;
+
+                final boolean hasInsufficientData = assessment.flags() != null
+                                                    && assessment.flags().contains(CredibilityFlag.INSUFFICIENT_DATA);
+                if (!hasInsufficientData) {
+                    totalRawWeight += rawWeight;
+                    totalEffectiveWeight += effectiveWeight;
+                    assessedAttestationCount++;
+                }
 
                 if (attestation.verdict == AttestationVerdict.SOUND
-                        || attestation.verdict == AttestationVerdict.ENDORSED) {
-                    alpha += weight;
+                    || attestation.verdict == AttestationVerdict.ENDORSED) {
+                    alpha += effectiveWeight;
                     totalPositive++;
                 } else if (attestation.verdict == AttestationVerdict.FLAGGED
-                        || attestation.verdict == AttestationVerdict.CHALLENGED) {
-                    beta += weight;
+                           || attestation.verdict == AttestationVerdict.CHALLENGED) {
+                    beta += effectiveWeight;
                     totalNegative++;
-                    if (weight > 0.0) {
+                    if (effectiveWeight > 0.0) {
                         hasNegative = true;
                     }
                 }
@@ -128,14 +156,17 @@ public final class TrustScoreComputer {
             }
         }
 
-        final double rawScore = alpha / (alpha + beta);
-        final double trustScore = Math.max(0.0, Math.min(1.0, rawScore));
+        final double trustScore = Math.max(0.0, Math.min(1.0, alpha / (alpha + beta)));
+        final double retention = assessedAttestationCount == 0
+                                 ? Double.NaN
+                                 : (totalRawWeight > 0.0 ? totalEffectiveWeight / totalRawWeight : 1.0);
 
         return new ActorScore(
                 trustScore, alpha, beta,
                 decisions.size(), overturnedCount,
-                totalPositive, totalNegative);
+                totalPositive, totalNegative, retention);
     }
+
 
     /**
      * Computes a decay-weighted average of continuous quality dimension scores.
@@ -158,6 +189,13 @@ public final class TrustScoreComputer {
     public OptionalDouble computeDimensionScore(
             final List<LedgerAttestation> dimensionAttestations,
             final Instant now) {
+        return computeDimensionScore(dimensionAttestations, now, Map.of());
+    }
+
+    public OptionalDouble computeDimensionScore(
+            final List<LedgerAttestation> dimensionAttestations,
+            final Instant now,
+            final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId) {
         double weightedSum = 0.0;
         double totalWeight = 0.0;
 
@@ -166,9 +204,16 @@ public final class TrustScoreComputer {
                 continue;
             }
             final Instant attestedAt = a.occurredAt != null ? a.occurredAt : now;
-            final long ageInDays = Math.max(0, java.time.Duration.between(attestedAt, now).toDays());
-            final double weight = decayFunction.weight(ageInDays, AttestationVerdict.SOUND)
-                    * Math.max(0.0, Math.min(1.0, a.confidence));
+            final long    ageInDays  = Math.max(0, java.time.Duration.between(attestedAt, now).toDays());
+            final double rawWeight = decayFunction.weight(ageInDays, AttestationVerdict.SOUND)
+                                     * Math.max(0.0, Math.min(1.0, a.confidence));
+
+            final AttestorCredibilityPolicy.CredibilityAssessment assessment =
+                    credibilityByAttestorId.getOrDefault(a.attestorId,
+                                                         AttestorCredibilityPolicy.CredibilityAssessment.NEUTRAL);
+            final double credibilityWeight = Math.max(0.0, Math.min(1.0, assessment.weight()));
+            final double weight            = rawWeight * credibilityWeight;
+
             weightedSum += weight * a.dimensionScore;
             totalWeight += weight;
         }
@@ -178,4 +223,6 @@ public final class TrustScoreComputer {
         }
         return OptionalDouble.of(Math.max(0.0, Math.min(1.0, weightedSum / totalWeight)));
     }
+
+
 }
