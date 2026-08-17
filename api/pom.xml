@@ -20,12 +20,6 @@
       <artifactId>casehub-platform-api</artifactId>
     </dependency>
 
-    <!-- Jakarta Persistence annotations (@MappedSuperclass, @Transient) — no runtime dependency -->
-    <dependency>
-      <groupId>jakarta.persistence</groupId>
-      <artifactId>jakarta.persistence-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <!-- Jackson for supplement serialization only — no JPA -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

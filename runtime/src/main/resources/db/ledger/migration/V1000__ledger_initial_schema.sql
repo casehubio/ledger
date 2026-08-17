@@ -26,6 +26,7 @@ CREATE TABLE ledger_entry (
     agent_key_ref      TEXT,
     actor_did          TEXT,
     metadata           TEXT,
+    domain_data        TEXT,
     CONSTRAINT pk_ledger_entry PRIMARY KEY (id),
     CONSTRAINT chk_agent_signature_pair CHECK (
         (agent_signature IS NULL) = (agent_public_key IS NULL)

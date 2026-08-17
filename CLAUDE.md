@@ -132,9 +132,10 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Parent artifactId | `casehub-ledger-parent` |
 | Runtime artifactId | `casehub-ledger` |
 | Deployment artifactId | `casehub-ledger-deployment` |
-| persistence-memory artifactId | `casehub-ledger-memory` |
+| persistence-memory artifactId | `casehub-ledger-persistence-memory` |
 | Testing artifactId | `casehub-ledger-testing` |
 | REST artifactId | `casehub-ledger-rest` |
+| GraphQL artifactId | `casehub-ledger-graphql` |
 | Vault Transit artifactId | `casehub-ledger-vault-transit` / `casehub-ledger-vault-transit-quarkus` |
 | AWS KMS artifactId | `casehub-ledger-aws-kms` / `casehub-ledger-aws-kms-quarkus` |
 | GCP Cloud KMS artifactId | `casehub-ledger-gcp-kms` / `casehub-ledger-gcp-kms-quarkus` |
@@ -270,7 +271,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 ├── api/
 │   └── src/main/java/io/casehub/ledger/api/
 │       ├── model/
-│       │   ├── LedgerEntry.java             — @MappedSuperclass: abstract base (all persistent fields, canonicalBytes()); tenancyId (multi-tenancy); agentSignature + agentPublicKey + agentKeyRef (bilateral signing); actorDid (identity binding); metadata (consumer-provided freeform JSON audit context, #172); consumers extend this or JpaLedgerEntry
+│       │   ├── LedgerEntry.java             — abstract base (all persistent fields, canonicalBytes(), domainData: Map<String,Object>); JPA annotations stripped — mappings in runtime/META-INF/orm.xml; consumers extend this or JpaLedgerEntry
 │       │   ├── LedgerEntryType.java         — COMMAND | EVENT | ATTESTATION enum
 │       │   ├── ActorType.java               — HUMAN | AGENT | SYSTEM enum
 │       │   ├── KeyRotationReason.java       — SCHEDULED | COMPROMISED enum (NIST SP 800-57 lifecycle distinction)
@@ -280,9 +281,9 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── ScoreType.java               — GLOBAL | CAPABILITY | DIMENSION | CAPABILITY_DIMENSION enum (trust score type; see ADR 0010)
 │       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path; metadata component for consumer-provided JSON context (#172)
 │       │   └── supplement/
-│       │       ├── LedgerSupplement.java        — @MappedSuperclass: abstract base for supplements
-│       │       ├── ComplianceSupplement.java    — @MappedSuperclass: GDPR Art.22, governance fields
-│       │       └── ProvenanceSupplement.java    — @MappedSuperclass: workflow source entity; agentConfigHash for LLM config drift detection
+│       │       ├── LedgerSupplement.java        — abstract base for supplements (JPA annotations stripped — mappings in runtime/META-INF/orm.xml)
+│       │       ├── ComplianceSupplement.java    — GDPR Art.22, governance fields (JPA-free)
+│       │       └── ProvenanceSupplement.java    — workflow source entity; agentConfigHash (JPA-free)
 │       └── spi/
 │           ├── LedgerEntryRepository.java        — tenant-scoped SPI (all methods take tenancyId); findEntryById (not findById — no Panache conflict)
 │           ├── ReactiveLedgerEntryRepository.java — tenant-scoped reactive SPI (Uni<T> return types; all methods take tenancyId)
@@ -294,9 +295,13 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │           ├── TrustScoreSource.java            — read-path SPI: globalScore(actorId), capabilityScore(actorId, capabilityTag), dimensionScore(actorId, dimension), capabilityDimensionScore(actorId, capability, dimension)
 │           └── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
 ├── runtime/
+│   └── src/main/resources/META-INF/
+│       └── orm.xml                          — JPA mapped-superclass declarations for api/ model classes (LedgerEntry, LedgerAttestation, LedgerSupplement, ComplianceSupplement, ProvenanceSupplement)
 │   └── src/main/java/io/casehub/ledger/runtime/
 │       ├── config/LedgerConfig.java         — @ConfigMapping(prefix = "casehub.ledger")
 │       ├── model/
+│       │   ├── converter/
+│       │   │   └── DomainDataConverter.java     — JPA AttributeConverter: Map<String,Object> ↔ JSON TEXT; USE_BIG_DECIMAL_FOR_FLOATS + USE_LONG_FOR_INTS for deterministic round-trip
 │       │   ├── jpa/
 │       │   │   └── JpaLedgerEntry.java          — @Entity: runtime JPA persistence layer extending api LedgerEntry; JOINED inheritance root for runtime; consumers can extend this instead of api LedgerEntry when they need JPA features in the base class
 │       │   ├── LedgerAttestation.java       — @Entity: peer attestation entity
@@ -471,6 +476,16 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
     └── src/main/java/io/casehub/ledger/testing/
         ├── NoOpLedgerEntryRepository.java           — @Alternative @Priority(1); no-op LedgerEntryRepository for consumer test profiles
         └── NoOpReactiveLedgerEntryRepository.java   — @Alternative @Priority(1); no-op ReactiveLedgerEntryRepository for consumer test profiles
+└── graphql/                              — opt-in GraphQL resolvers + MCP domain provider (plain JAR, not a Quarkus extension)
+    └── src/main/java/io/casehub/ledger/graphql/
+        ├── LedgerQueryResolver.java             — @GraphQLApi @McpDomain("ledger"): ledgerEntries, ledgerEntry, ledgerAttestations, trustScore, trustCapabilityScore, trustRoutingProfile (composite), merkleVerification
+        ├── LedgerMutationResolver.java          — @GraphQLApi @McpDomain("ledger"): appendLedgerEntry (with domainData), createAttestation
+        ├── LedgerModelEnricher.java             — @McpDomain("ledger") ModelEnricher: summary + state for MCP hierarchical model
+        └── dto/                                 — GraphQL input/output records (decoupled from JPA entities)
+            ├── LedgerEntryType.java, LedgerAttestationType.java, TrustScoreType.java
+            ├── TrustCapabilityScoreType.java, TrustRoutingProfileType.java
+            ├── MerkleVerificationType.java, LedgerEntryPage.java
+            └── LedgerEntryFilterInput.java, AppendLedgerEntryInput.java, CreateAttestationInput.java
 └── rest/                                 — opt-in JAX-RS REST endpoints (plain JAR, not a Quarkus extension)
     └── src/main/java/io/casehub/ledger/rest/
         ├── LedgerEntryResource.java             — GET /api/v1/ledger/entries — query by subject or actor; GET /{id}; GET /{id}/caused-by

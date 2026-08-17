@@ -64,7 +64,7 @@ class LedgerAppenderIT {
     void append_commandEntryType() {
         final UUID subjectId = UUID.randomUUID();
         final AuditRecord record = new AuditRecord(subjectId, "actor-2", ActorType.HUMAN,
-                "approver", LedgerEntryType.COMMAND, null, null, null);
+                "approver", LedgerEntryType.COMMAND, null, null, null, null);
         final UUID id = appender.append(record, DEFAULT_TENANT_ID);
 
         final var entry = repo.findEntryById(id, DEFAULT_TENANT_ID).orElseThrow();

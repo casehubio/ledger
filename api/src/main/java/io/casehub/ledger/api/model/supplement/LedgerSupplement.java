@@ -2,9 +2,6 @@ package io.casehub.ledger.api.model.supplement;
 
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
 
 /**
  * Abstract base for all ledger supplements.
@@ -40,11 +37,9 @@ import jakarta.persistence.MappedSuperclass;
  * is {@code @Transient} at this level; JPA subclasses add the concrete
  * {@code @ManyToOne} relationship.
  */
-@MappedSuperclass
 public abstract class LedgerSupplement {
 
     /** Primary key — UUID assigned on first persist. */
-    @Id
     public UUID id;
 
     // Note: the ledgerEntry back-reference is NOT declared here. Hibernate bytecode
@@ -57,6 +52,5 @@ public abstract class LedgerSupplement {
      * Use {@code instanceof} checks or {@link LedgerEntry#compliance()} etc.
      * for typed access rather than reading this field directly.
      */
-    @Column(name = "supplement_type")
     public String supplementType;
 }

@@ -25,7 +25,8 @@ public final class LedgerDtoMapper {
                 entry.digest,
                 entry.traceId,
                 entry.causedByEntryId,
-                entry.metadata);
+                entry.metadata,
+                entry.domainData);
     }
 
     public static List<LedgerEntryResponse> toResponseList(final List<? extends LedgerEntry> entries) {
