@@ -4,17 +4,16 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.Transient;
 
 import io.casehub.platform.api.identity.ActorType;
 
@@ -63,22 +62,23 @@ import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
  * {@code JpaLedgerEntry} subclass. Non-JPA backends (in-memory, event-sourced) extend
  * this class directly.
  */
-@MappedSuperclass
 public abstract class LedgerEntry {
 
     private static final byte[] EMPTY_BYTES = new byte[0];
 
+    private static final ObjectMapper DOMAIN_DATA_MAPPER = new ObjectMapper()
+            .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
     // ── Core identity ─────────────────────────────────────────────────────────
 
     /** Primary key — UUID assigned eagerly at construction time. */
-    @Id
     public UUID id = UUID.randomUUID();
 
     /**
      * The aggregate this entry belongs to — the domain object whose lifecycle
      * is being recorded. Scopes the sequence number and hash chain.
      */
-    @Column(name = "subject_id", nullable = false)
     public UUID subjectId;
 
     /**
@@ -86,37 +86,28 @@ public abstract class LedgerEntry {
      * {@link io.casehub.platform.api.identity.TenancyConstants#DEFAULT_TENANT_ID}.
      * Set at persist time by the repository — callers do not set this directly.
      */
-    @Column(name = "tenancy_id", nullable = false)
     public String tenancyId;
 
     /** Position of this entry in the per-subject ledger sequence (1-based). */
-    @Column(name = "sequence_number", nullable = false)
     public int sequenceNumber;
 
     /** Whether this entry is a command (intent), event (fact), or attestation record. */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "entry_type", nullable = false)
     public LedgerEntryType entryType;
 
     // ── Actor ─────────────────────────────────────────────────────────────────
 
     /** Identity of the actor who triggered this transition. */
-    @Column(name = "actor_id")
     public String actorId;
 
     /** Whether the actor is a human, autonomous agent, or the system itself. */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "actor_type")
     public ActorType actorType;
 
     /** The functional role of the actor in this transition — e.g. {@code "Resolver"}. */
-    @Column(name = "actor_role")
     public String actorRole;
 
     // ── Timing ────────────────────────────────────────────────────────────────
 
     /** When this entry was recorded — set automatically on first persist. */
-    @Column(name = "occurred_at", nullable = false)
     public Instant occurredAt;
 
     // ── Hash chain ────────────────────────────────────────────────────────────
@@ -133,7 +124,6 @@ public abstract class LedgerEntry {
      * OpenTelemetry trace ID linking this entry to a distributed trace.
      * W3C trace context format (32-char hex string).
      */
-    @Column(name = "trace_id", length = 255)
     public String traceId;
 
     /**
@@ -146,7 +136,6 @@ public abstract class LedgerEntry {
      * When Claudony orchestrates Tarkus → Qhorus, each downstream entry's
      * {@code causedByEntryId} points to its upstream cause.
      */
-    @Column(name = "caused_by_entry_id")
     public UUID causedByEntryId;
 
     // ── Agent signing ─────────────────────────────────────────────────────────
@@ -156,7 +145,6 @@ public abstract class LedgerEntry {
      * by the agent identified in {@link #actorId}.
      * Null when the actor is not configured for bilateral signing.
      */
-    @Column(name = "agent_signature")
     public byte[] agentSignature;
 
     /**
@@ -165,7 +153,6 @@ public abstract class LedgerEntry {
      * entries remain verifiable without any external key management system.
      * Null when {@link #agentSignature} is null.
      */
-    @Column(name = "agent_public_key")
     public byte[] agentPublicKey;
 
     /**
@@ -173,11 +160,9 @@ public abstract class LedgerEntry {
      * Value: {@code Base64URL(SHA-256(agentPublicKey))} — computable from stored bytes.
      * Null when {@link #agentSignature} is null.
      */
-    @Column(name = "agent_key_ref")
     public String agentKeyRef;
 
     /** DID URI bound to this entry's actorId at write time. Null when no binding is configured. */
-    @Column(name = "actor_did")
     public String actorDid;
 
     // ── Consumer metadata ─────────────────────────────────────────────────────
@@ -196,8 +181,22 @@ public abstract class LedgerEntry {
      * @see io.casehub.ledger.api.model.OutcomeRecord#withMetadata(String)
      * @see io.casehub.ledger.api.model.AuditRecord#withMetadata(String)
      */
-    @Column(name = "metadata", columnDefinition = "TEXT")
     public String metadata;
+
+    // ── Domain data ───────────────────────────────────────────────────────────
+
+    /**
+     * Flexible key-value payload for domain-specific entry data.
+     *
+     * <p>Used in centralized mode where remote apps cannot provide typed JPA
+     * subclasses. Stored as JSONB in PostgreSQL. Included in
+     * {@link #canonicalBytes()} when non-null and non-empty — serialized with
+     * sorted keys for deterministic hashing.
+     *
+     * <p>Complementary to {@link #domainContentBytes()}: typed subtypes use
+     * domainContentBytes() for their typed fields; remote entries use domainData.
+     */
+    public Map<String, Object> domainData;
 
     // ── Supplements ───────────────────────────────────────────────────────────
 
@@ -208,7 +207,6 @@ public abstract class LedgerEntry {
      * Use {@link #attach(LedgerSupplement)}, {@link #compliance()},
      * and {@link #provenance()} for type-safe access.
      */
-    @Transient
     public List<LedgerSupplement> supplements = new ArrayList<>();
 
     /**
@@ -217,7 +215,6 @@ public abstract class LedgerEntry {
      * Enables fast single-entry reads without joining supplement tables.
      * Format: {@code {"COMPLIANCE":{...},"PROVENANCE":{...}}}.
      */
-    @Column(name = "supplement_json", columnDefinition = "TEXT")
     public String supplementJson;
 
     // ── Supplement helpers ────────────────────────────────────────────────────
@@ -339,6 +336,11 @@ public abstract class LedgerEntry {
             canonical.append("|").append(supplementJson);
         }
 
+        // Append domain data if present
+        if (domainData != null && !domainData.isEmpty()) {
+            canonical.append("|").append(canonicalDomainData(domainData));
+        }
+
         // Append domain content if present
         final byte[] domainBytes = domainContentBytes();
         if (domainBytes.length > 0) {
@@ -347,6 +349,14 @@ public abstract class LedgerEntry {
         }
 
         return canonical.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String canonicalDomainData(final Map<String, Object> data) {
+        try {
+            return DOMAIN_DATA_MAPPER.writeValueAsString(data);
+        } catch (final Exception e) {
+            throw new IllegalStateException("domainData serialization failed", e);
+        }
     }
 
     /**

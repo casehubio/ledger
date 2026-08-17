@@ -57,7 +57,7 @@
     <!-- In-memory persistence — satisfies LedgerEntryRepository and friends without a real DB -->
     <dependency>
       <groupId>io.casehub</groupId>
-      <artifactId>casehub-ledger-memory</artifactId>
+      <artifactId>casehub-ledger-persistence-memory</artifactId>
       <version>${casehub-ledger.version}</version>
       <scope>test</scope>
     </dependency>

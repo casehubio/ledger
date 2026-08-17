@@ -10,7 +10,7 @@
     <version>0.2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>casehub-ledger-memory</artifactId>
+  <artifactId>casehub-ledger-persistence-memory</artifactId>
   <name>CaseHub Ledger - In-Memory Persistence</name>
   <description>In-memory implementations of all ledger persistence SPIs — zero datasource, for tests and ephemeral installs</description>
 

@@ -1,6 +1,7 @@
 package io.casehub.ledger.rest.dto;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 public record LedgerEntryResponse(
@@ -16,5 +17,6 @@ public record LedgerEntryResponse(
         String digest,
         String traceId,
         UUID causedByEntryId,
-        String metadata) {
+        String metadata,
+        Map<String, Object> domainData) {
 }

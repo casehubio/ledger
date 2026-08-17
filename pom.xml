@@ -21,6 +21,7 @@
     <module>consumer-compat-test</module>
     <module>testing</module>
     <module>rest</module>
+    <module>graphql</module>
   </modules>
 
   <repositories>
@@ -78,6 +79,11 @@
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-identity</artifactId>
+        <version>0.2-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-graphql</artifactId>
         <version>0.2-SNAPSHOT</version>
       </dependency>
       <dependency>

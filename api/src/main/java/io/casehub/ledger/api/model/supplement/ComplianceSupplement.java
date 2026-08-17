@@ -1,7 +1,5 @@
 package io.casehub.ledger.api.model.supplement;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.MappedSuperclass;
 
 /**
  * Supplement carrying compliance, governance, and GDPR Art.22 decision snapshot fields.
@@ -44,25 +42,20 @@ import jakarta.persistence.MappedSuperclass;
  * entry.attach(cs);
  * }</pre>
  */
-@MappedSuperclass
 public abstract class ComplianceSupplement extends LedgerSupplement {
 
     // ── Governance ────────────────────────────────────────────────────────────
 
     /** Reference to the policy or procedure version that governed this action. */
-    @Column(name = "plan_ref", length = 500)
     public String planRef;
 
     /** The actor's stated basis for the decision. */
-    @Column(columnDefinition = "TEXT")
     public String rationale;
 
     /** Structured evidence supplied by the actor. */
-    @Column(columnDefinition = "TEXT")
     public String evidence;
 
     /** Free-text or JSON detail — delegation targets, rejection reasons, etc. */
-    @Column(columnDefinition = "TEXT")
     public String detail;
 
     // ── GDPR Art.22 / EU AI Act Art.12 decision snapshot ─────────────────────
@@ -72,7 +65,6 @@ public abstract class ComplianceSupplement extends LedgerSupplement {
      * Provides the "meaningful information about the logic involved" required by
      * GDPR Arts.13–15 and the technical logging required by EU AI Act Art.12.
      */
-    @Column(name = "decision_context", columnDefinition = "TEXT")
     public String decisionContext;
 
     /**
@@ -80,7 +72,6 @@ public abstract class ComplianceSupplement extends LedgerSupplement {
      * the decision. Examples: {@code "gpt-4o"}, {@code "risk-classifier-v2.1"},
      * {@code "approval-rules-2026-Q1"}. Required for reproducibility audits.
      */
-    @Column(name = "algorithm_ref", length = 500)
     public String algorithmRef;
 
     /**
@@ -89,7 +80,6 @@ public abstract class ComplianceSupplement extends LedgerSupplement {
      * deterministic rule engines). Satisfies the GDPR requirement to disclose
      * the significance and envisaged consequences of the decision.
      */
-    @Column(name = "confidence_score")
     public Double confidenceScore;
 
     /**
@@ -97,13 +87,11 @@ public abstract class ComplianceSupplement extends LedgerSupplement {
      * this decision, satisfying the contestation right under GDPR Art.22(3).
      * Example: {@code "https://example.com/decisions/{entryId}/challenge"}.
      */
-    @Column(name = "contestation_uri", length = 2000)
     public String contestationUri;
 
     /**
      * Whether a human review path exists for this decision, satisfying the
      * Art.22(2)(b) safeguard requirement.
      */
-    @Column(name = "human_override_available")
     public Boolean humanOverrideAvailable;
 }

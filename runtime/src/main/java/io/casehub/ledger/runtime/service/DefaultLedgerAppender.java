@@ -54,6 +54,7 @@ public class DefaultLedgerAppender implements LedgerAppender {
         entry.occurredAt = record.occurredAt();
         entry.causedByEntryId = record.causedByEntryId();
         entry.metadata = record.metadata();
+        entry.domainData = record.domainData();
 
         final LedgerEntry saved = repo.save(entry, tenancyId);
         return saved.id;

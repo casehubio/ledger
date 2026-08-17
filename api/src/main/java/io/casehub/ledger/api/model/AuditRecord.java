@@ -1,6 +1,7 @@
 package io.casehub.ledger.api.model;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,7 +27,8 @@ public record AuditRecord(
         LedgerEntryType entryType,
         Instant occurredAt,
         UUID causedByEntryId,
-        String metadata
+        String metadata,
+        Map<String, Object> domainData
 ) {
     public AuditRecord {
         Objects.requireNonNull(actorId, "actorId required");
@@ -48,25 +50,25 @@ public record AuditRecord(
      */
     public static AuditRecord event(final String actorId, final UUID subjectId) {
         return new AuditRecord(subjectId, actorId, ActorType.AGENT,
-                null, LedgerEntryType.EVENT, null, null, null);
+                null, LedgerEntryType.EVENT, null, null, null, null);
     }
 
     /** @throws NullPointerException if role is null */
     public AuditRecord withActorRole(final String role) {
         return new AuditRecord(subjectId, actorId, actorType,
-                Objects.requireNonNull(role, "role"), entryType, occurredAt, causedByEntryId, metadata);
+                Objects.requireNonNull(role, "role"), entryType, occurredAt, causedByEntryId, metadata, domainData);
     }
 
     /** @throws NullPointerException if entryId is null */
     public AuditRecord withCausedBy(final UUID entryId) {
         return new AuditRecord(subjectId, actorId, actorType,
-                actorRole, entryType, occurredAt, Objects.requireNonNull(entryId, "entryId"), metadata);
+                actorRole, entryType, occurredAt, Objects.requireNonNull(entryId, "entryId"), metadata, domainData);
     }
 
     /** @throws NullPointerException if ts is null */
     public AuditRecord withOccurredAt(final Instant ts) {
         return new AuditRecord(subjectId, actorId, actorType,
-                actorRole, entryType, Objects.requireNonNull(ts, "ts"), causedByEntryId, metadata);
+                actorRole, entryType, Objects.requireNonNull(ts, "ts"), causedByEntryId, metadata, domainData);
     }
 
     /**
@@ -79,6 +81,12 @@ public record AuditRecord(
      */
     public AuditRecord withMetadata(final String m) {
         return new AuditRecord(subjectId, actorId, actorType,
-                actorRole, entryType, occurredAt, causedByEntryId, Objects.requireNonNull(m, "metadata"));
+                actorRole, entryType, occurredAt, causedByEntryId, Objects.requireNonNull(m, "metadata"), domainData);
+    }
+
+    public AuditRecord withDomainData(final Map<String, Object> data) {
+        return new AuditRecord(subjectId, actorId, actorType,
+                actorRole, entryType, occurredAt, causedByEntryId, metadata,
+                Objects.requireNonNull(data, "domainData"));
     }
 }
