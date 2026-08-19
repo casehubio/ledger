@@ -34,7 +34,8 @@ public class MeshTrustResource {
     @POST
     @Path("/seed")
     public Response seed() {
-        meshTrustService.seedClassifications();
+        final var entries = meshTrustService.seedEntries();
+        meshTrustService.seedAttestations(entries);
         return Response.ok("{\"seeded\":true}").build();
     }
 

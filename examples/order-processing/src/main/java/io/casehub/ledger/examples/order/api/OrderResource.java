@@ -23,11 +23,12 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntry;
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntryRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.ledger.examples.order.model.Order;
 import io.casehub.ledger.examples.order.service.OrderService;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 
 /**
@@ -132,7 +133,7 @@ public class OrderResource {
     public List<LedgerEntryView> getLedger(@PathParam("id") final UUID orderId) {
         final List<OrderLedgerEntry> entries = ledgerRepo.findByOrderId(orderId);
         return entries.stream().map(e -> {
-            final List<LedgerAttestation> attestations = ledgerRepo.findAttestationsByEntryId(e.id);
+            final List<LedgerAttestation> attestations = ledgerRepo.findAttestationsByEntryId(e.id, TenancyConstants.DEFAULT_TENANT_ID);
             return new LedgerEntryView(e, attestations);
         }).toList();
     }
@@ -178,7 +179,7 @@ public class OrderResource {
             @PathParam("entryId") final UUID entryId,
             final AttestationRequest req) {
 
-        final LedgerAttestation attestation = new LedgerAttestation();
+        final io.casehub.ledger.runtime.model.LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
         attestation.subjectId = orderId;
         attestation.attestorId = req.attestorId();
@@ -186,7 +187,7 @@ public class OrderResource {
         attestation.verdict = req.verdict();
         attestation.evidence = req.evidence();
         attestation.confidence = req.confidence();
-        ledgerRepo.saveAttestation(attestation);
+        ledgerRepo.saveAttestation(attestation, TenancyConstants.DEFAULT_TENANT_ID);
 
         return Response.status(Response.Status.CREATED).build();
     }
@@ -208,7 +209,7 @@ public class OrderResource {
             @QueryParam("actorId") final String actorId,
             @QueryParam("from") final String from,
             @QueryParam("to") final String to) {
-        return ledgerRepo.findByActorId(actorId, Instant.parse(from), Instant.parse(to))
+        return ledgerRepo.findByActorId(actorId, Instant.parse(from), Instant.parse(to), TenancyConstants.DEFAULT_TENANT_ID)
                 .stream()
                 .map(e -> (Object) Map.of(
                         "id", String.valueOf(e.id),

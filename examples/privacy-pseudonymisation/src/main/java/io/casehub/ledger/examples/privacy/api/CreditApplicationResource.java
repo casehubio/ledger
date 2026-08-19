@@ -103,7 +103,7 @@ public class CreditApplicationResource {
     @GET
     @Path("/{applicationId}/ledger")
     public List<LedgerEntryView> ledger(@PathParam("applicationId") final UUID applicationId) {
-        return repo.findBySubjectId(applicationId).stream()
+        return repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).stream()
                 .map(e -> new LedgerEntryView(
                         e.id,
                         e.actorId,

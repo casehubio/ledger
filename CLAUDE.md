@@ -423,6 +423,9 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   │   ├── NoOpTrustBootstrapSource.java   — @DefaultBean no-op (bootstrapping is opt-in)
 │       │   │   └── TrustBootstrapService.java      — CDI bean: bootstrapIfNew(Set<actorId>) — wired into TrustScoreJob pre-pass
 │       │   └── intercept/
+│       │       ├── AuditedInterceptor.java          — CDI interceptor at Priority APPLICATION+1: handles @Audited, @Attested, @ComplianceSupplement (moved from annotations/runtime in #199)
+│       │       ├── ComplianceSupplementContext.java  — ThreadLocal context (same pattern as ProvenanceContext; moved from annotations/runtime in #199)
+│       │       ├── ComplianceSupplementEnricher.java — LedgerEntryEnricher at Priority 35 (moved from annotations/runtime in #199)
 │       │       ├── ProvenanceCapture.java           — CDI interceptor binding (@InterceptorBinding); attributes sourceEntityType, sourceEntitySystem
 │       │       ├── ProvenanceCaptureInterceptor.java — CDI interceptor: pushes ProvenanceContext before proceed, pops in finally
 │       │       ├── ProvenanceCaptureEnricher.java   — LedgerEntryEnricher: attaches ProvenanceSupplement from active context
@@ -515,11 +518,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
     │       ├── Attested.java             — composes with @Audited for entry + attestation via OutcomeRecorder
     │       ├── ComplianceSupplement.java — attaches EU AI Act / GDPR metadata
     │       ├── SubjectId.java            — @Target(PARAMETER): required aggregate key
-    │       ├── ActorId.java, TenancyId.java, DecisionContext.java, ConfidenceScore.java, Verdict.java — parameter annotations
-    │       └── runtime/
-    │           ├── AuditedInterceptor.java           — CDI interceptor at Priority APPLICATION+1
-    │           ├── ComplianceSupplementContext.java   — ThreadLocal context (same pattern as ProvenanceContext)
-    │           └── ComplianceSupplementEnricher.java  — LedgerEntryEnricher at Priority 35
+    │       └── ActorId.java, TenancyId.java, DecisionContext.java, ConfidenceScore.java, Verdict.java — parameter annotations
     └── deployment/                       → io.casehub:casehub-ledger-annotations-deployment
         └── src/main/java/.../deployment/
             └── LedgerAnnotationsProcessor.java — Jandex build-time validation (@SubjectId required, type checks, @Attested requires @Audited)

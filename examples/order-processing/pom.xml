@@ -50,6 +50,11 @@
       <artifactId>casehub-ledger</artifactId>
       <version>${casehub-ledger.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-ledger-annotations</artifactId>
+      <version>${casehub-ledger.version}</version>
+    </dependency>
 
     <!-- REST + JSON -->
     <dependency>

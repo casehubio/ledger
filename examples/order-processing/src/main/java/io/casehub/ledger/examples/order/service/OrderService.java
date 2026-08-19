@@ -11,12 +11,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import io.casehub.ledger.annotations.ActorId;
+import io.casehub.ledger.annotations.Audited;
+import io.casehub.ledger.annotations.SubjectId;
+import io.casehub.ledger.annotations.TenancyId;
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntry;
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntryRepository;
 import io.casehub.ledger.examples.order.model.Order;
 import io.casehub.ledger.examples.order.model.OrderStatus;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 
@@ -89,18 +94,7 @@ public class OrderService {
         order.status = OrderStatus.CANCELLED;
 
         if (ledgerConfig.enabled()) {
-            final OrderLedgerEntry entry = record(order, "cancel", actor);
-            // Attach or update ComplianceSupplement with rationale
-            entry.compliance().ifPresentOrElse(
-                    cs -> {
-                        cs.rationale = reason;
-                        entry.refreshSupplementJson(); // required after in-place field mutation
-                    },
-                    () -> {
-                        final JpaComplianceSupplement cs = new JpaComplianceSupplement();
-                        cs.rationale = reason;
-                        entry.attach(cs);
-                    });
+            record(order, "cancel", actor, reason);
         }
         return order;
     }
@@ -109,39 +103,58 @@ public class OrderService {
     // Internal
     // -------------------------------------------------------------------------
 
+
+    @Audited(actorRole = "System")
+    public void reconcile(@SubjectId UUID orderId,
+                          @ActorId String systemActorId,
+                          @TenancyId String tenancyId) {
+        findOrThrow(orderId);
+    }
+
     private Order findOrThrow(final UUID orderId) {
         return Optional.<Order> ofNullable(Order.findById(orderId))
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
     }
 
     private OrderLedgerEntry record(final Order order, final String transition, final String actor) {
+        return record(order, transition, actor, null);
+    }
+
+    private OrderLedgerEntry record(final Order order, final String transition, final String actor, final String rationale) {
         final String[] meta = EVENT_META.get(transition);
 
-        final Optional<OrderLedgerEntry> latest = ledgerRepo.findLatestByOrderId(order.id);
-        final int nextSeq = latest.map(e -> e.sequenceNumber + 1).orElse(1);
+        final Optional<OrderLedgerEntry> latest  = ledgerRepo.findLatestByOrderId(order.id);
+        final int                        nextSeq = latest.map(e -> e.sequenceNumber + 1).orElse(1);
 
         final OrderLedgerEntry entry = new OrderLedgerEntry();
-        entry.subjectId = order.id;
-        entry.orderId = order.id;
+        entry.subjectId      = order.id;
+        entry.orderId        = order.id;
         entry.sequenceNumber = nextSeq;
-        entry.entryType = LedgerEntryType.EVENT;
-        entry.commandType = meta[0];
-        entry.eventType = meta[1];
-        entry.actorId = actor;
-        entry.actorType = ActorType.HUMAN;
-        entry.actorRole = meta[2];
-        entry.orderStatus = order.status.name();
-        entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        entry.entryType      = LedgerEntryType.EVENT;
+        entry.commandType    = meta[0];
+        entry.eventType      = meta[1];
+        entry.actorId        = actor;
+        entry.actorType      = ActorType.HUMAN;
+        entry.actorRole      = meta[2];
+        entry.orderStatus    = order.status.name();
+        entry.occurredAt     = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         if (ledgerConfig.decisionContext().enabled()) {
             final JpaComplianceSupplement cs = new JpaComplianceSupplement();
             cs.decisionContext = String.format(
                     "{\"status\":\"%s\",\"total\":%s,\"customerId\":\"%s\"}",
                     order.status, order.total, order.customerId);
+            if (rationale != null) {
+                cs.rationale = rationale;
+            }
+            entry.attach(cs);
+        } else if (rationale != null) {
+            final JpaComplianceSupplement cs = new JpaComplianceSupplement();
+            cs.rationale = rationale;
             entry.attach(cs);
         }
 
-        ledgerRepo.save(entry);
+        ledgerRepo.save(entry, TenancyConstants.DEFAULT_TENANT_ID);
 
         return entry;
     }

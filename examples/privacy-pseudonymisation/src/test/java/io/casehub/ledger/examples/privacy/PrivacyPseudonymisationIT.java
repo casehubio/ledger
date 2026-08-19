@@ -53,7 +53,7 @@ class PrivacyPseudonymisationIT {
 
         service.humanReview(applicationId, officerId, true);
 
-        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId);
+        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
 
         final LedgerEntry entry = entries.get(0);
@@ -78,7 +78,7 @@ class PrivacyPseudonymisationIT {
 
         service.analyseApplication(applicationId, "test-applicant", 0.5);
 
-        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId);
+        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
 
         final LedgerEntry entry = entries.get(0);
@@ -113,7 +113,7 @@ class PrivacyPseudonymisationIT {
 
         service.analyseApplication(applicationId, "test-applicant", 0.4);
 
-        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId);
+        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
 
         final LedgerEntry entry = entries.get(0);
@@ -148,7 +148,7 @@ class PrivacyPseudonymisationIT {
         service.humanReview(applicationId, officerId, false);
 
         // Capture the token before erasure
-        final LedgerEntry entryBeforeErasure = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entryBeforeErasure = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
         final String tokenBeforeErasure = entryBeforeErasure.actorId;
         assertThat(tokenBeforeErasure).isNotEqualTo(officerId);
 
@@ -165,35 +165,33 @@ class PrivacyPseudonymisationIT {
 
         // The token remains on the ledger entry — the audit record is intact
         em.clear(); // bypass L1 cache
-        final LedgerEntry entryAfterErasure = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entryAfterErasure = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
         assertThat(entryAfterErasure.actorId)
                 .as("token must remain on the ledger entry after erasure — audit record survives")
                 .isEqualTo(tokenBeforeErasure);
     }
 
-    // ── Correctness: AI agent actorId is also pseudonymised ───────────────────
+    // ── Correctness: AI agent actorId is NOT pseudonymised ─────────────────────
 
     /**
-     * AI agent persona names ("claude:risk-agent@v1") are pseudonymised exactly like
-     * human identities. The stored actorId must be a UUID token, never the raw persona name.
+     * AI agent persona names ("claude:risk-agent@v1") are NOT pseudonymised —
+     * only HUMAN actors are tokenised (#142). Agent identities stay raw so trust
+     * scores accumulate correctly under the persona name.
      */
     @Test
     @Transactional
-    void agentActorId_isPseudonymisedOnWrite() {
+    void agentActorId_isNotPseudonymised() {
         final UUID applicationId = UUID.randomUUID();
 
         service.analyseApplication(applicationId, "any-applicant", 0.6);
 
-        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId);
+        final List<LedgerEntry> entries = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
 
         final LedgerEntry entry = entries.get(0);
         assertThat(entry.actorId)
-                .as("agent persona name must be replaced with a UUID token")
-                .isNotEqualTo("claude:risk-agent@v1");
-        assertThat(UUID_PATTERN.matcher(entry.actorId).matches())
-                .as("agent actorId must match UUID format after pseudonymisation")
-                .isTrue();
+                .as("agent persona name must be stored raw — not pseudonymised")
+                .isEqualTo("claude:risk-agent@v1");
     }
 
     // ── Correctness: erasure endpoint reachable via REST ─────────────────────
@@ -271,7 +269,7 @@ class PrivacyPseudonymisationIT {
 
         service.analyseApplication(applicationId, "test-applicant", 0.3);
 
-        final LedgerEntry entry = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entry = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
 
         assertThat(entry.supplementJson)
                 .as("supplementJson must contain sourceEntityId")
@@ -303,7 +301,7 @@ class PrivacyPseudonymisationIT {
 
         service.analyseApplication(applicationId, "test-applicant", 0.5);
 
-        final LedgerEntry entry = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entry = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
 
         assertThat(entry.compliance())
                 .isPresent()
@@ -327,7 +325,7 @@ class PrivacyPseudonymisationIT {
 
         service.humanReview(applicationId, officerId, true);
 
-        final LedgerEntry entry = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entry = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
 
         assertThat(entry.actorId)
                 .as("pseudonymised actorId must match UUID regex")
@@ -349,7 +347,7 @@ class PrivacyPseudonymisationIT {
 
         service.humanReview(applicationId, officerId, true);
 
-        final LedgerEntry entry = repo.findBySubjectId(applicationId).get(0);
+        final LedgerEntry entry = repo.findBySubjectId(applicationId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).get(0);
 
         assertThat(entry.supplementJson)
                 .as("supplementJson must contain the rationale text for an approved review")

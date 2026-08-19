@@ -49,7 +49,7 @@ public class DecisionResource {
     }
 
     private Map<String, Object> toView(final DecisionLedgerEntry e) {
-        final JpaComplianceSupplement cs = e.compliance().orElse(null);
+        final var cs = e.compliance().orElse(null);
         return Map.of(
                 "id", e.id,
                 "decisionId", e.decisionId,
