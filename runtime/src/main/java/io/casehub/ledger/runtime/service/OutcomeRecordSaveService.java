@@ -1,10 +1,7 @@
 package io.casehub.ledger.runtime.service;
 
-import java.util.UUID;
-
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.config.LedgerConfig;
@@ -12,6 +9,8 @@ import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.PlainLedgerEntry;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import java.util.UUID;
 
 /**
  * Inner service for {@link DefaultOutcomeRecorder}.
@@ -80,11 +79,10 @@ class OutcomeRecordSaveService {
         entry.actorRole  = record.actorRole();
         entry.actorType  = record.actorType();
         entry.subjectId  = record.subjectId();
-        entry.entryType  = LedgerEntryType.EVENT;
+        entry.entryType  = record.entryType();
         entry.occurredAt = record.occurredAt();
         entry.metadata   = record.metadata();
-        return entry;
-    }
+        return entry;}
 
     private LedgerAttestation buildAttestation(final OutcomeRecord record,
                                                final LedgerEntry saved, final AttestorDefaults attestor) {

@@ -1,9 +1,9 @@
 package io.casehub.ledger.api.spi;
 
-import java.util.UUID;
-
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.OutcomeRecord;
+
+import java.util.UUID;
 
 public interface OutcomeRecorder {
 
@@ -17,6 +17,18 @@ public interface OutcomeRecorder {
      *                               {@code casehub.ledger.outcome.default-attestor-id} is not configured
      */
     UUID record(OutcomeRecord record);
+
+    /**
+     * Append an outcome with explicit tenancy scope.
+     * Same semantics as {@link #record(OutcomeRecord)} but the caller provides
+     * tenancyId directly — for non-HTTP contexts where CurrentPrincipal is absent.
+     *
+     * @return the UUID of the created {@code LedgerEntry}
+     * @throws IllegalStateException if {@code record.attestorId()} is null and
+     *                               {@code casehub.ledger.outcome.default-attestor-id} is not configured
+     */
+    UUID record(OutcomeRecord record, String tenancyId);
+
 
     /**
      * Append an attestation to an existing decision entry.
