@@ -1,15 +1,14 @@
 package io.casehub.ledger.api.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static io.casehub.ledger.api.model.AttestationVerdict.SOUND;
+import io.casehub.platform.api.identity.ActorType;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.ActorType;
+import static io.casehub.ledger.api.model.AttestationVerdict.SOUND;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OutcomeRecordTest {
 
@@ -72,14 +71,14 @@ class OutcomeRecordTest {
     @Test
     void nullActorType_defaultsToAgent() {
         OutcomeRecord r = new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", null, null, null, null, null, null);
+                "strategy", null, null, null, null, null, null, null);
         assertThat(r.actorType()).isEqualTo(ActorType.AGENT);
     }
 
     @Test
     void attestorIdSetTypeNull_throwsIAE() {
         assertThatThrownBy(() -> new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", ActorType.AGENT, null, null, "some-attestor", null, null))
+                "strategy", ActorType.AGENT, null, null, "some-attestor", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("attestorId and attestorType must be provided together");
     }
@@ -87,7 +86,7 @@ class OutcomeRecordTest {
     @Test
     void attestorTypeSetIdNull_throwsIAE() {
         assertThatThrownBy(() -> new OutcomeRecord("actor", subjectId, SOUND, 0.7,
-                "strategy", ActorType.AGENT, null, null, null, ActorType.SYSTEM, null))
+                "strategy", ActorType.AGENT, null, null, null, ActorType.SYSTEM, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("attestorId and attestorType must be provided together");
     }
@@ -226,5 +225,35 @@ class OutcomeRecordTest {
 
         OutcomeRecord g = OutcomeRecord.ofGlobal("actor", subjectId, SOUND, 0.7);
         assertThat(g.metadata()).isNull();
+    }
+
+// ── Entry type ────────────────────────────────────────────────────────────
+
+    @Test
+    void entryTypeDefaultsToEvent() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "cap", SOUND, 0.5);
+        assertThat(r.entryType()).isEqualTo(LedgerEntryType.EVENT);
+    }
+
+    @Test
+    void withEntryTypeReturnsCopy() {
+        OutcomeRecord r       = OutcomeRecord.of("actor", subjectId, "cap", SOUND, 0.5);
+        OutcomeRecord command = r.withEntryType(LedgerEntryType.COMMAND);
+        assertThat(command.entryType()).isEqualTo(LedgerEntryType.COMMAND);
+        assertThat(r.entryType()).isEqualTo(LedgerEntryType.EVENT);
+    }
+
+    @Test
+    void withEntryType_null_throwsNPE() {
+        OutcomeRecord r = OutcomeRecord.of("actor", subjectId, "cap", SOUND, 0.5);
+        assertThatThrownBy(() -> r.withEntryType(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void nullEntryType_defaultsToEvent() {
+        OutcomeRecord r = new OutcomeRecord("actor", subjectId, SOUND, 0.7,
+                                            "strategy", null, null, null, null, null, null, null);
+        assertThat(r.entryType()).isEqualTo(LedgerEntryType.EVENT);
     }
 }

@@ -22,6 +22,7 @@
     <module>testing</module>
     <module>rest</module>
     <module>graphql</module>
+    <module>annotations</module>
   </modules>
 
   <repositories>

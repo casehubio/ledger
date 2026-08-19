@@ -1,16 +1,16 @@
 package io.casehub.ledger.runtime.service;
 
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.platform.api.identity.CurrentPrincipal;
-import java.util.UUID;
-
-import io.casehub.ledger.api.model.AttestationVerdict;
 import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import java.util.UUID;
 
 /**
  * Default blocking implementation of {@link OutcomeRecorder}.
@@ -37,10 +37,14 @@ public class DefaultOutcomeRecorder implements OutcomeRecorder {
     CurrentPrincipal currentPrincipal;
 
     @Override
-    public UUID record(final OutcomeRecord record) {
+    public UUID record(final OutcomeRecord record) {return record(record, currentPrincipal.tenancyId());}
+
+    @Override
+    public UUID record(final OutcomeRecord record, final String tenancyId) {
         final AttestorDefaults attestor = resolveAttestor(record);
-        return saveService.save(record, attestor, currentPrincipal.tenancyId());
+        return saveService.save(record, attestor, tenancyId);
     }
+
 
     @Override
     public void addAttestation(final UUID entryId, final AttestationVerdict verdict,

@@ -1,0 +1,4 @@
+name: casehub-ledger-annotations
+description: Annotation-driven audit, compliance, and attestation recording for CaseHub ledger
+metadata:
+  status: preview

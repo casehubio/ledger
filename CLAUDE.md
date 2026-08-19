@@ -136,6 +136,7 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Testing artifactId | `casehub-ledger-testing` |
 | REST artifactId | `casehub-ledger-rest` |
 | GraphQL artifactId | `casehub-ledger-graphql` |
+| Annotations artifactId | `casehub-ledger-annotations` / `casehub-ledger-annotations-deployment` |
 | Vault Transit artifactId | `casehub-ledger-vault-transit` / `casehub-ledger-vault-transit-quarkus` |
 | AWS KMS artifactId | `casehub-ledger-aws-kms` / `casehub-ledger-aws-kms-quarkus` |
 | GCP Cloud KMS artifactId | `casehub-ledger-gcp-kms` / `casehub-ledger-gcp-kms-quarkus` |
@@ -143,6 +144,9 @@ in V1000–V1008 and always present when `casehub-ledger` is on the classpath.
 | Root Java package | `io.casehub.ledger.runtime` |
 | Signing packages | `io.casehub.ledger.signing.{vault,aws,gcp,azure}[.quarkus]` |
 | Deployment subpackage | `io.casehub.ledger.deployment` |
+| Annotations package | `io.casehub.ledger.annotations` |
+| Annotations runtime subpackage | `io.casehub.ledger.annotations.runtime` |
+| Annotations deployment subpackage | `io.casehub.ledger.annotations.deployment` |
 | Config prefix | `casehub.ledger` |
 | Signing config prefixes | `casehub.ledger.{vault-transit,aws-kms,gcp-kms,azure-keyvault}` |
 | Feature name | `ledger` |
@@ -503,6 +507,22 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
             ├── TrustScoreResponse.java
             ├── VerificationResponse.java
             └── LedgerDtoMapper.java             — entity → DTO conversion
+└── annotations/                          — annotation-driven audit, compliance, and attestation (Quarkus extension)
+    ├── pom.xml                           — aggregator POM
+    ├── runtime/                          → io.casehub:casehub-ledger-annotations
+    │   └── src/main/java/io/casehub/ledger/annotations/
+    │       ├── Audited.java              — @InterceptorBinding: marks methods for ledger entry recording
+    │       ├── Attested.java             — composes with @Audited for entry + attestation via OutcomeRecorder
+    │       ├── ComplianceSupplement.java — attaches EU AI Act / GDPR metadata
+    │       ├── SubjectId.java            — @Target(PARAMETER): required aggregate key
+    │       ├── ActorId.java, TenancyId.java, DecisionContext.java, ConfidenceScore.java, Verdict.java — parameter annotations
+    │       └── runtime/
+    │           ├── AuditedInterceptor.java           — CDI interceptor at Priority APPLICATION+1
+    │           ├── ComplianceSupplementContext.java   — ThreadLocal context (same pattern as ProvenanceContext)
+    │           └── ComplianceSupplementEnricher.java  — LedgerEntryEnricher at Priority 35
+    └── deployment/                       → io.casehub:casehub-ledger-annotations-deployment
+        └── src/main/java/.../deployment/
+            └── LedgerAnnotationsProcessor.java — Jandex build-time validation (@SubjectId required, type checks, @Attested requires @Audited)
 └── signing/                              — first-class signing adapter modules (profile: with-signing)
     ├── pom.xml                           — aggregator POM
     ├── vault-transit/                    → io.casehub:casehub-ledger-vault-transit (pure Java; HttpClient + Jackson)

@@ -1,10 +1,10 @@
 package io.casehub.ledger.api.model;
 
+import io.casehub.platform.api.identity.ActorType;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-
-import io.casehub.platform.api.identity.ActorType;
 
 /**
  * Captures a single plugin decision and its outcome for recording via {@link io.casehub.ledger.api.spi.OutcomeRecorder}.
@@ -27,17 +27,18 @@ public record OutcomeRecord(
         Instant occurredAt,
         String attestorId,
         ActorType attestorType,
-        String metadata
+        String metadata,
+        LedgerEntryType entryType
 ) {
     public OutcomeRecord {
-        Objects.requireNonNull(actorId,       "actorId required");
-        Objects.requireNonNull(subjectId,     "subjectId required");
-        Objects.requireNonNull(verdict,       "verdict required");
+        Objects.requireNonNull(actorId, "actorId required");
+        Objects.requireNonNull(subjectId, "subjectId required");
+        Objects.requireNonNull(verdict, "verdict required");
         Objects.requireNonNull(capabilityTag, "capabilityTag required — use CapabilityTag.GLOBAL if intentional");
         if (confidence <= 0.0 || confidence > 1.0) {
             throw new IllegalArgumentException(
                     "confidence must be in (0.0, 1.0] — got " + confidence
-                            + ". Recommended: 0.1 (tick), 0.7 (game), 1.0 (session).");
+                    + ". Recommended: 0.1 (tick), 0.7 (game), 1.0 (session).");
         }
         if ((attestorId == null) != (attestorType == null)) {
             throw new IllegalArgumentException(
@@ -46,6 +47,9 @@ public record OutcomeRecord(
         if (actorType == null) {
             actorType = ActorType.AGENT;
         }
+        if (entryType == null) {
+            entryType = LedgerEntryType.EVENT;
+        }
     }
 
     /**
@@ -53,9 +57,9 @@ public record OutcomeRecord(
      * capabilityTag is required — GLOBAL-scoped attestations do not reach TrustScoreCache.
      */
     public static OutcomeRecord of(final String actorId, final UUID subjectId,
-            final String capabilityTag, final AttestationVerdict verdict, final double confidence) {
+                                   final String capabilityTag, final AttestationVerdict verdict, final double confidence) {
         return new OutcomeRecord(actorId, subjectId, verdict, confidence,
-                capabilityTag, ActorType.AGENT, null, null, null, null, null);
+                                 capabilityTag, ActorType.AGENT, null, null, null, null, null, null);
     }
 
     /**
@@ -63,33 +67,37 @@ public record OutcomeRecord(
      * These do NOT reach TrustScoreCache or TrustWeightedAgentStrategy.
      */
     public static OutcomeRecord ofGlobal(final String actorId, final UUID subjectId,
-            final AttestationVerdict verdict, final double confidence) {
+                                         final AttestationVerdict verdict, final double confidence) {
         return new OutcomeRecord(actorId, subjectId, verdict, confidence,
-                CapabilityTag.GLOBAL, ActorType.AGENT, null, null, null, null, null);
+                                 CapabilityTag.GLOBAL, ActorType.AGENT, null, null, null, null, null, null);
     }
 
-    /** @throws NullPointerException if role is null */
+    /**
+     * @throws NullPointerException if role is null
+     */
     public OutcomeRecord withActorRole(final String role) {
         Objects.requireNonNull(role, "role");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, role, occurredAt, attestorId, attestorType, metadata);
+                                 actorType, role, occurredAt, attestorId, attestorType, metadata, entryType);
     }
 
     /**
      * @throws NullPointerException if t is null.
-     * Pass ActorType.AGENT explicitly to reset to the default rather than passing null.
+     *                              Pass ActorType.AGENT explicitly to reset to the default rather than passing null.
      */
     public OutcomeRecord withActorType(final ActorType t) {
         Objects.requireNonNull(t, "actorType — use ActorType.AGENT to set the default explicitly");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                t, actorRole, occurredAt, attestorId, attestorType, metadata);
+                                 t, actorRole, occurredAt, attestorId, attestorType, metadata, entryType);
     }
 
-    /** @throws NullPointerException if ts is null */
+    /**
+     * @throws NullPointerException if ts is null
+     */
     public OutcomeRecord withOccurredAt(final Instant ts) {
         Objects.requireNonNull(ts, "occurredAt");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, actorRole, ts, attestorId, attestorType, metadata);
+                                 actorType, actorRole, ts, attestorId, attestorType, metadata, entryType);
     }
 
     /**
@@ -98,9 +106,9 @@ public record OutcomeRecord(
      */
     public OutcomeRecord withAttestor(final String id, final ActorType t) {
         Objects.requireNonNull(id, "attestorId");
-        Objects.requireNonNull(t,  "attestorType");
+        Objects.requireNonNull(t, "attestorType");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, actorRole, occurredAt, id, t, metadata);
+                                 actorType, actorRole, occurredAt, id, t, metadata, entryType);
     }
 
     /**
@@ -114,6 +122,15 @@ public record OutcomeRecord(
     public OutcomeRecord withMetadata(final String m) {
         Objects.requireNonNull(m, "metadata");
         return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
-                actorType, actorRole, occurredAt, attestorId, attestorType, m);
+                                 actorType, actorRole, occurredAt, attestorId, attestorType, m, entryType);
+    }
+
+    /**
+     * @throws NullPointerException if type is null
+     */
+    public OutcomeRecord withEntryType(final LedgerEntryType type) {
+        Objects.requireNonNull(type, "entryType");
+        return new OutcomeRecord(actorId, subjectId, verdict, confidence, capabilityTag,
+                                 actorType, actorRole, occurredAt, attestorId, attestorType, metadata, type);
     }
 }
