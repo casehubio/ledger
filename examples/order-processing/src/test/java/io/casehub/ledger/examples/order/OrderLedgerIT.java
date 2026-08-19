@@ -6,10 +6,17 @@ import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
+
+import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.examples.order.service.OrderService;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -18,6 +25,12 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 class OrderLedgerIT {
+
+    @Inject
+    OrderService orderService;
+
+    @Inject
+    LedgerEntryRepository ledgerRepo;
 
     private static final String BASE = "/orders";
 
@@ -200,6 +213,18 @@ class OrderLedgerIT {
                 .then()
                 .statusCode(200)
                 .body("[0]", org.hamcrest.Matchers.hasKey("traceId"));
+    }
+
+    @Test
+    void reconcile_createsAnnotationDrivenEntryWithExplicitTenancy() {
+        var order = orderService.placeOrder("recon-customer", BigDecimal.TEN);
+        orderService.reconcile(order.id, "system:reconciler", "tenant-recon");
+
+        var entries = ledgerRepo.findBySubjectId(order.id, "tenant-recon");
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).actorId).isEqualTo("system:reconciler");
+        assertThat(entries.get(0).actorRole).isEqualTo("System");
+        assertThat(entries.get(0).entryType).isEqualTo(LedgerEntryType.EVENT);
     }
 
     private String placeOrder(final String customerId, final String total) {

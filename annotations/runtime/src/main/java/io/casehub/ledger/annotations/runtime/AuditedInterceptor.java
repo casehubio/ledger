@@ -13,7 +13,6 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.OutcomeRecord;
 import io.casehub.ledger.api.spi.LedgerAppender;
 import io.casehub.ledger.api.spi.OutcomeRecorder;
-import io.casehub.platform.api.identity.ActorType;
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
@@ -87,7 +86,7 @@ public class AuditedInterceptor {
             final OutcomeRecord withRole = actorRole != null ? record.withActorRole(actorRole) : record;
             outcomeRecorder.record(withRole, tenancyId);
         } else {
-            final AuditRecord record = new AuditRecord(subjectId, actorId, ActorType.AGENT,
+            final AuditRecord record = new AuditRecord(subjectId, actorId, null,
                     actorRole, audited.entryType(), null, null, null, null);
             appender.append(record, tenancyId);
         }
@@ -99,7 +98,7 @@ public class AuditedInterceptor {
         final String tenancyId = resolveTenancyId(ic);
         final String actorRole = audited.actorRole().isEmpty() ? null : audited.actorRole();
 
-        final AuditRecord record = new AuditRecord(subjectId, actorId, ActorType.AGENT,
+        final AuditRecord record = new AuditRecord(subjectId, actorId, null,
                 actorRole, LedgerEntryType.COMMAND, null, null, null, null);
         appender.append(record, tenancyId);
     }

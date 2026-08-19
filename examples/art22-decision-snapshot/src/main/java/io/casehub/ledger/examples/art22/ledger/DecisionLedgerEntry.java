@@ -32,4 +32,10 @@ public class DecisionLedgerEntry extends JpaLedgerEntry {
     /** The decision outcome — e.g. {@code "APPROVED"}, {@code "FLAGGED"}, {@code "REJECTED"}. */
     @Column(name = "outcome", length = 50)
     public String outcome;
+
+    @Override
+    public byte[] domainContentBytes() {
+        return ("%s|%s|%s".formatted(decisionId, decisionCategory, outcome))
+                       .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

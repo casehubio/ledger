@@ -23,4 +23,10 @@ public class DocumentClassificationLedgerEntry extends JpaLedgerEntry {
     /** Risk level assigned by the classifying agent: "LOW", "MEDIUM", or "HIGH". */
     @Column(name = "risk_level")
     public String riskLevel;
+
+    @Override
+    public byte[] domainContentBytes() {
+        return ("%s|%s".formatted(documentId, riskLevel))
+                       .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

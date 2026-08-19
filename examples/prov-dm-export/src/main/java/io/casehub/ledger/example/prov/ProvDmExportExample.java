@@ -11,6 +11,7 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.ledger.runtime.service.LedgerProvExportService;
 
 /**
@@ -46,7 +47,7 @@ public class ProvDmExportExample {
         cs.rationale = "Threshold exceeded; classified as high-priority";
         cs.decisionContext = "{\"inputScore\":0.94,\"threshold\":0.80}";
         e1.attach(cs);
-        e1 = (ProvAuditEntry) repo.save(e1);
+        e1 = (ProvAuditEntry) repo.save(e1, TenancyConstants.DEFAULT_TENANT_ID);
 
         // Entry 2: event from external WorkItem (ProvenanceSupplement)
         ProvAuditEntry e2 = new ProvAuditEntry();
@@ -61,7 +62,7 @@ public class ProvDmExportExample {
         ps.sourceEntityType = "WorkItem";
         ps.sourceEntitySystem = "tarkus";
         e2.attach(ps);
-        e2 = (ProvAuditEntry) repo.save(e2);
+        e2 = (ProvAuditEntry) repo.save(e2, TenancyConstants.DEFAULT_TENANT_ID);
 
         // Entry 3: caused by entry 1 (cross-subject causality)
         ProvAuditEntry e3 = new ProvAuditEntry();
@@ -72,8 +73,8 @@ public class ProvDmExportExample {
         e3.actorType = ActorType.AGENT;
         e3.actorRole = "Classifier";
         e3.causedByEntryId = e1.id;
-        repo.save(e3);
+        repo.save(e3, TenancyConstants.DEFAULT_TENANT_ID);
 
-        return exportService.exportSubject(subjectId);
+        return exportService.exportSubject(subjectId, TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

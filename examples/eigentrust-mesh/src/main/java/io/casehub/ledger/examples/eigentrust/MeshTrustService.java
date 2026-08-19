@@ -7,7 +7,8 @@ import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import jakarta.transaction.Transactional;
 
 import io.casehub.ledger.runtime.model.ActorTrustScore;
@@ -42,7 +43,7 @@ public class MeshTrustService {
     static final String AGENT_C = "claude:classifier-c@v1";
 
     @Inject
-    EntityManager em;
+    LedgerEntryRepository repo;
 
     @Inject
     TrustScoreJob trustScoreJob;
@@ -51,46 +52,48 @@ public class MeshTrustService {
     ActorTrustScoreRepository trustRepo;
 
     /**
-     * Seeds classification ledger entries and peer attestations for all three agents.
-     * Idempotent for tests — uses unique document IDs each call.
+     * @deprecated Use {@link #seedEntries()} then {@link #seedAttestations(SeedResult)} for correct TX boundaries.
      */
-    @Transactional
+    @Deprecated
     public void seedClassifications() {
+        throw new UnsupportedOperationException("Use seedEntries() then seedAttestations() separately");
+    }
+
+    public record SeedResult(
+            DocumentClassificationLedgerEntry a1, DocumentClassificationLedgerEntry a2,
+            DocumentClassificationLedgerEntry b1, DocumentClassificationLedgerEntry b2,
+            DocumentClassificationLedgerEntry c1, DocumentClassificationLedgerEntry c2) {}
+
+    @Transactional
+    public SeedResult seedEntries() {
         final Instant base = Instant.now().minus(1, ChronoUnit.DAYS);
+        return new SeedResult(
+                classify(AGENT_A, "HIGH", base),
+                classify(AGENT_A, "HIGH", base.plusSeconds(60)),
+                classify(AGENT_B, "MEDIUM", base.plusSeconds(120)),
+                classify(AGENT_B, "MEDIUM", base.plusSeconds(180)),
+                classify(AGENT_C, "LOW", base.plusSeconds(240)),
+                classify(AGENT_C, "LOW", base.plusSeconds(300)));
+    }
 
-        // Agent A classifies documents — reliable HIGH risk calls
-        final DocumentClassificationLedgerEntry entryA1 = classify(AGENT_A, "HIGH", base);
-        final DocumentClassificationLedgerEntry entryA2 = classify(AGENT_A, "HIGH", base.plusSeconds(60));
+    @Transactional
+    public void seedAttestations(final SeedResult e) {
+        final Instant attBase = Instant.now().minus(1, ChronoUnit.DAYS).plusSeconds(600);
 
-        // Agent B classifies documents — moderate, mostly correct
-        final DocumentClassificationLedgerEntry entryB1 = classify(AGENT_B, "MEDIUM", base.plusSeconds(120));
-        final DocumentClassificationLedgerEntry entryB2 = classify(AGENT_B, "MEDIUM", base.plusSeconds(180));
+        attest(AGENT_B, e.a1, AttestationVerdict.SOUND, 0.9, attBase);
+        attest(AGENT_C, e.a1, AttestationVerdict.SOUND, 0.8, attBase.plusSeconds(10));
+        attest(AGENT_B, e.a2, AttestationVerdict.SOUND, 0.9, attBase.plusSeconds(20));
+        attest(AGENT_C, e.a2, AttestationVerdict.ENDORSED, 0.85, attBase.plusSeconds(30));
 
-        // Agent C classifies documents — unreliable, gets risk levels wrong
-        final DocumentClassificationLedgerEntry entryC1 = classify(AGENT_C, "LOW", base.plusSeconds(240));
-        final DocumentClassificationLedgerEntry entryC2 = classify(AGENT_C, "LOW", base.plusSeconds(300));
+        attest(AGENT_C, e.b1, AttestationVerdict.SOUND, 0.7, attBase.plusSeconds(40));
+        attest(AGENT_A, e.b1, AttestationVerdict.CHALLENGED, 0.8, attBase.plusSeconds(50));
+        attest(AGENT_C, e.b2, AttestationVerdict.SOUND, 0.7, attBase.plusSeconds(60));
+        attest(AGENT_A, e.b2, AttestationVerdict.CHALLENGED, 0.8, attBase.plusSeconds(70));
 
-        em.flush(); // ensure IDs are assigned before attestations reference them
-
-        final Instant attBase = base.plusSeconds(600);
-
-        // Peer reviews of Agent A's work — B and C both SOUND
-        attest(AGENT_B, entryA1, AttestationVerdict.SOUND, 0.9, attBase);
-        attest(AGENT_C, entryA1, AttestationVerdict.SOUND, 0.8, attBase.plusSeconds(10));
-        attest(AGENT_B, entryA2, AttestationVerdict.SOUND, 0.9, attBase.plusSeconds(20));
-        attest(AGENT_C, entryA2, AttestationVerdict.ENDORSED, 0.85, attBase.plusSeconds(30));
-
-        // Peer reviews of Agent B's work — C gives SOUND, A gives CHALLENGED
-        attest(AGENT_C, entryB1, AttestationVerdict.SOUND, 0.7, attBase.plusSeconds(40));
-        attest(AGENT_A, entryB1, AttestationVerdict.CHALLENGED, 0.8, attBase.plusSeconds(50));
-        attest(AGENT_C, entryB2, AttestationVerdict.SOUND, 0.7, attBase.plusSeconds(60));
-        attest(AGENT_A, entryB2, AttestationVerdict.CHALLENGED, 0.8, attBase.plusSeconds(70));
-
-        // Peer reviews of Agent C's work — A and B both FLAGGED
-        attest(AGENT_A, entryC1, AttestationVerdict.FLAGGED, 0.95, attBase.plusSeconds(80));
-        attest(AGENT_B, entryC1, AttestationVerdict.FLAGGED, 0.9, attBase.plusSeconds(90));
-        attest(AGENT_A, entryC2, AttestationVerdict.FLAGGED, 0.95, attBase.plusSeconds(100));
-        attest(AGENT_B, entryC2, AttestationVerdict.FLAGGED, 0.9, attBase.plusSeconds(110));
+        attest(AGENT_A, e.c1, AttestationVerdict.FLAGGED, 0.95, attBase.plusSeconds(80));
+        attest(AGENT_B, e.c1, AttestationVerdict.FLAGGED, 0.9, attBase.plusSeconds(90));
+        attest(AGENT_A, e.c2, AttestationVerdict.FLAGGED, 0.95, attBase.plusSeconds(100));
+        attest(AGENT_B, e.c2, AttestationVerdict.FLAGGED, 0.9, attBase.plusSeconds(110));
     }
 
     /**
@@ -116,17 +119,16 @@ public class MeshTrustService {
             final Instant occurredAt) {
 
         final DocumentClassificationLedgerEntry entry = new DocumentClassificationLedgerEntry();
-        entry.subjectId = UUID.randomUUID();
+        entry.subjectId      = UUID.randomUUID();
         entry.sequenceNumber = 1;
-        entry.entryType = LedgerEntryType.EVENT;
-        entry.actorId = agentId;
-        entry.actorType = ActorType.AGENT;
-        entry.actorRole = "DocumentClassifier";
-        entry.occurredAt = occurredAt;
-        entry.documentId = UUID.randomUUID();
-        entry.riskLevel = riskLevel;
-        em.persist(entry);
-        return entry;
+        entry.entryType      = LedgerEntryType.EVENT;
+        entry.actorId        = agentId;
+        entry.actorType      = ActorType.AGENT;
+        entry.actorRole      = "DocumentClassifier";
+        entry.occurredAt     = occurredAt;
+        entry.documentId     = UUID.randomUUID();
+        entry.riskLevel      = riskLevel;
+        return (DocumentClassificationLedgerEntry) repo.save(entry, TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     private void attest(
@@ -138,13 +140,13 @@ public class MeshTrustService {
 
         final LedgerAttestation att = new LedgerAttestation();
         att.ledgerEntryId = entry.id;
-        att.subjectId = entry.subjectId;
-        att.attestorId = attestorId;
-        att.attestorType = ActorType.AGENT;
-        att.attestorRole = "PeerReviewer";
-        att.verdict = verdict;
-        att.confidence = confidence;
-        att.occurredAt = occurredAt;
-        em.persist(att);
+        att.subjectId     = entry.subjectId;
+        att.attestorId    = attestorId;
+        att.attestorType  = ActorType.AGENT;
+        att.attestorRole  = "PeerReviewer";
+        att.verdict       = verdict;
+        att.confidence    = confidence;
+        att.occurredAt    = occurredAt;
+        repo.saveAttestation(att, TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

@@ -38,7 +38,8 @@ class EigenTrustMeshIT {
 
     @BeforeEach
     void seedAndCompute() {
-        meshTrustService.seedClassifications();
+        final var entries = meshTrustService.seedEntries();
+        meshTrustService.seedAttestations(entries);
         trustScoreJob.runComputation();
     }
 

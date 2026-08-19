@@ -36,4 +36,10 @@ public class CreditApplicationLedgerEntry extends JpaLedgerEntry {
      */
     @Column(name = "outcome")
     public String outcome;
+
+    @Override
+    public byte[] domainContentBytes() {
+        return ("%s|%s|%s".formatted(applicationId, decisionType, outcome))
+                       .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

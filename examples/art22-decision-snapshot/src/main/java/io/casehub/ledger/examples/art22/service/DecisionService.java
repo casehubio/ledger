@@ -14,6 +14,7 @@ import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntryRepository;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 /**
  * Simulates an AI decision service that records each decision with a full
@@ -36,7 +37,7 @@ public class DecisionService {
 
         final UUID subjectUuid = UUID.fromString(subjectId);
 
-        final int nextSeq = repo.findLatestBySubjectId(subjectUuid)
+        final int nextSeq = repo.findLatestBySubjectId(subjectUuid, TenancyConstants.DEFAULT_TENANT_ID)
                 .map(e -> e.sequenceNumber + 1)
                 .orElse(1);
 
@@ -61,14 +62,14 @@ public class DecisionService {
         cs.decisionContext = inputContext;
         entry.attach(cs);
 
-        repo.save(entry);
+        repo.save(entry, TenancyConstants.DEFAULT_TENANT_ID);
 
         return entry;
     }
 
     public List<DecisionLedgerEntry> history(final String subjectId) {
         final UUID subjectUuid = UUID.fromString(subjectId);
-        return repo.findBySubjectId(subjectUuid).stream()
+        return repo.findBySubjectId(subjectUuid, TenancyConstants.DEFAULT_TENANT_ID).stream()
                 .filter(e -> e instanceof DecisionLedgerEntry)
                 .map(e -> (DecisionLedgerEntry) e)
                 .toList();

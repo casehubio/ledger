@@ -22,5 +22,6 @@
     <module>prov-dm-export</module>
     <module>trust-score-routing</module>
     <module>vault-transit-signing</module>
+    <module>audit-trail-annotated</module>
   </modules>
 </project>

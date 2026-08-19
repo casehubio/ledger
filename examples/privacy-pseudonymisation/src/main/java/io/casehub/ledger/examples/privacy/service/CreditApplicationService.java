@@ -15,7 +15,9 @@ import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService;
 import io.casehub.ledger.runtime.privacy.LedgerErasureService.ErasureResult;
+import io.casehub.ledger.api.model.ErasureReason;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 /**
  * Records credit application decisions with full privacy and supplement usage.
@@ -96,7 +98,7 @@ public class CreditApplicationService {
         ps.agentConfigHash = "a3f7c2e1b9d4ee82f3c1a7b56d9e2f04c8a1b3d7e9f2c5a8b1d4e7f0a3c6b9ef";
         entry.attach(ps);
 
-        repo.save(entry);
+        repo.save(entry, TenancyConstants.DEFAULT_TENANT_ID);
         return entry.id;
     }
 
@@ -136,7 +138,7 @@ public class CreditApplicationService {
                 : "Application declined after manual review.";
         entry.attach(cs);
 
-        repo.save(entry);
+        repo.save(entry, TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     /**
@@ -152,6 +154,6 @@ public class CreditApplicationService {
      * @return erasure result with diagnostic information
      */
     public ErasureResult erase(final String rawActorId) {
-        return erasureService.erase(rawActorId);
+        return erasureService.erase(rawActorId, ErasureReason.GDPR_ART_17_REQUEST);
     }
 }
