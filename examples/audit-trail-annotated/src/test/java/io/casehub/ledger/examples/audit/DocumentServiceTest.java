@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -26,7 +27,7 @@ class DocumentServiceTest {
         UUID docId = UUID.randomUUID();
         service.upload(docId, "alice", "Design Doc", "content...");
 
-        var entries = repo.findBySubjectId(docId, "default");
+        var entries = repo.findBySubjectId(docId, TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).actorId).isEqualTo("alice");
         assertThat(entries.get(0).actorRole).isEqualTo("Author");
@@ -38,7 +39,7 @@ class DocumentServiceTest {
         UUID docId = UUID.randomUUID();
         service.submitForReview(docId, "alice");
 
-        var entries = repo.findBySubjectId(docId, "default");
+        var entries = repo.findBySubjectId(docId, TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).entryType).isEqualTo(LedgerEntryType.COMMAND);
     }
@@ -48,7 +49,7 @@ class DocumentServiceTest {
         UUID docId = UUID.randomUUID();
         service.approve(docId, "bob-reviewer");
 
-        var entries = repo.findBySubjectId(docId, "default");
+        var entries = repo.findBySubjectId(docId, TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).actorId).isEqualTo("bob-reviewer");
         assertThat(entries.get(0).actorRole).isEqualTo("Reviewer");
@@ -61,7 +62,7 @@ class DocumentServiceTest {
         service.submitForReview(docId, "alice");
         service.approve(docId, "bob");
 
-        var entries = repo.findBySubjectId(docId, "default");
+        var entries = repo.findBySubjectId(docId, TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(entries).hasSize(3);
     }
 

@@ -1,4 +1,4 @@
-package io.casehub.ledger.annotations.runtime;
+package io.casehub.ledger.runtime.service.intercept;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
