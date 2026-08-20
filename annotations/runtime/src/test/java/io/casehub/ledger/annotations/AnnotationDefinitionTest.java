@@ -102,8 +102,8 @@ class AnnotationDefinitionTest {
     }
 
     @Test
-    void complianceSupplementIsNotInterceptorBinding() {
-        assertThat(ComplianceSupplement.class.isAnnotationPresent(InterceptorBinding.class)).isFalse();
+    void complianceSupplementIsInterceptorBinding() {
+        assertThat(ComplianceSupplement.class.isAnnotationPresent(InterceptorBinding.class)).isTrue();
     }
 
     @Test

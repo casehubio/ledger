@@ -1,25 +1,23 @@
 package io.casehub.ledger.annotations.deployment;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import org.junit.jupiter.api.Test;
-
+import io.casehub.ledger.annotations.ActorId;
 import io.casehub.ledger.annotations.Audited;
 import io.casehub.ledger.annotations.ComplianceSupplement;
 import io.casehub.ledger.annotations.ConfidenceScore;
 import io.casehub.ledger.annotations.DecisionContext;
 import io.casehub.ledger.annotations.SubjectId;
-import io.casehub.ledger.annotations.ActorId;
 import io.casehub.ledger.annotations.TenancyId;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.quarkus.test.QuarkusUnitTest;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.jboss.shrinkwrap.api.asset.StringAsset;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ComplianceSupplementTest {
 
@@ -76,6 +74,21 @@ class ComplianceSupplementTest {
         assertThat(compliance.get().decisionContext).isNull();
     }
 
+    @Test
+    void standaloneComplianceSupplementWithoutAudited() {
+        UUID subjectId = UUID.randomUUID();
+        service.assessStandalone(subjectId, "agent-1", "default");
+
+        var entries = repo.findBySubjectId(subjectId, "default");
+        assertThat(entries).hasSize(1);
+        var compliance = entries.get(0).compliance();
+        assertThat(compliance).isPresent();
+        assertThat(compliance.get().algorithmRef).isEqualTo("standalone-model");
+        assertThat(compliance.get().contestationUri).isEqualTo("https://example.com/standalone");
+        assertThat(compliance.get().humanOverrideAvailable).isTrue();
+    }
+
+
     @ApplicationScoped
     public static class ComplianceService {
 
@@ -100,5 +113,22 @@ class ComplianceSupplementTest {
                                    @TenancyId String tenancyId) {
             return "assessed";
         }
+
+        @ComplianceSupplement(
+                algorithmRef = "standalone-model",
+                contestationUri = "https://example.com/standalone",
+                humanOverrideAvailable = true)
+        public void assessStandalone(@SubjectId UUID caseId,
+                                     @ActorId String agentId,
+                                     @TenancyId String tenancyId) {
+            final var entry = new io.casehub.ledger.runtime.model.PlainLedgerEntry();
+            entry.subjectId = caseId;
+            entry.actorId   = agentId;
+            entry.entryType = io.casehub.ledger.api.model.LedgerEntryType.EVENT;
+            repo.save(entry, tenancyId);
+        }
+
+        @Inject
+        LedgerEntryRepository repo;
     }
 }
