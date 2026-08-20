@@ -382,10 +382,11 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
             return List.of();
         }
         return em.createQuery(
-                         "SELECT a FROM LedgerAttestation a WHERE a.attestorId IN :attestorIds"
+                         "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id"
+                         + " WHERE a.attestorId IN :attestorIds"
                          + " AND a.verdict IN (io.casehub.ledger.api.model.AttestationVerdict.ENDORSED,"
                          + " io.casehub.ledger.api.model.AttestationVerdict.CHALLENGED)"
-                         + " AND a.tenancyId = :tenancyId",
+                         + " AND e.tenancyId = :tenancyId",
                          LedgerAttestation.class)
                  .setParameter("attestorIds", tokens)
                  .setParameter("tenancyId", tenancyId)
@@ -410,7 +411,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                                                                              + " WHERE a.attestorId IN :attestorIds"
                                                                              + " AND a.verdict IN (io.casehub.ledger.api.model.AttestationVerdict.ENDORSED,"
                                                                              + " io.casehub.ledger.api.model.AttestationVerdict.CHALLENGED)"
-                                                                             + " AND a.tenancyId = :tenancyId"
+                                                                             + " AND e.tenancyId = :tenancyId"
                                                                              + " GROUP BY a.attestorId, e.actorId")
                                                                      .setParameter("attestorIds", tokens)
                                                                      .setParameter("tenancyId", tenancyId)
