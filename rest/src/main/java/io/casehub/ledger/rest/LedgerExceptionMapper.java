@@ -1,6 +1,7 @@
 package io.casehub.ledger.rest;
 
 import jakarta.annotation.Priority;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
@@ -11,6 +12,9 @@ public class LedgerExceptionMapper implements ExceptionMapper<RuntimeException> 
 
     @Override
     public Response toResponse(final RuntimeException exception) {
+        if (exception instanceof WebApplicationException wae) {
+            return wae.getResponse();
+        }
         if (exception instanceof LedgerNotFoundException) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(new ErrorResponse(exception.getMessage(), 404))
