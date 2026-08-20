@@ -1,31 +1,29 @@
 package io.casehub.ledger.annotations.deployment;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import org.junit.jupiter.api.Test;
-
+import io.casehub.ledger.annotations.ActorId;
 import io.casehub.ledger.annotations.Audited;
 import io.casehub.ledger.annotations.SubjectId;
-import io.casehub.ledger.annotations.ActorId;
 import io.casehub.ledger.annotations.TenancyId;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.quarkus.test.QuarkusUnitTest;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.jboss.shrinkwrap.api.asset.StringAsset;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AuditedInterceptorTest {
 
     @RegisterExtension
     static final QuarkusUnitTest test = new QuarkusUnitTest()
             .withApplicationRoot(jar -> jar
-                    .addClasses(AuditedService.class)
+                    .addClasses(AuditedService.class, ResultItem.class)
                     .addAsResource(new StringAsset(
                             "quarkus.datasource.db-kind=h2\n"
                             + "quarkus.datasource.jdbc.url=jdbc:h2:mem:auditedinterceptortestdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1\n"
@@ -95,6 +93,29 @@ class AuditedInterceptorTest {
         assertThat(entries.get(0).entryType).isEqualTo(LedgerEntryType.COMMAND);
     }
 
+    @Test
+    void auditedMethodPopulatesDomainDataFromReturnValue() {
+        UUID subjectId = UUID.randomUUID();
+        service.doWorkWithResult(subjectId, "agent-1", "default");
+
+        var entries = repo.findBySubjectId(subjectId, "default");
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).domainData).isNotNull();
+        assertThat(entries.get(0).domainData).containsEntry("name", "test-item");
+        assertThat(entries.get(0).domainData).containsEntry("value", 42);
+    }
+
+    @Test
+    void auditedVoidMethodHasNullDomainData() {
+        UUID subjectId = UUID.randomUUID();
+        service.doVoidWork(subjectId, "agent-1", "default");
+
+        var entries = repo.findBySubjectId(subjectId, "default");
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).domainData).isNull();
+    }
+
+
     @ApplicationScoped
     public static class AuditedService {
 
@@ -127,5 +148,20 @@ class AuditedInterceptorTest {
                                              @TenancyId String tenancyId) {
             throw new RuntimeException("boom");
         }
+
+        @Audited
+        public ResultItem doWorkWithResult(@SubjectId UUID subjectId, @ActorId String actorId,
+                                           @TenancyId String tenancyId) {
+            return new ResultItem("test-item", 42);
+        }
+
+        @Audited
+        public void doVoidWork(@SubjectId UUID subjectId, @ActorId String actorId,
+                               @TenancyId String tenancyId) {
+            // void — no return value
+        }
     }
+
+    public record ResultItem(String name, int value) {}
+
 }
