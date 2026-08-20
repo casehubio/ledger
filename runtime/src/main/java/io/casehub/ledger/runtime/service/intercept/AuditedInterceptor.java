@@ -1,5 +1,6 @@
 package io.casehub.ledger.runtime.service.intercept;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.ledger.annotations.ActorId;
 import io.casehub.ledger.annotations.Attested;
 import io.casehub.ledger.annotations.Audited;
@@ -22,6 +23,7 @@ import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
 
 import java.lang.reflect.Parameter;
+import java.util.Map;
 import java.util.UUID;
 
 @Interceptor
@@ -40,6 +42,8 @@ public class AuditedInterceptor {
     @Inject
     ComplianceSupplementContext complianceContext;
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
 
     @AroundInvoke
     public Object audit(final InvocationContext ic) throws Exception {
@@ -53,7 +57,7 @@ public class AuditedInterceptor {
             if (audited.auditFailures()) {
                 try {
                     final Object result = ic.proceed();
-                    recordSuccess(ic, audited);
+                    recordSuccess(ic, audited, result);
                     return result;
                 } catch (final Exception e) {
                     recordFailure(ic, audited);
@@ -61,7 +65,7 @@ public class AuditedInterceptor {
                 }
             } else {
                 final Object result = ic.proceed();
-                recordSuccess(ic, audited);
+                recordSuccess(ic, audited, result);
                 return result;
             }
         } finally {
@@ -70,11 +74,12 @@ public class AuditedInterceptor {
             }
         }}
 
-    private void recordSuccess(final InvocationContext ic, final Audited audited) {
+    private void recordSuccess(final InvocationContext ic, final Audited audited, final Object result) {
         final UUID subjectId = resolveSubjectId(ic);
         final String actorId = resolveActorIdWithFallback(ic);
         final String tenancyId = resolveTenancyId(ic);
         final String actorRole = audited.actorRole().isEmpty() ? null : audited.actorRole();
+        final Map<String, Object> domainData = toDomainData(result);
 
         final Attested attested = resolveAttested(ic);
         if (attested != null) {
@@ -88,7 +93,7 @@ public class AuditedInterceptor {
             outcomeRecorder.record(withRole, tenancyId);
         } else {
             final AuditRecord record = new AuditRecord(subjectId, actorId, ActorType.AGENT,
-                    actorRole, audited.entryType(), null, null, null, null);
+                    actorRole, audited.entryType(), null, null, null, domainData);
             appender.append(record, tenancyId);
         }
     }
@@ -203,4 +208,20 @@ public class AuditedInterceptor {
         }
         return attested.confidence();
     }
+
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> toDomainData(final Object result) {
+        if (result == null) {
+            return null;
+        }
+        if (result instanceof String || result instanceof Number || result instanceof Boolean) {
+            return null;
+        }
+        try {
+            return MAPPER.convertValue(result, Map.class);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+    }
+
 }
