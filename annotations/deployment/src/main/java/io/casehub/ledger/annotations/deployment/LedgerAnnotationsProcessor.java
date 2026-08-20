@@ -65,16 +65,8 @@ public class LedgerAnnotationsProcessor {
             validateAttestedConfidence(ann, method);
         }
 
-        for (AnnotationInstance ann : index.getAnnotations(COMPLIANCE)) {
-            if (ann.target().kind() != org.jboss.jandex.AnnotationTarget.Kind.METHOD) {continue;}
-            MethodInfo method = ann.target().asMethod();
-
-            if (!method.hasAnnotation(AUDITED) && !method.declaringClass().hasAnnotation(AUDITED)) {
-                throw new IllegalStateException("@ComplianceSupplement on method '"
-                                                + method.declaringClass().name() + "." + method.name()
-                                                + "' requires @Audited");
-            }
-        }}
+        // @ComplianceSupplement is a standalone interceptor binding — no longer requires @Audited (#198)
+    }
 
     private void validateAuditedMethod(MethodInfo method, AnnotationInstance auditedAnn) {
         validateSubjectId(method);

@@ -423,7 +423,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   │   ├── NoOpTrustBootstrapSource.java   — @DefaultBean no-op (bootstrapping is opt-in)
 │       │   │   └── TrustBootstrapService.java      — CDI bean: bootstrapIfNew(Set<actorId>) — wired into TrustScoreJob pre-pass
 │       │   └── intercept/
-│       │       ├── AuditedInterceptor.java          — CDI interceptor at Priority APPLICATION+1: handles @Audited, @Attested, @ComplianceSupplement (moved from annotations/runtime in #199)
+│       │       ├── AuditedInterceptor.java          — CDI interceptor at Priority APPLICATION+1: handles @Audited, @Attested; auto-populates domainData from return value (#197)
+│       │       ├── ComplianceSupplementInterceptor.java — CDI interceptor at Priority APPLICATION: standalone @ComplianceSupplement context push/pop (#198)
 │       │       ├── ComplianceSupplementContext.java  — ThreadLocal context (same pattern as ProvenanceContext; moved from annotations/runtime in #199)
 │       │       ├── ComplianceSupplementEnricher.java — LedgerEntryEnricher at Priority 35 (moved from annotations/runtime in #199)
 │       │       ├── ProvenanceCapture.java           — CDI interceptor binding (@InterceptorBinding); attributes sourceEntityType, sourceEntitySystem
@@ -516,12 +517,12 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
     │   └── src/main/java/io/casehub/ledger/annotations/
     │       ├── Audited.java              — @InterceptorBinding: marks methods for ledger entry recording
     │       ├── Attested.java             — composes with @Audited for entry + attestation via OutcomeRecorder
-    │       ├── ComplianceSupplement.java — attaches EU AI Act / GDPR metadata
+    │       ├── ComplianceSupplement.java — @InterceptorBinding: attaches EU AI Act / GDPR metadata (standalone or with @Audited)
     │       ├── SubjectId.java            — @Target(PARAMETER): required aggregate key
     │       └── ActorId.java, TenancyId.java, DecisionContext.java, ConfidenceScore.java, Verdict.java — parameter annotations
     └── deployment/                       → io.casehub:casehub-ledger-annotations-deployment
         └── src/main/java/.../deployment/
-            └── LedgerAnnotationsProcessor.java — Jandex build-time validation (@SubjectId required, type checks, @Attested requires @Audited)
+            └── LedgerAnnotationsProcessor.java — Jandex build-time validation (@SubjectId required, type checks, @Attested requires @Audited, @ComplianceSupplement standalone OK)
 └── signing/                              — first-class signing adapter modules (profile: with-signing)
     ├── pom.xml                           — aggregator POM
     ├── vault-transit/                    → io.casehub:casehub-ledger-vault-transit (pure Java; HttpClient + Jackson)

@@ -50,7 +50,8 @@ public class AuditedInterceptor {
         final Audited                                            audited    = resolveAudited(ic);
         final io.casehub.ledger.annotations.ComplianceSupplement compliance = resolveComplianceSupplement(ic);
 
-        if (compliance != null) {
+        final boolean pushedCompliance = compliance != null && !complianceContext.isActive();
+        if (pushedCompliance) {
             pushComplianceContext(ic, compliance);
         }
         try {
@@ -69,7 +70,7 @@ public class AuditedInterceptor {
                 return result;
             }
         } finally {
-            if (compliance != null) {
+            if (pushedCompliance) {
                 complianceContext.pop();
             }
         }}
