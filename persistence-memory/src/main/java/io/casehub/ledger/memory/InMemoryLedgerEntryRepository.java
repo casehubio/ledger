@@ -1,37 +1,40 @@
 package io.casehub.ledger.memory;
 
-import java.time.Instant;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
-import jakarta.annotation.Priority;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Event;
-import jakarta.enterprise.inject.Alternative;
-import jakarta.inject.Inject;
-
-import org.jboss.logging.Logger;
-
+import io.casehub.ledger.api.model.AttestationSummary;
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
-import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
-import io.casehub.ledger.runtime.privacy.ContentSanitiser;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.runtime.config.LedgerConfig;
+import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
+import io.casehub.ledger.runtime.privacy.ContentSanitiser;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.AgentEntrySigner;
 import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * In-memory implementation of {@link LedgerEntryRepository} for zero-datasource deployments.
@@ -305,6 +308,94 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
                 .sorted(Comparator.comparing(a -> a.occurredAt))
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Stream<LedgerEntry> streamBySubjectId(final UUID subjectId, final String tenancyId) {
+        return entries.values().stream()
+                      .filter(e -> subjectId.equals(e.subjectId) && tenancyId.equals(e.tenancyId))
+                      .sorted(Comparator.comparingInt(e -> e.sequenceNumber));
+    }
+
+    @Override
+    public Stream<LedgerEntry> streamByActorId(final String actorId, final Instant from,
+                                               final Instant to, final String tenancyId) {
+        return entries.values().stream()
+                      .filter(e -> actorId.equals(e.actorId)
+                                   && tenancyId.equals(e.tenancyId)
+                                   && !e.occurredAt.isBefore(from)
+                                   && !e.occurredAt.isAfter(to))
+                      .sorted(Comparator.comparing(e -> e.occurredAt));
+    }
+
+    @Override
+    public List<LedgerEntry> findBySubjectIdPaged(final UUID subjectId, final int afterSequence,
+                                                  final int limit, final String tenancyId) {
+        return entries.values().stream()
+                      .filter(e -> subjectId.equals(e.subjectId)
+                                   && tenancyId.equals(e.tenancyId)
+                                   && e.sequenceNumber > afterSequence)
+                      .sorted(Comparator.comparingInt(e -> e.sequenceNumber))
+                      .limit(limit)
+                      .toList();
+    }
+
+    @Override
+    public Map<AttestationVerdict, Long> countByActorAndVerdict(final String actorId,
+                                                                final Instant from, final Instant to, final String tenancyId) {
+        final Set<UUID> entryIds = entries.values().stream()
+                                          .filter(e -> actorId.equals(e.actorId)
+                                                       && tenancyId.equals(e.tenancyId)
+                                                       && !e.occurredAt.isBefore(from)
+                                                       && !e.occurredAt.isAfter(to))
+                                          .map(e -> e.id)
+                                          .collect(Collectors.toSet());
+        return attestations.values().stream()
+                           .filter(a -> entryIds.contains(a.ledgerEntryId))
+                           .collect(Collectors.groupingBy(a -> a.verdict, Collectors.counting()));
+    }
+
+
+    
+
+    @Override
+    public Map<AttestationVerdict, Long> countBySubjectAndVerdict(final UUID subjectId,
+                                                                  final Instant from, final Instant to, final String tenancyId) {
+        final Set<UUID> entryIds = entries.values().stream()
+                                          .filter(e -> subjectId.equals(e.subjectId)
+                                                       && tenancyId.equals(e.tenancyId)
+                                                       && !e.occurredAt.isBefore(from)
+                                                       && !e.occurredAt.isAfter(to))
+                                          .map(e -> e.id)
+                                          .collect(Collectors.toSet());
+        return attestations.values().stream()
+                           .filter(a -> entryIds.contains(a.ledgerEntryId))
+                           .collect(Collectors.groupingBy(a -> a.verdict, Collectors.counting()));
+    }
+
+    @Override
+    public AttestationSummary summariseAttestationsByActor(final String actorId,
+                                                           final Instant from, final Instant to, final String tenancyId) {
+        final Set<UUID> entryIds = entries.values().stream()
+                                          .filter(e -> actorId.equals(e.actorId)
+                                                       && tenancyId.equals(e.tenancyId)
+                                                       && !e.occurredAt.isBefore(from)
+                                                       && !e.occurredAt.isAfter(to))
+                                          .map(e -> e.id)
+                                          .collect(Collectors.toSet());
+        final List<LedgerAttestation> matched = attestations.values().stream()
+                                                            .filter(a -> entryIds.contains(a.ledgerEntryId))
+                                                            .toList();
+        if (matched.isEmpty()) {
+            return AttestationSummary.EMPTY;
+        }
+        final Map<AttestationVerdict, Long> verdictCounts = matched.stream()
+                                                                   .collect(Collectors.groupingBy(a -> a.verdict, Collectors.counting()));
+        final double mean = matched.stream().mapToDouble(a -> a.confidence).average().orElse(0.0);
+        final double min  = matched.stream().mapToDouble(a -> a.confidence).min().orElse(0.0);
+        final double max  = matched.stream().mapToDouble(a -> a.confidence).max().orElse(0.0);
+        return new AttestationSummary(verdictCounts, matched.size(), mean, min, max);
+    }
+
 
     /** Package-private accessor — called by sibling in-memory repositories and cross-tenant delegates. */
     Collection<LedgerEntry> allEntries() {

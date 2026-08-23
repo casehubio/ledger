@@ -89,6 +89,15 @@ import java.util.UUID;
 @NamedQuery(
         name = "LedgerEntry.findCausedBy",
         query = "SELECT e FROM LedgerEntry e WHERE e.causedByEntryId = :entryId AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.streamBySubjectId",
+        query = "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber ASC")
+@NamedQuery(
+        name = "LedgerEntry.streamByActorIdAndTimeRange",
+        query = "SELECT e FROM LedgerEntry e WHERE e.actorId = :actorId AND e.occurredAt >= :from AND e.occurredAt <= :to AND e.tenancyId = :tenancyId ORDER BY e.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerEntry.findBySubjectIdPaged",
+        query = "SELECT e FROM LedgerEntry e WHERE e.subjectId = :subjectId AND e.sequenceNumber > :afterSequence AND e.tenancyId = :tenancyId ORDER BY e.sequenceNumber ASC")
 @Entity(name = "LedgerEntry")
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)

@@ -1,5 +1,7 @@
 package io.casehub.ledger.api.spi;
 
+import io.casehub.ledger.api.model.AttestationSummary;
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 
@@ -9,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * SPI for persisting and querying {@link LedgerEntry} and {@link LedgerAttestation} records.
@@ -181,5 +184,33 @@ public interface LedgerEntryRepository {
     default Map<String, Map<String, Long>> findPeerAttestationPairCounts(Set<String> attestorIds, String tenancyId) {
         return Map.of();
     }
+
+    default Stream<LedgerEntry> streamBySubjectId(UUID subjectId, String tenancyId) {
+        return findBySubjectId(subjectId, tenancyId).stream();
+    }
+
+    default Stream<LedgerEntry> streamByActorId(String actorId, Instant from, Instant to, String tenancyId) {
+        return findByActorId(actorId, from, to, tenancyId).stream();
+    }
+
+    default List<LedgerEntry> findBySubjectIdPaged(UUID subjectId, int afterSequence, int limit, String tenancyId) {
+        return findBySubjectId(subjectId, tenancyId).stream()
+                                                    .filter(e -> e.sequenceNumber > afterSequence)
+                                                    .limit(limit)
+                                                    .toList();
+    }
+
+    default Map<AttestationVerdict, Long> countByActorAndVerdict(String actorId, Instant from, Instant to, String tenancyId) {
+        return Map.of();
+    }
+
+    default Map<AttestationVerdict, Long> countBySubjectAndVerdict(UUID subjectId, Instant from, Instant to, String tenancyId) {
+        return Map.of();
+    }
+
+    default AttestationSummary summariseAttestationsByActor(String actorId, Instant from, Instant to, String tenancyId) {
+        return AttestationSummary.EMPTY;
+    }
+
 
 }
