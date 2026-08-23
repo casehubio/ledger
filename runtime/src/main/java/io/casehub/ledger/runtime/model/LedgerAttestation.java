@@ -1,12 +1,12 @@
 package io.casehub.ledger.runtime.model;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A peer attestation stamped onto a {@link LedgerEntry}.
@@ -53,7 +53,24 @@ import jakarta.persistence.Table;
         name = "LedgerAttestation.findByAttestorIdAndCapabilityTagAndTenancyId",
         query = "SELECT a FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id "
               + "WHERE a.attestorId = :attestorId AND a.capabilityTag = :capabilityTag AND e.tenancyId = :tenancyId ORDER BY a.occurredAt ASC")
+@NamedQuery(
+        name = "LedgerAttestation.countByActorAndVerdict",
+        query = "SELECT a.verdict, COUNT(a) FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id"
+              + " WHERE e.actorId = :actorId AND e.occurredAt >= :from AND e.occurredAt <= :to"
+              + " AND e.tenancyId = :tenancyId GROUP BY a.verdict")
+@NamedQuery(
+        name = "LedgerAttestation.countBySubjectAndVerdict",
+        query = "SELECT a.verdict, COUNT(a) FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id"
+              + " WHERE e.subjectId = :subjectId AND e.occurredAt >= :from AND e.occurredAt <= :to"
+              + " AND e.tenancyId = :tenancyId GROUP BY a.verdict")
+@NamedQuery(
+        name = "LedgerAttestation.summariseByActor",
+        query = "SELECT a.verdict, COUNT(a), AVG(a.confidence), MIN(a.confidence), MAX(a.confidence)"
+              + " FROM LedgerAttestation a JOIN LedgerEntry e ON a.ledgerEntryId = e.id"
+              + " WHERE e.actorId = :actorId AND e.occurredAt >= :from AND e.occurredAt <= :to"
+              + " AND e.tenancyId = :tenancyId GROUP BY a.verdict")
 public class LedgerAttestation extends io.casehub.ledger.api.model.LedgerAttestation {
+
 
     @PrePersist
     void prePersist() {

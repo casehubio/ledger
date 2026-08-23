@@ -1,6 +1,8 @@
 package io.casehub.ledger.runtime.repository.jpa;
 
 import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.AttestationSummary;
+import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
@@ -30,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Hibernate ORM implementation of {@link LedgerEntryRepository} using EntityManager directly.
@@ -426,6 +430,98 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
         }
         return result;
     }
+
+    @Override
+    public Stream<LedgerEntry> streamBySubjectId(final UUID subjectId, final String tenancyId) {
+        return em.createNamedQuery("LedgerEntry.streamBySubjectId", LedgerEntry.class)
+                 .setParameter("subjectId", subjectId)
+                 .setParameter("tenancyId", tenancyId)
+                 .getResultStream();
+    }
+
+    @Override
+    public Stream<LedgerEntry> streamByActorId(final String actorId, final Instant from,
+                                               final Instant to, final String tenancyId) {
+        return em.createNamedQuery("LedgerEntry.streamByActorIdAndTimeRange", LedgerEntry.class)
+                 .setParameter("actorId", actorId)
+                 .setParameter("from", from)
+                 .setParameter("to", to)
+                 .setParameter("tenancyId", tenancyId)
+                 .getResultStream();
+    }
+
+    @Override
+    public List<LedgerEntry> findBySubjectIdPaged(final UUID subjectId, final int afterSequence,
+                                                  final int limit, final String tenancyId) {
+        final List<LedgerEntry> results = em.createNamedQuery("LedgerEntry.findBySubjectIdPaged", LedgerEntry.class)
+                                            .setParameter("subjectId", subjectId)
+                                            .setParameter("afterSequence", afterSequence)
+                                            .setParameter("tenancyId", tenancyId)
+                                            .setMaxResults(limit)
+                                            .getResultList();
+        loadSupplements(results);
+        return results;
+    }
+
+    @Override
+    public Map<AttestationVerdict, Long> countByActorAndVerdict(final String actorId,
+                                                                final Instant from, final Instant to, final String tenancyId) {
+        final List<Object[]> rows = em.createNamedQuery("LedgerAttestation.countByActorAndVerdict", Object[].class)
+                                      .setParameter("actorId", actorId)
+                                      .setParameter("from", from)
+                                      .setParameter("to", to)
+                                      .setParameter("tenancyId", tenancyId)
+                                      .getResultList();
+        return rows.stream().collect(Collectors.toMap(
+                r -> (AttestationVerdict) r[0],
+                r -> (Long) r[1]));
+    }
+
+    @Override
+    public Map<AttestationVerdict, Long> countBySubjectAndVerdict(final UUID subjectId,
+                                                                  final Instant from, final Instant to, final String tenancyId) {
+        final List<Object[]> rows = em.createNamedQuery("LedgerAttestation.countBySubjectAndVerdict", Object[].class)
+                                      .setParameter("subjectId", subjectId)
+                                      .setParameter("from", from)
+                                      .setParameter("to", to)
+                                      .setParameter("tenancyId", tenancyId)
+                                      .getResultList();
+        return rows.stream().collect(Collectors.toMap(
+                r -> (AttestationVerdict) r[0],
+                r -> (Long) r[1]));
+    }
+
+    @Override
+    public AttestationSummary summariseAttestationsByActor(final String actorId,
+                                                           final Instant from, final Instant to, final String tenancyId) {
+        final List<Object[]> rows = em.createNamedQuery("LedgerAttestation.summariseByActor", Object[].class)
+                                      .setParameter("actorId", actorId)
+                                      .setParameter("from", from)
+                                      .setParameter("to", to)
+                                      .setParameter("tenancyId", tenancyId)
+                                      .getResultList();
+        if (rows.isEmpty()) {
+            return AttestationSummary.EMPTY;
+        }
+        final Map<AttestationVerdict, Long> verdictCounts = rows.stream()
+                                                                .collect(Collectors.toMap(r -> (AttestationVerdict) r[0], r -> (Long) r[1]));
+        long   total       = 0;
+        double weightedSum = 0.0;
+        double min         = Double.MAX_VALUE;
+        double max         = Double.MIN_VALUE;
+        for (final Object[] row : rows) {
+            final long   count  = (Long) row[1];
+            final double avg    = (Double) row[2];
+            final double rowMin = (Double) row[3];
+            final double rowMax = (Double) row[4];
+            total += count;
+            weightedSum += avg * count;
+            min = Math.min(min, rowMin);
+            max = Math.max(max, rowMax);
+        }
+        return new AttestationSummary(verdictCounts, total, weightedSum / total, min, max);
+    }
+
 
     /**
      * Loads supplements from their self-contained tables and attaches them to entries.
