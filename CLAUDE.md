@@ -284,12 +284,13 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── CapabilityTag.java           — sentinel constants: GLOBAL = "*" for cross-capability attestations
 │       │   ├── ScoreType.java               — GLOBAL | CAPABILITY | DIMENSION | CAPABILITY_DIMENSION enum (trust score type; see ADR 0010)
 │       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path; metadata component for consumer-provided JSON context (#172)
+│       │   ├── AttestationSummary.java      — immutable record: verdict counts + confidence stats for aggregate queries (#201)
 │       │   └── supplement/
 │       │       ├── LedgerSupplement.java        — abstract base for supplements (JPA annotations stripped — mappings in runtime/META-INF/orm.xml)
 │       │       ├── ComplianceSupplement.java    — GDPR Art.22, governance fields (JPA-free)
 │       │       └── ProvenanceSupplement.java    — workflow source entity; agentConfigHash (JPA-free)
 │       └── spi/
-│           ├── LedgerEntryRepository.java        — tenant-scoped SPI (all methods take tenancyId); findEntryById (not findById — no Panache conflict)
+│           ├── LedgerEntryRepository.java        — tenant-scoped SPI (all methods take tenancyId); findEntryById (not findById — no Panache conflict); streaming (streamBySubjectId, streamByActorId), cursor (findBySubjectIdPaged), aggregate (countByActorAndVerdict, countBySubjectAndVerdict, summariseAttestationsByActor)
 │           ├── ReactiveLedgerEntryRepository.java — tenant-scoped reactive SPI (Uni<T> return types; all methods take tenancyId)
 │           ├── LedgerAppender.java              — write-path SPI: append(AuditRecord) → LedgerEntry (higher-level facade over repository.save())
 │           ├── ReactiveLedgerAppender.java      — reactive write-path SPI: appendAsync(AuditRecord) → Uni<LedgerEntry>
