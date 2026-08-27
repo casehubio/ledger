@@ -34,13 +34,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository == 'casehubio/ledger'
         run: mvn --batch-mode deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger downstream CI
-        if: github.event_name != 'pull_request' && success()
+        if: github.event_name != 'pull_request' && github.repository == 'casehubio/ledger' && success()
         run: |
           for repo in work qhorus eidos clinical life; do
             gh api repos/casehubio/$repo/dispatches \
