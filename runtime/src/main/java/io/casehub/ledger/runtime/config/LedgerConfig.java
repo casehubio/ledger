@@ -424,6 +424,26 @@ public interface LedgerConfig {
          */
         IncrementalConfig incremental();
 
+        /**
+         * Trust score snapshot settings — retention for historical score trajectories.
+         *
+         * @return the snapshot sub-configuration
+         */
+        SnapshotConfig snapshot();
+
+        /** Trust score snapshot retention settings. */
+        interface SnapshotConfig {
+            /**
+             * Maximum age in days for trust score snapshots. Snapshots older than this
+             * are deleted during each trust score computation run. Set to 0 to disable
+             * retention trimming (keep all snapshots indefinitely).
+             *
+             * @return retention window in days (default 365)
+             */
+            @WithDefault("365")
+            int retentionDays();
+        }
+
         /** Incremental per-actor trust recomputation on attestation persist. */
         interface IncrementalConfig {
             /**

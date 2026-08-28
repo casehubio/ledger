@@ -1,5 +1,6 @@
 package io.casehub.ledger.runtime.repository.jpa;
 
+import java.time.Instant;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -38,5 +39,31 @@ public class JpaTrustScoreSnapshotRepository implements TrustScoreSnapshotReposi
                 .setParameter("actorId", actorId)
                 .setParameter("capabilityTag", capabilityTag)
                 .getResultList();
+    }
+
+    @Override
+    public List<TrustScoreSnapshot> findDimensionSnapshots(final String actorId,
+            final String dimensionKey) {
+        return em.createNamedQuery("TrustScoreSnapshot.findByActorAndDimension", TrustScoreSnapshot.class)
+                .setParameter("actorId", actorId)
+                .setParameter("dimensionKey", dimensionKey)
+                .getResultList();
+    }
+
+    @Override
+    public List<TrustScoreSnapshot> findByActorAndTimeRange(final String actorId,
+            final Instant from, final Instant to) {
+        return em.createNamedQuery("TrustScoreSnapshot.findByActorAndTimeRange", TrustScoreSnapshot.class)
+                .setParameter("actorId", actorId)
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getResultList();
+    }
+
+    @Override
+    public int deleteOlderThan(final Instant cutoff) {
+        return em.createNamedQuery("TrustScoreSnapshot.deleteOlderThan")
+                .setParameter("cutoff", cutoff)
+                .executeUpdate();
     }
 }

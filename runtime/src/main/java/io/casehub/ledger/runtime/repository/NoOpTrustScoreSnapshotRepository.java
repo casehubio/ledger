@@ -1,5 +1,6 @@
 package io.casehub.ledger.runtime.repository;
 
+import java.time.Instant;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,5 +25,22 @@ public class NoOpTrustScoreSnapshotRepository implements TrustScoreSnapshotRepos
     public List<TrustScoreSnapshot> findCapabilitySnapshots(final String actorId,
             final String capabilityTag) {
         return List.of();
+    }
+
+    @Override
+    public List<TrustScoreSnapshot> findDimensionSnapshots(final String actorId,
+            final String dimensionKey) {
+        return List.of();
+    }
+
+    @Override
+    public List<TrustScoreSnapshot> findByActorAndTimeRange(final String actorId,
+            final Instant from, final Instant to) {
+        return List.of();
+    }
+
+    @Override
+    public int deleteOlderThan(final Instant cutoff) {
+        return 0;
     }
 }

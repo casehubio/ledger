@@ -23,6 +23,7 @@ import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
+import io.casehub.ledger.runtime.repository.TrustScoreSnapshotRepository;
 import io.casehub.ledger.runtime.service.federation.TrustBootstrapService;
 import io.casehub.ledger.runtime.service.routing.TrustScoreRoutingPublisher;
 import io.quarkus.scheduler.Scheduled;
@@ -61,6 +62,9 @@ public class TrustScoreJob {
 
     @Inject
     PerActorTrustComputer perActorComputer;
+
+    @Inject
+    TrustScoreSnapshotRepository snapshotRepo;
 
     @Inject
     @LedgerPersistenceUnit
@@ -152,6 +156,12 @@ public class TrustScoreJob {
                 .peek(em::detach)
                 .collect(Collectors.toList());
         routingPublisher.publish(currentScores, previousSnapshot, now);
+
+        // Snapshot retention trimming
+        final int retentionDays = config.trustScore().snapshot().retentionDays();
+        if (retentionDays > 0) {
+            snapshotRepo.deleteOlderThan(now.minus(retentionDays, java.time.temporal.ChronoUnit.DAYS));
+        }
     }
 
     private void runEigenTrustPass(
