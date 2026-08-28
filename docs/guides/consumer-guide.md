@@ -34,6 +34,8 @@ Zero knowledge of business domain. Consumers extend it; it never extends them. A
 | `rest/` | `casehub-ledger-rest` | JAX-RS REST API for ledger queries, attestations, Merkle verification, and trust scores -- opt-in via explicit dependency. Base path: `/api/v1/ledger/`. OpenAPI-annotated. |
 | `testing/` | `casehub-ledger-testing` | `NoOpLedgerEntryRepository` -- `@Alternative @Priority(1)` implementation that returns empty results for all queries and passes through saves unchanged. For consumer `@QuarkusTest` tests that do not need real persistence. Activate via `quarkus.arc.selected-alternatives`. |
 | `signing/` | (reactor POM) | Cloud-managed Ed25519 signing adapters. Each cloud provider has a pure Java module (framework-free) and a Quarkus CDI adapter module. See Cloud KMS Signers section below. |
+| `annotations/` | `casehub-ledger-annotations` / `casehub-ledger-annotations-deployment` | Annotation-driven audit: `@Audited`, `@Attested`, `@ComplianceSupplement`. Quarkus extension with build-time validation. See Annotation-Driven Audit section below. |
+| `graphql/` | `casehub-ledger-graphql` | GraphQL resolvers and MCP domain provider. Query/mutation resolvers for ledger entries, attestations, trust scores, and Merkle verification. Opt-in via explicit dependency. |
 | `examples/` | (reactor POM) | Runnable example applications demonstrating each ledger capability. Not deployed. `maven.deploy.skip=true`. |
 | `consumer-compat-test/` | `casehub-ledger-consumer-compat-test` | Boot guard for CDI graph integrity. Standalone POM (not a child of ledger parent). Single `@QuarkusTest` with empty body -- if CDI boots with no persistence infrastructure and no `quarkus.arc.exclude-types`, every injection point is satisfied by `@DefaultBean` no-ops. `maven.deploy.skip=true`. |
 
@@ -62,6 +64,8 @@ Zero knowledge of business domain. Consumers extend it; it never extends them. A
 | Capability tag | `CapabilityTag` (api) | Constants including `CapabilityTag.GLOBAL` for non-capability-scoped attestations. |
 | Erasure reason | `ErasureReason` (api, enum) | `GDPR_ART_17_REQUEST`, `RETENTION_EXPIRED`, `ACCOUNT_DELETION`. |
 | Key rotation reason | `KeyRotationReason` (api, enum) | Rotation/revocation reason for `KeyRotationEntry`. |
+| Trust score snapshot | `TrustScoreSnapshot` (runtime, `@Entity`) | Point-in-time trust score record for trajectory visibility. Four `ScoreType` values, keyed by `(actorId, scoreType, capabilityTag, dimensionKey)`. Captured by `PerActorTrustComputer` on every score upsert. Query via `TrustScoreSnapshotRepository`. |
+| Attestation summary | `AttestationSummary` (api, record) | Verdict counts and confidence statistics for aggregate attestation queries. Returned by `LedgerEntryRepository.summariseAttestationsByActor()`. |
 
 ### Supplements (Optional Attachments)
 
@@ -99,6 +103,7 @@ These are the primary entry points for consumers writing to the ledger.
 | `ErasureReceiptRepository` | runtime | `NoOpErasureReceiptRepository` (`@DefaultBean`) | JPA: `JpaErasureReceiptRepository` (`@Alternative`); memory: `InMemoryErasureReceiptRepository` | Query erasure receipt entries by actor/tenant. `countByTenant(tenancyId)`. |
 | `KeyRotationRepository` | runtime | — | JPA: `JpaKeyRotationRepository`; memory: `InMemoryKeyRotationRepository` | Query key rotation entries by actor. `findCompromisedByActorIdAndKeyRef()` is cross-tenant. |
 | `ActorIdentityBindingRepository` | runtime | `NoOpActorIdentityBindingRepository` (`@DefaultBean`) | JPA: `JpaActorIdentityBindingRepository`; memory: `InMemoryActorIdentityBindingRepository` | Query DID identity binding entries by actor/tenant. |
+| `TrustScoreSnapshotRepository` | runtime | `NoOpTrustScoreSnapshotRepository` (`@DefaultBean`) | JPA: `JpaTrustScoreSnapshotRepository`; memory: `InMemoryTrustScoreSnapshotRepository` | Save and query trust score snapshots. `findGlobalSnapshots`, `findCapabilitySnapshots`, `findDimensionSnapshots`, `findByActorAndTimeRange`, `deleteOlderThan`. |
 
 ### Other SPIs
 
@@ -112,6 +117,7 @@ These are the primary entry points for consumers writing to the ledger.
 | `LedgerEntryEnricher` | runtime | (multiple built-in enrichers) | Auto-populate fields on `LedgerEntry` at persist time, before hashing and signing. Priority-ordered. Consumer enrichers are CDI-discovered. See Enricher Pipeline section. |
 | `TrustImportService` | runtime | `NoOpTrustImportService` | Import trust scores from an external `TrustExportPayload`. Built-in alternative: `JpaTrustImportService` (seed-if-absent). |
 | `TrustBootstrapSource` | runtime | `NoOpTrustBootstrapSource` (returns empty -- Beta(1,1) prior) | Fetch prior trust data for first-time actors from an external source. |
+| `AttestorCredibilityPolicy` | api | `DefaultAttestorCredibilityPolicy` (all attestors equally credible) | Weight attestor credibility in trust computation. Override to discount low-trust attestors. |
 
 ### Metadata Field
 
@@ -153,6 +159,7 @@ Built-in enrichers (ascending priority):
 |---|---|---|
 | 10 | `TraceIdEnricher` | Populates `traceId` from `LedgerTraceIdProvider` (OTel by default) |
 | 30 | `ProvenanceCaptureEnricher` | Attaches `ProvenanceSupplement` from CDI context when available |
+| 35 | `ComplianceSupplementEnricher` | Attaches `ComplianceSupplement` from ThreadLocal context (standalone `@ComplianceSupplement` or `@Audited`) |
 | 40 | `ActorDIDEnricher` | Populates `actorDid` from the platform `ActorDIDProvider` SPI |
 | 50 | `ActorIdentityValidationEnricher` | Fires DID/VC identity validation and records binding events |
 
@@ -212,9 +219,44 @@ Cloud-managed Ed25519 signing lives in the `signing/` reactor. Each provider has
 
 ---
 
+## Annotation-Driven Audit (casehub-ledger-annotations)
+
+Declarative audit logging via CDI interceptors. Add `casehub-ledger-annotations` as a dependency to use.
+
+### Annotations
+
+| Annotation | Target | Purpose |
+|---|---|---|
+| `@Audited` | Method | Records a `LedgerEntry` from the method's return value. Auto-populates `domainData` from the return value. |
+| `@Attested` | Method | Composes with `@Audited` -- creates both an entry and an attestation atomically via `OutcomeRecorder`. |
+| `@ComplianceSupplement` | Method | Attaches EU AI Act / GDPR metadata. Works standalone or combined with `@Audited`. |
+| `@SubjectId` | Parameter | Required -- marks the UUID parameter as the aggregate key. |
+| `@ActorId` | Parameter | Marks the actor identity parameter. |
+| `@TenancyId` | Parameter | Marks the tenant identity parameter. |
+| `@Verdict` | Parameter | Marks the `AttestationVerdict` parameter (for `@Attested`). |
+| `@ConfidenceScore` | Parameter | Marks the confidence score parameter (for `@Attested`). |
+| `@DecisionContext` | Parameter | Marks the decision context JSON parameter (for `@ComplianceSupplement`). |
+
+### Build-Time Validation
+
+`LedgerAnnotationsProcessor` validates at build time:
+- `@SubjectId` is required on `@Audited` methods
+- `@SubjectId` parameter must be `UUID`
+- `@Attested` requires `@Audited` on the same method
+- `@ComplianceSupplement` can be standalone or combined with `@Audited`
+
+### Interceptor Priorities
+
+| Priority | Interceptor | Purpose |
+|---|---|---|
+| `APPLICATION` | `ComplianceSupplementInterceptor` | Pushes/pops compliance context (runs first) |
+| `APPLICATION + 1` | `AuditedInterceptor` | Handles `@Audited` and `@Attested` (runs after compliance context is set) |
+
+---
+
 ## Examples
 
-The `examples/` directory contains 13 runnable applications demonstrating individual ledger capabilities. Each is self-contained with its own POM. Not deployed (`maven.deploy.skip=true`).
+The `examples/` directory contains 14 runnable applications demonstrating individual ledger capabilities. Each is self-contained with its own POM. Not deployed (`maven.deploy.skip=true`).
 
 | Example | Demonstrates |
 |---|---|
@@ -230,6 +272,7 @@ The `examples/` directory contains 13 runnable applications demonstrating indivi
 | `vault-transit-signing` | HashiCorp Vault Transit agent signing |
 | `aws-kms-signing` | AWS KMS agent signing |
 | `gcp-kms-signing` | GCP Cloud KMS agent signing |
+| `audit-trail-annotated` | Annotation-driven audit with `@Audited`, `@Attested`, `@ComplianceSupplement` |
 | `azure-keyvault-signing` | Azure Key Vault agent signing |
 
 ---
@@ -239,22 +282,13 @@ The `examples/` directory contains 13 runnable applications demonstrating indivi
 Path: `classpath:db/ledger/migration` (moved from `classpath:db/migration` in ledger#95).
 Consumers must add this path to their `quarkus.flyway.locations` config.
 
+All base schema is consolidated into a single migration file:
+
 | Version | Contents |
 |---|---|
-| V1000 | `ledger_entry` + `ledger_attestation` tables |
-| V1001 | `actor_trust_score` table |
-| V1002 | Supplement tables (`compliance_supplement`, `provenance_supplement`) |
-| V1003 | `ledger_entry_archive` table |
-| V1004 | `actor_identity` pseudonymisation table |
-| V1005 | `agent_signature` + `agent_public_key` columns on `ledger_entry` |
-| V1006 | `agent_key_ref` column on `ledger_entry` |
-| V1007 | `key_rotation_entry` subclass table |
-| V1008 | `actor_identity_binding_entry` subclass table |
-| V1009 | `plain_ledger_entry` -- `PlainLedgerEntry` for domain-agnostic event writes (`OutcomeRecorder`) |
-| V1010 | `erasure_receipt_entry` -- `ErasureReceiptLedgerEntry` (opt-in via `casehub.ledger.erasure-receipt.enabled=true`) |
-| V1011 | `ledger_entry` metadata column (consumer-provided JSON) |
+| V1000 | All ledger tables: `ledger_entry`, `ledger_attestation`, `actor_trust_score`, `compliance_supplement`, `provenance_supplement`, `ledger_entry_archive`, `actor_identity`, `key_rotation_entry`, `actor_identity_binding_entry`, `plain_ledger_entry`, `erasure_receipt_entry`, `trust_score_snapshot`, `ledger_merkle_frontier`, `ledger_subject_sequence`. No production database exists -- schema is maintained as a single clean-slate migration. |
 
-**Consumers** own V1012+ for their own subclass join tables (V1000-V1011 are ledger base).
+**Consumers** own V1012+ for their own subclass join tables.
 
 ---
 
@@ -318,6 +352,7 @@ All configuration is under the `casehub.ledger` prefix via Quarkus `@ConfigMappi
 | `casehub.ledger.trust-score.eigentrust.pre-trusted-actors` | (empty) | Actor IDs that seed the eigenvector. |
 | `casehub.ledger.trust-score.export.deployment-id` | (empty) | Opaque deployment identifier for trust export payloads. |
 | `casehub.ledger.trust-score.bootstrap.enabled` | `false` | Seed trust from external source for first-time actors. |
+| `casehub.ledger.trust-score.snapshot.retention-days` | `365` | Max age in days for trust score snapshots. Set to 0 to disable trimming. |
 
 ### Decay
 
@@ -436,7 +471,7 @@ All queries, sequences, and hash chains are scoped per `(subjectId, tenancyId)`.
 
 ### Depends On
 
-Nothing in the casehubio ecosystem. Quarkus + Hibernate ORM + `casehub-platform-api` (for `ActorType`, `ActorDIDProvider`, `TenancyConstants`).
+Nothing in the casehubio ecosystem beyond platform libraries. Quarkus + Hibernate ORM + `casehub-platform-api` (for `ActorType`, `ActorDIDProvider`, `TenancyConstants`) + `casehub-platform-identity` (for `DIDResolver`, `AgentCredentialValidator`, `ActorDIDProvider` implementations, no-op defaults).
 
 ### Depended On By
 

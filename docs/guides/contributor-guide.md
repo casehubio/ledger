@@ -16,8 +16,10 @@
 | `persistence-memory/` | `casehub-ledger-memory` | Zero-datasource in-memory `@Alternative @Priority(1)` implementations of all persistence SPIs -- for `@QuarkusTest` isolation and ephemeral installs. |
 | `rest/` | `casehub-ledger-rest` | JAX-RS REST API for ledger queries, attestations, Merkle verification, and trust scores -- opt-in via explicit dependency. Base path: `/api/v1/ledger/`. Four resource classes: `LedgerEntryResource`, `AttestationResource`, `MerkleVerificationResource`, `TrustScoreResource`. |
 | `testing/` | `casehub-ledger-testing` | `NoOpLedgerEntryRepository` -- `@Alternative @Priority(1)` for consumer test isolation. |
+| `annotations/` | `casehub-ledger-annotations` / `casehub-ledger-annotations-deployment` | Annotation-driven audit (`@Audited`, `@Attested`, `@ComplianceSupplement`). Quarkus extension with build-time validation via `LedgerAnnotationsProcessor`. Interceptors: `AuditedInterceptor` (APPLICATION+1), `ComplianceSupplementInterceptor` (APPLICATION). |
+| `graphql/` | `casehub-ledger-graphql` | GraphQL resolvers (`LedgerQueryResolver`, `LedgerMutationResolver`) and MCP domain provider (`LedgerModelEnricher`). DTOs decoupled from JPA entities. |
 | `signing/` | (reactor POM) | Cloud-managed Ed25519 signing adapters. 8 sub-modules (4 pure Java + 4 Quarkus CDI adapters). |
-| `examples/` | (reactor POM) | 13 runnable example applications. Not deployed. |
+| `examples/` | (reactor POM) | 14 runnable example applications. Not deployed. |
 | `consumer-compat-test/` | `casehub-ledger-consumer-compat-test` | Boot guard for CDI graph integrity. Standalone POM (not a child of ledger parent). |
 
 ---
@@ -69,9 +71,9 @@ Pure Java -- no CDI, no database. Suitable for unit tests without Quarkus. Algor
 
 Default `ExponentialDecayFunction` applies exponential decay with an asymmetric valence multiplier -- FLAGGED attestations decay slower via `casehub.ledger.decay.flagged-persistence-multiplier` (default 0.5 = FLAGGED persists twice as long as SOUND).
 
-### TrustScoreComputer
+### PerActorTrustComputer
 
-`@ApplicationScoped` CDI bean that orchestrates trust computation for a single actor. Called by both `TrustScoreJob` (batch) and `IncrementalTrustUpdateObserver` (per-attestation). Uses `TrustScoreCalculator` for the pure computation, then persists results via `ActorTrustScoreRepository.upsert()`.
+`@ApplicationScoped` package-private CDI bean that orchestrates trust computation for a single actor. Called by both `TrustScoreJob` (batch) and `IncrementalTrustUpdateObserver` (per-attestation). Delegates pure computation to `TrustScoreCalculator`, persists results via `ActorTrustScoreRepository.upsert()`, and captures `TrustScoreSnapshot` records for all four score types on every computation.
 
 ### Incremental Recomputation
 
@@ -139,6 +141,7 @@ Built-in enrichers:
 |---|---|---|---|
 | 10 | `TraceIdEnricher` | `runtime.service` | Populates `traceId` from `LedgerTraceIdProvider` |
 | 30 | `ProvenanceCaptureEnricher` | `runtime.service.intercept` | Attaches `ProvenanceSupplement` from CDI context |
+| 35 | `ComplianceSupplementEnricher` | `runtime.service.intercept` | Attaches `ComplianceSupplement` from ThreadLocal context |
 | 40 | `ActorDIDEnricher` | `runtime.service.identity` | Populates `actorDid` from platform `ActorDIDProvider` |
 | 50 | `ActorIdentityValidationEnricher` | `runtime.service.identity` | Fires DID/VC identity validation; records `ActorIdentityBindingEntry` |
 
@@ -197,6 +200,7 @@ All repository SPI methods take `tenancyId` as a parameter. Filtering is uncondi
 |---|---|---|---|---|
 | `ActorTrustScoreRepository` | runtime | `JpaActorTrustScoreRepository` | `InMemoryActorTrustScoreRepository` | Trust scores are actor-global |
 | `KeyRotationRepository` | runtime | `JpaKeyRotationRepository` | `InMemoryKeyRotationRepository` | `findByActorId()` is tenant-scoped; `findCompromisedByActorIdAndKeyRef()` is cross-tenant |
+| `TrustScoreSnapshotRepository` | runtime | `JpaTrustScoreSnapshotRepository` | `InMemoryTrustScoreSnapshotRepository` | Trust score trajectory snapshots. `findGlobalSnapshots`, `findCapabilitySnapshots`, `findDimensionSnapshots`, `findByActorAndTimeRange`, `deleteOlderThan`. Retention trimming via `casehub.ledger.trust-score.snapshot.retention-days`. |
 
 ---
 
@@ -313,7 +317,7 @@ All endpoints require `tenancyId` as a query parameter (validated by `LedgerRest
 
 ### Depends On
 
-Nothing in the casehubio ecosystem. Quarkus + Hibernate ORM + `casehub-platform-api` (for `ActorType`, `ActorDIDProvider`, `TenancyConstants`, `IdentityVerificationResult`, `IdentityBindingStatus`, `CredentialValidationResult`).
+Nothing in the casehubio ecosystem beyond platform libraries. Quarkus + Hibernate ORM + `casehub-platform-api` (for `ActorType`, `TenancyConstants`) + `casehub-platform-identity` (for `ActorDIDProvider`, `DIDResolver`, `AgentCredentialValidator`, `IdentityVerificationResult`, `IdentityBindingStatus`, `CredentialValidationResult`, and no-op defaults).
 
 ### Depended On By
 
@@ -330,20 +334,11 @@ Nothing in the casehubio ecosystem. Quarkus + Hibernate ORM + `casehub-platform-
 
 Path: `classpath:db/ledger/migration`.
 
-| Version | Table(s) | Entity |
-|---|---|---|
-| V1000 | `ledger_entry`, `ledger_attestation` | `JpaLedgerEntry`, `LedgerAttestation` |
-| V1001 | `actor_trust_score` | `ActorTrustScore` |
-| V1002 | `compliance_supplement`, `provenance_supplement` | `JpaComplianceSupplement`, `JpaProvenanceSupplement` |
-| V1003 | `ledger_entry_archive` | `LedgerEntryArchiveRecord` |
-| V1004 | `actor_identity` | `ActorIdentity` |
-| V1005 | `agent_signature`, `agent_public_key` columns on `ledger_entry` | — |
-| V1006 | `agent_key_ref` column on `ledger_entry` | — |
-| V1007 | `key_rotation_entry` | `KeyRotationEntry` |
-| V1008 | `actor_identity_binding_entry` | `ActorIdentityBindingEntry` |
-| V1009 | `plain_ledger_entry` | `PlainLedgerEntry` |
-| V1010 | `erasure_receipt_entry` | `ErasureReceiptLedgerEntry` |
-| V1011 | `metadata` column on `ledger_entry` | — |
+All base schema is consolidated into a single migration file. No production database exists -- schema is maintained as a clean-slate migration.
+
+| Version | Contents |
+|---|---|
+| V1000 | All ledger tables: `ledger_entry`, `ledger_attestation`, `actor_trust_score`, `compliance_supplement`, `provenance_supplement`, `ledger_entry_archive`, `actor_identity`, `key_rotation_entry`, `actor_identity_binding_entry`, `plain_ledger_entry`, `erasure_receipt_entry`, `trust_score_snapshot`, `ledger_merkle_frontier`, `ledger_subject_sequence`. |
 
 Consumer subclass tables start at V1012+.
 
@@ -351,7 +346,7 @@ Consumer subclass tables start at V1012+.
 
 ## Current State
 
-- All modules on main: api, runtime, deployment, persistence-memory, rest, testing, consumer-compat-test, signing (8 sub-modules), examples (13 sub-modules)
+- All modules on main: api, runtime, deployment, persistence-memory, annotations (runtime + deployment), rest, graphql, testing, consumer-compat-test, signing (8 sub-modules), examples (14 sub-modules)
 - Reactive tier fully retired (#180, #182) -- all services are blocking, virtual-thread-aligned
 - All JPQL queries migrated to `@NamedQuery` (#179, #154)
 - All epics complete: MMR, PROV-DM, privacy/pseudonymisation, EigenTrust, trust routing signals, OTel auto-wiring, multi-tenancy, cloud KMS signing, REST API, metadata field
@@ -362,17 +357,17 @@ Consumer subclass tables start at V1012+.
 
 | # | Title | Status |
 |---|---|---|
-| 178 | Field-level GDPR erasure for metadata containing PII | Open |
-| 174 | Platform persistence unification -- standardise H2/PostgreSQL/MongoDB/Redis support | Open |
-| 171 | Vault browser-based OIDC auth flow (two-step auth URL + callback) | Open |
-| 137 | Artifact trust scoring -- extend Bayesian Beta model to content-hashed artifacts | Open |
-| 96 | Code-generation approach for reactive service tier | Open (stale -- reactive retired) |
+| 205 | Full consumer and contributor guide review -- drift, gaps, staleness | Open |
+| 178 | Field-level GDPR erasure for metadata containing PII | Open (deferred -- only needed if PII-free contract proves insufficient) |
+| 171 | Vault browser-based OIDC auth flow (two-step auth URL + callback) | Open (deferred -- not needed until interactive admin tooling exists) |
+| 96 | Code-generation approach for reactive service tier | Open (deferred -- reactive retired; only relevant if reactive pair count grows) |
 
 ---
 
 ## Design Documents
 
-- `docs/DESIGN.md` -- full architecture, agent identity model, mesh topology decisions
-- `docs/CAPABILITIES.md` -- capability applicability ratings and selection matrix
-- `docs/ARC42STORIES.MD` -- architecture and delivery record (arc42 + story progression)
-- `adr/INDEX.md` -- architectural decision records
+- `ARC42STORIES.MD` -- **primary architecture record** (arc42 + story progression). Covers entity model, architecture, SPI contracts, Merkle MMR, trust scoring, agent identity, and delivery history.
+- `docs/DESIGN.md` -- redirects to `ARC42STORIES.MD`
+- `docs/CAPABILITIES.md` -- redirects to `ARC42STORIES.MD`
+- `docs/adr/INDEX.md` -- architectural decision records (17 ADRs)
+- `docs/specs/` -- design specs (60+ specs from brainstorming sessions)
