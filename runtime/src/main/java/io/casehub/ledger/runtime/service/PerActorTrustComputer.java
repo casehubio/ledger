@@ -7,6 +7,7 @@ import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.TrustScoreSnapshot;
 import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.repository.TrustScoreSnapshotRepository;
+
 import io.casehub.platform.api.identity.ActorType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -76,7 +77,8 @@ class PerActorTrustComputer {
                              score.decisionCount(), score.overturnedCount(),
                              score.alpha(), score.beta(),
                              score.attestationPositive(), score.attestationNegative(), now);
-            snapshotRepo.save(new TrustScoreSnapshot(actorId, entry.getKey(),
+            snapshotRepo.save(new TrustScoreSnapshot(actorId, ScoreType.CAPABILITY,
+                                                     entry.getKey(), null,
                                                      score.trustScore(), previous, now));
             results.add(buildScore(actorId, ScoreType.CAPABILITY,
                                    entry.getKey(), null, actorType, score, now));
@@ -84,9 +86,14 @@ class PerActorTrustComputer {
 
         // ── Persist dimension scores ─────────────────────────────────────────
         for (final Map.Entry<String, Double> entry : computed.dimensionScores().entrySet()) {
+            final double previousDim = trustRepo.findDimensionScore(actorId, entry.getKey())
+                                                .map(s -> s.trustScore).orElse(0.0);
             trustRepo.upsert(actorId, ScoreType.DIMENSION,
                              null, entry.getKey(), actorType, entry.getValue(),
                              0, 0, 0.0, 0.0, 0, 0, now);
+            snapshotRepo.save(new TrustScoreSnapshot(actorId, ScoreType.DIMENSION,
+                                                     null, entry.getKey(),
+                                                     entry.getValue(), previousDim, now));
             results.add(buildDimensionScore(actorId, null, entry.getKey(),
                                             actorType, entry.getValue(), 0, 0, 0, now));
         }
@@ -95,9 +102,15 @@ class PerActorTrustComputer {
         for (final Map.Entry<String, Map<String, Double>> capEntry :
                 computed.capabilityDimensionScores().entrySet()) {
             for (final Map.Entry<String, Double> dimEntry : capEntry.getValue().entrySet()) {
+                final double previousCapDim = trustRepo.findCapabilityDimension(
+                        actorId, capEntry.getKey(), dimEntry.getKey())
+                        .map(s -> s.trustScore).orElse(0.0);
                 trustRepo.upsert(actorId, ScoreType.CAPABILITY_DIMENSION,
                                  capEntry.getKey(), dimEntry.getKey(), actorType, dimEntry.getValue(),
                                  0, 0, 0.0, 0.0, 0, 0, now);
+                snapshotRepo.save(new TrustScoreSnapshot(actorId, ScoreType.CAPABILITY_DIMENSION,
+                                                         capEntry.getKey(), dimEntry.getKey(),
+                                                         dimEntry.getValue(), previousCapDim, now));
                 results.add(buildDimensionScore(actorId, capEntry.getKey(), dimEntry.getKey(),
                                                 actorType, dimEntry.getValue(), 0, 0, 0, now));
             }
@@ -112,7 +125,8 @@ class PerActorTrustComputer {
                          global.decisionCount(), global.overturnedCount(),
                          global.alpha(), global.beta(),
                          global.attestationPositive(), global.attestationNegative(), now);
-        snapshotRepo.save(new TrustScoreSnapshot(actorId, null,
+        snapshotRepo.save(new TrustScoreSnapshot(actorId, ScoreType.GLOBAL,
+                                                 null, null,
                                                  global.trustScore(), previousGlobal, now));
         results.add(buildScore(actorId, ScoreType.GLOBAL,
                                null, null, actorType, global, now));

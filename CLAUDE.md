@@ -317,7 +317,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── ActorIdentityBindingEntry.java — @Entity: LedgerEntry subclass: DID/VC binding validation event; subjectId=nameUUIDFromBytes(actorId); entryType=EVENT; see ADR 0015
 │       │   ├── PlainLedgerEntry.java         — @Entity: LedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder (V1009)
 │       │   ├── ErasureReceiptLedgerEntry.java — @Entity: LedgerEntry subclass: tamper-evident GDPR Art.17 erasure record; subjectId=nameUUIDFromBytes(erasedActorId); entryType=EVENT; opt-in via casehub.ledger.erasure-receipt.enabled (V1010)
-│       │   ├── TrustScoreSnapshot.java       — @Entity: trust score point-in-time snapshot for trend visibility; (actorId, capabilityTag, score, previousScore, occurredAt); captured by PerActorTrustComputer on every score upsert (V1012)
+│       │   ├── TrustScoreSnapshot.java       — @Entity: trust score point-in-time snapshot for trend visibility; (actorId, scoreType, capabilityTag, dimensionKey, score, previousScore, occurredAt); captured by PerActorTrustComputer on every score upsert for all four score types (V1000)
 │       │   ├── ActorIdentity.java           — @Entity: token↔identity mapping for pseudonymisation
 │       │   └── supplement/
 │       │       ├── JpaLedgerSupplement.java      — @Entity: runtime JPA base extending api LedgerSupplement; JOINED inheritance
@@ -331,7 +331,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── NoOpLedgerMerkleFrontierRepository.java — @DefaultBean: CDI-satisfaction no-op; findBySubjectId() returns empty, replace() is a no-op
 │       │   ├── NoOpErasureReceiptRepository.java — @DefaultBean: CDI-satisfaction no-op; returns empty list
 │       │   ├── NoOpTrustScoreSnapshotRepository.java — @DefaultBean: CDI-satisfaction no-op; save() discards, find methods return empty
-│       │   ├── TrustScoreSnapshotRepository.java — SPI: save(TrustScoreSnapshot), findGlobalSnapshots(actorId), findCapabilitySnapshots(actorId, capabilityTag)
+│       │   ├── TrustScoreSnapshotRepository.java — SPI: save(TrustScoreSnapshot), findGlobalSnapshots(actorId), findCapabilitySnapshots(actorId, capabilityTag), findDimensionSnapshots(actorId, dimensionKey), findByActorAndTimeRange(actorId, from, to), deleteOlderThan(cutoff)
 │       │   └── jpa/                              — JPA implementations (EntityManager-based)
 │       │       ├── JpaLedgerEntryRepository.java     — @Alternative: JPA implementation of LedgerEntryRepository; activate via quarkus.arc.selected-alternatives
 │       │       ├── JpaActorIdentityBindingRepository.java — @Alternative: read-only JPA implementation (latestBindingFor, bindingHistoryFor with tenancyId); no save() — saves go through JpaLedgerEntryRepository; activate via quarkus.arc.selected-alternatives
@@ -462,7 +462,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       ├── V1009__plain_ledger_entry.sql            — plain_ledger_entry join table (PlainLedgerEntry subclass for domain-agnostic event writes via OutcomeRecorder)
 │       ├── V1010__erasure_receipt_entry.sql         — erasure_receipt_entry join table (ErasureReceiptLedgerEntry; opt-in via casehub.ledger.erasure-receipt.enabled)
 │       ├── V1011__ledger_entry_metadata.sql         — metadata TEXT column on ledger_entry for consumer-provided audit context (#172)
-│       └── V1012__trust_score_snapshot.sql          — trust_score_snapshot table for score trend visibility (#183)
+│       └── (trust_score_snapshot defined in V1000 — consolidated initial schema)
 └── deployment/
 │   └── src/main/java/io/casehub/ledger/deployment/
 │       ├── LedgerBuildTimeConfig.java       — @ConfigRoot(BUILD_TIME): casehub.ledger.reactive.enabled (default false)
