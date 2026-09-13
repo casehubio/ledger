@@ -11,13 +11,13 @@ import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
 import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
-import io.casehub.ledger.runtime.privacy.ContentSanitiser;
+import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
-import io.casehub.ledger.runtime.service.AgentEntrySigner;
-import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
+import io.casehub.ledger.core.signing.AgentEntrySigner;
+import io.casehub.ledger.core.model.AttestationRecordedEvent;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Alternative;
@@ -168,8 +168,8 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
     }
 
     private void updateMerkleFrontier(final LedgerEntry entry, final String tenancyId) {
-        final List<LedgerMerkleFrontier> currentFrontier = frontierRepo.findBySubjectId(entry.subjectId, tenancyId);
-        final List<LedgerMerkleFrontier> newFrontier = LedgerMerkleTree.append(
+        final var currentFrontier = frontierRepo.findBySubjectId(entry.subjectId, tenancyId);
+        final List<io.casehub.ledger.api.model.LedgerMerkleFrontier> newFrontier = LedgerMerkleTree.append(
                 entry.digest, currentFrontier, entry.subjectId);
         frontierRepo.replace(entry.subjectId, newFrontier, tenancyId);
         final String newRoot = LedgerMerkleTree.treeRoot(newFrontier);

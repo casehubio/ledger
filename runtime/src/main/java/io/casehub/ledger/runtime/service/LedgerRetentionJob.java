@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import io.casehub.ledger.core.compliance.LedgerEntryArchiver;
+import io.casehub.ledger.core.compliance.RetentionEligibilityChecker;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -16,7 +18,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.model.LedgerEntryArchiveRecord;
 import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
@@ -132,7 +134,8 @@ public class LedgerRetentionJob {
 
         // 2. Archive each entry (if configured)
         if (archiveBeforeDelete) {
-            final Map<UUID, List<LedgerAttestation>> attestsByEntry = ledgerRepo.findAttestationsForEntries(entryIds);
+            @SuppressWarnings("unchecked")
+            final Map<UUID, List<LedgerAttestation>> attestsByEntry = (Map<UUID, List<LedgerAttestation>>) (Map<?,?>) ledgerRepo.findAttestationsForEntries(entryIds);
             for (final LedgerEntry e : sorted) {
                 final List<LedgerAttestation> attests = attestsByEntry.getOrDefault(e.id, List.of());
                 final LedgerEntryArchiveRecord record = new LedgerEntryArchiveRecord();

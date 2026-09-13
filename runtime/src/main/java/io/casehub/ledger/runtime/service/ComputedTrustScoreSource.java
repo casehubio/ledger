@@ -9,6 +9,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import io.casehub.ledger.core.model.AttestationRecordedEvent;
+import io.casehub.ledger.core.trust.TrustScoreCalculator;
+import io.casehub.ledger.core.trust.TrustScoreComputer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.TransactionPhase;
@@ -16,7 +19,7 @@ import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 
 import io.casehub.ledger.api.spi.TrustScoreSource;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.runtime.qualifier.CrossTenant;
 import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
@@ -42,8 +45,8 @@ import io.casehub.ledger.runtime.repository.CrossTenantLedgerEntryRepository;
 @Alternative
 public class ComputedTrustScoreSource implements TrustScoreSource {
 
-    private final CrossTenantLedgerEntryRepository ledgerRepo;
-    private final TrustScoreCalculator calculator;
+    private final        CrossTenantLedgerEntryRepository    ledgerRepo;
+    private final        TrustScoreCalculator                calculator;
     private static final TrustScoreCalculator.ComputedScores EMPTY_SENTINEL =
             new TrustScoreCalculator.ComputedScores(Map.of(), Map.of(), Map.of(),
                     new TrustScoreComputer.ActorScore(0, 0, 0, 0, 0, 0, 0, 1.0));
@@ -158,8 +161,9 @@ public class ComputedTrustScoreSource implements TrustScoreSource {
         if (decisions.isEmpty()) {
             return EMPTY_SENTINEL;
         }
+        @SuppressWarnings("unchecked")
         final Map<UUID, List<LedgerAttestation>> attestationsByEntry =
-                ledgerRepo.findAttestationsByActorId(actorId);
+                (Map<UUID, List<LedgerAttestation>>) (Map<?,?>) ledgerRepo.findAttestationsByActorId(actorId);
         return calculator.computeAll(decisions, attestationsByEntry, Instant.now());
     }
 }
