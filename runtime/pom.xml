@@ -22,6 +22,12 @@
       <version>${project.version}</version>
     </dependency>
 
+    <!-- Ledger Core — framework-neutral business logic POJOs -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-ledger-core</artifactId>
+    </dependency>
+
     <!-- Ledger annotations — @Audited, @Attested, @SubjectId etc. (interceptor lives here in runtime) -->
     <dependency>
       <groupId>io.casehub</groupId>
@@ -49,8 +55,8 @@
 
     <!-- JSON serialisation for LedgerSupplementSerializer -->
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jackson</artifactId>
     </dependency>
 
     <!-- JDBC drivers — optional; consuming app provides them -->

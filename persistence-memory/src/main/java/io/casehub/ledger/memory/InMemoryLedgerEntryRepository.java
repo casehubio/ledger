@@ -9,13 +9,13 @@ import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
-import io.casehub.ledger.runtime.privacy.ContentSanitiser;
+import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
-import io.casehub.ledger.runtime.service.AgentEntrySigner;
-import io.casehub.ledger.runtime.service.AttestationRecordedEvent;
+import io.casehub.ledger.core.signing.AgentEntrySigner;
+import io.casehub.ledger.core.model.AttestationRecordedEvent;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -139,9 +139,9 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
             entries.put(entry.id, entry);
 
             if (ledgerConfig.hashChain().enabled()) {
-                final List<LedgerMerkleFrontier> current =
+                final var current =
                         frontierRepo.findBySubjectId(entry.subjectId, tenancyId);
-                final List<LedgerMerkleFrontier> newFrontier =
+                final var newFrontier =
                         LedgerMerkleTree.append(entry.digest, current, entry.subjectId);
                 frontierRepo.replace(entry.subjectId, newFrontier, tenancyId);
                 merklePublisher.publish(entry.subjectId, entry.sequenceNumber,
