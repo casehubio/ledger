@@ -20,13 +20,16 @@ public final class AgentCryptographicVerifier {
     private AgentCryptographicVerifier() {}
 
     public static VerificationResult verifyCryptographic(final LedgerEntry entry) {
-        if (entry.agentSignature == null || entry.agentPublicKey == null) {
+        if (entry.agentSignature == null) {
             return VerificationResult.UNSIGNED;
+        }
+        if (entry.agentPublicKey == null) {
+            return VerificationResult.INVALID;
         }
         try {
             final PublicKey publicKey = decodePublicKey(entry.agentPublicKey);
-            final String algorithm = SignatureAlgorithms.signatureAlgorithm(publicKey);
-            final Signature sig = Signature.getInstance(algorithm);
+            final String    algorithm = SignatureAlgorithms.signatureAlgorithm(publicKey);
+            final Signature sig       = Signature.getInstance(algorithm);
             sig.initVerify(publicKey);
             sig.update(entry.canonicalBytes());
             return sig.verify(entry.agentSignature) ? VerificationResult.VALID : VerificationResult.INVALID;
