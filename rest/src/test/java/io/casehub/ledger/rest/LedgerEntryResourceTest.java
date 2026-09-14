@@ -27,16 +27,14 @@ class LedgerEntryResourceTest {
         repository.save(entry, "default");
 
         given()
-                .queryParam("arg0", subjectId.toString())
-                .queryParam("arg2", "default")
-                .when().get("/api/ledger/entries/list-entries")
+                .queryParam("subjectId", subjectId.toString())
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/entries")
                 .then()
                 .statusCode(200)
-                .body("entries", hasSize(1))
-                .body("entries[0].subjectId", equalTo(subjectId.toString()))
-                .body("entries[0].actorId", equalTo("actor-1"))
-                .body("totalCount", equalTo(1))
-                .body("hasMore", equalTo(false));
+                .body("$", hasSize(1))
+                .body("[0].subjectId", equalTo(subjectId.toString()))
+                .body("[0].actorId", equalTo("actor-1"));
     }
 
     @Test
@@ -46,8 +44,8 @@ class LedgerEntryResourceTest {
         final var saved = repository.save(entry, "default");
 
         given()
-                .queryParam("arg1", "default")
-                .when().get("/api/ledger/entries/get-entry/{id}", saved.id)
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/entries/{id}", saved.id)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(saved.id.toString()))
@@ -55,14 +53,22 @@ class LedgerEntryResourceTest {
     }
 
     @Test
-    void listEntries_noFilters_returnsEmptyPage() {
+    void getEntryById_notFound_returns404() {
         given()
-                .queryParam("arg2", "default")
-                .when().get("/api/ledger/entries/list-entries")
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/entries/{id}", UUID.randomUUID())
                 .then()
-                .statusCode(200)
-                .body("entries", hasSize(0))
-                .body("totalCount", equalTo(0));
+                .statusCode(404)
+                .body("status", equalTo(404));
+    }
+
+    @Test
+    void queryEntries_noParams_returns400() {
+        given()
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/entries")
+                .then()
+                .statusCode(400);
     }
 
     private PlainLedgerEntry createEntry(final UUID subjectId, final String actorId) {

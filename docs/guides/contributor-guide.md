@@ -14,10 +14,10 @@
 | `runtime/` | `casehub-ledger` | Full Quarkus extension: JPA entities (`JpaLedgerEntry`, `PlainLedgerEntry`, `KeyRotationEntry`, `ActorIdentityBindingEntry`, `ErasureReceiptLedgerEntry`, `ActorTrustScore`, `LedgerMerkleFrontier`, `ActorIdentity`, `LedgerEntryArchiveRecord`), all services, repositories, enrichers, privacy, federation, routing, config, and Flyway migrations. |
 | `deployment/` | `casehub-ledger-deployment` | Quarkus build-time augmentation. `LedgerProcessor` enforces `domainContentBytes()` override on subclasses with persistent fields and rejects `@RequestScoped` beans injecting `@CrossTenant`. |
 | `persistence-memory/` | `casehub-ledger-memory` | Zero-datasource in-memory `@Alternative @Priority(1)` implementations of all persistence SPIs -- for `@QuarkusTest` isolation and ephemeral installs. |
-| `rest/` | `casehub-ledger-rest` | APT-generated JAX-RS REST endpoints from `@McpDomain` SPI interfaces in `api/spi/`. Depends on `casehub-ledger-api` (compile), `casehub-ledger` (test). Cross-cutting: `LedgerExceptionMapper`, `LedgerNotFoundException`, `LedgerRestUtil`. |
+| `rest/` | `casehub-ledger-rest` | JAX-RS REST API for ledger queries, attestations, Merkle verification, and trust scores -- opt-in via explicit dependency. Base path: `/api/v1/ledger/`. Four resource classes: `LedgerEntryResource`, `AttestationResource`, `MerkleVerificationResource`, `TrustScoreResource`. |
 | `testing/` | `casehub-ledger-testing` | `NoOpLedgerEntryRepository` -- `@Alternative @Priority(1)` for consumer test isolation. |
 | `annotations/` | `casehub-ledger-annotations` / `casehub-ledger-annotations-deployment` | Annotation-driven audit (`@Audited`, `@Attested`, `@ComplianceSupplement`). Quarkus extension with build-time validation via `LedgerAnnotationsProcessor`. Interceptors: `AuditedInterceptor` (APPLICATION+1), `ComplianceSupplementInterceptor` (APPLICATION). |
-| `graphql/` | `casehub-ledger-graphql` | APT-generated SmallRye GraphQL resolvers from `@McpDomain` SPI interfaces in `api/spi/`. MCP domain provider (`LedgerModelEnricher`). Depends on `casehub-ledger-api` (compile), `casehub-ledger` (test). |
+| `graphql/` | `casehub-ledger-graphql` | GraphQL resolvers (`LedgerQueryResolver`, `LedgerMutationResolver`) and MCP domain provider (`LedgerModelEnricher`). DTOs decoupled from JPA entities. |
 | `signing/` | (reactor POM) | Cloud-managed Ed25519 signing adapters. 8 sub-modules (4 pure Java + 4 Quarkus CDI adapters). |
 | `examples/` | (reactor POM) | 14 runnable example applications. Not deployed. |
 | `consumer-compat-test/` | `casehub-ledger-consumer-compat-test` | Boot guard for CDI graph integrity. Standalone POM (not a child of ledger parent). |
@@ -287,20 +287,20 @@ When `casehub.ledger.trust-score.routing-enabled=true`, `TrustScoreRoutingPublis
 
 ---
 
-## REST and GraphQL — Generated API Architecture
+## REST Module Internals
 
-REST and GraphQL endpoints are APT-generated from four `@McpDomain` SPI interfaces in `api/spi/`:
+Four resource classes, all under `/api/v1/ledger/`:
 
-| SPI Interface | Domain | Operations |
+| Resource | Path | Methods |
 |---|---|---|
-| `LedgerEntryApi` | `ledger/entries` | listEntries, getEntry, getCausedBy, appendEntry |
-| `LedgerAttestationApi` | `ledger/attestations` | listAttestations, createAttestation |
-| `LedgerVerificationApi` | `ledger/verification` | verify, inclusionProof |
-| `LedgerTrustApi` | `ledger/trust` | trustScore, capabilityScore, routingProfile |
+| `LedgerEntryResource` | `/entries` | `GET /entries` (query by subject/actor + time range), `GET /entries/{id}`, `GET /entries/{id}/caused-by` |
+| `AttestationResource` | `/entries/{entryId}/attestations` | `GET` (list, optional capabilityTag filter), `POST` (create attestation) |
+| `MerkleVerificationResource` | `/verify` | `GET /verify` (verify all entries for subject), `GET /verify/entries/{entryId}/proof` (inclusion proof) |
+| `TrustScoreResource` | `/trust` | `GET /trust/{actorId}` (all scores), `GET /trust/{actorId}/capability/{capabilityTag}` (capability-specific) |
 
-The `graphql-generator` APT produces `GeneratedLedger*Resource` (REST) and `GeneratedLedger*Resolver` (GraphQL) classes at compile time. Generated code injects the SPI interface → CDI resolves to `@DefaultBean` service implementations in `runtime/service/api/`.
+DTO mapping via `LedgerDtoMapper`. Response types: `LedgerEntryResponse`, `AttestationResponse`, `VerificationResponse`, `InclusionProofResponse`, `TrustScoreResponse`, `CapabilityScoreResponse`. Error handling via `LedgerExceptionMapper` and `LedgerNotFoundException`.
 
-View/request records in `api/view/` are shared across REST and GraphQL surfaces. Error handling via `LedgerExceptionMapper` and `LedgerNotFoundException` (cross-cutting, not generated).
+All endpoints require `tenancyId` as a query parameter (validated by `LedgerRestUtil.requireTenancyId()`).
 
 ---
 
