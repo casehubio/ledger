@@ -1,11 +1,11 @@
 # ledger Workspace
 **Name:** casehub-ledger
-**Project repo:** /Users/mdproctor/claude/casehub/slots/192/ledger
+**Project repo:** /Users/mdproctor/claude/casehub/slots/194/ledger
 **Workspace type:** public
 
 ## Session Start
 
-Run `add-dir /Users/mdproctor/claude/casehub/slots/192/ledger` before any other work.
+Run `add-dir /Users/mdproctor/claude/casehub/slots/194/ledger` before any other work.
 
 ## Artifact Locations
 
@@ -197,9 +197,13 @@ startup, so typos fail at boot not at query time.
 `LedgerEntryRepository.findById(UUID)` was renamed to `findEntryById(UUID)` to avoid
 a Java return-type conflict with `PanacheRepositoryBase.findById()`.
 
-**REST endpoints are domain-specific**
-`casehub-ledger` provides model, SPI, services, and JPA implementations only. Tarkus and
-Qhorus each define their own REST/MCP endpoints on top.
+**REST and GraphQL endpoints are APT-generated**
+`casehub-ledger-rest` and `casehub-ledger-graphql` use the platform `graphql-generator` APT
+to generate JAX-RS REST resources and SmallRye GraphQL resolvers from `@McpDomain` SPI
+interfaces in `api/spi/`. Four SPI interfaces (`LedgerEntryApi`, `LedgerAttestationApi`,
+`LedgerVerificationApi`, `LedgerTrustApi`) produce both API surfaces from one source.
+Domain-specific consumers (Tarkus, Qhorus) can still override the `@DefaultBean` service
+implementations in `runtime/service/api/`.
 
 **`actorId` format for LLM agents**
 LLM agents are stateless; use versioned persona names so trust accumulates correctly
@@ -299,7 +303,22 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │           ├── OutcomeRecorder.java             — write-path SPI: record(outcome, actorId, subjectId, tenancyId) → UUID entryId
 │           ├── ReactiveOutcomeRecorder.java     — reactive write-path SPI: recordAsync(outcome, actorId, subjectId, tenancyId) → Uni<UUID>
 │           ├── TrustScoreSource.java            — read-path SPI: globalScore(actorId), capabilityScore(actorId, capabilityTag), dimensionScore(actorId, dimension), capabilityDimensionScore(actorId, capability, dimension)
-│           └── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
+│           ├── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
+│           ├── LedgerEntryApi.java              — @McpDomain("ledger/entries"): listEntries, getEntry, getCausedBy, appendEntry
+│           ├── LedgerAttestationApi.java        — @McpDomain("ledger/attestations"): listAttestations, createAttestation
+│           ├── LedgerVerificationApi.java       — @McpDomain("ledger/verification"): verify, inclusionProof
+│           └── LedgerTrustApi.java              — @McpDomain("ledger/trust"): trustScore, capabilityScore, routingProfile
+│       └── view/
+│           ├── LedgerEntryView.java             — record: unified entry view (replaces REST LedgerEntryResponse + GraphQL LedgerEntryType)
+│           ├── LedgerEntryPage.java             — record: paginated entry list
+│           ├── AttestationView.java             — record: attestation view
+│           ├── VerificationView.java            — record: Merkle verification result
+│           ├── InclusionProofView.java          — record: Merkle inclusion proof with ProofStepView
+│           ├── TrustScoreView.java              — record: global trust score with capability/dimension maps
+│           ├── CapabilityScoreView.java         — record: capability-scoped trust score
+│           ├── TrustRoutingProfileView.java     — record: composite routing profile
+│           ├── AppendEntryRequest.java          — record: append entry request
+│           └── CreateAttestationRequest.java    — record: create attestation request
 ├── runtime/
 │   └── src/main/resources/META-INF/
 │       └── orm.xml                          — JPA mapped-superclass declarations for api/ model classes (LedgerEntry, LedgerAttestation, LedgerSupplement, ComplianceSupplement, ProvenanceSupplement)
@@ -345,6 +364,11 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       ├── qualifier/
 │       │   └── CrossTenant.java              — CDI qualifier: disambiguates CrossTenantLedgerEntryRepository from LedgerEntryRepository (Category 1 only; build-time scope validation)
 │       ├── service/
+│       │   ├── api/
+│       │   │   ├── DefaultLedgerEntryApi.java       — @DefaultBean: implements LedgerEntryApi; delegates to LedgerEntryRepository + LedgerAppender
+│       │   │   ├── DefaultLedgerAttestationApi.java — @DefaultBean: implements LedgerAttestationApi; delegates to LedgerEntryRepository
+│       │   │   ├── DefaultLedgerVerificationApi.java — @DefaultBean: implements LedgerVerificationApi; delegates to LedgerVerificationService
+│       │   │   └── DefaultLedgerTrustApi.java       — @DefaultBean: implements LedgerTrustApi; delegates to TrustScoreSource
 │       │   ├── DefaultLedgerAppender.java       — CDI bean: default LedgerAppender implementation — constructs PlainLedgerEntry from AuditRecord, delegates to LedgerEntryRepository
 │       │   ├── DefaultReactiveLedgerAppender.java — CDI bean: default ReactiveLedgerAppender implementation — delegates to ReactiveLedgerEntryRepository
 │       │   ├── TraceIdEnricher.java             — auto-populates traceId from active OTel span
@@ -487,33 +511,18 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
     └── src/main/java/io/casehub/ledger/testing/
         ├── NoOpLedgerEntryRepository.java           — @Alternative @Priority(1); no-op LedgerEntryRepository for consumer test profiles
         └── NoOpReactiveLedgerEntryRepository.java   — @Alternative @Priority(1); no-op ReactiveLedgerEntryRepository for consumer test profiles
-└── graphql/                              — opt-in GraphQL resolvers + MCP domain provider (plain JAR, not a Quarkus extension)
+└── graphql/                              — APT-generated GraphQL resolvers + MCP domain provider (plain JAR, not a Quarkus extension)
     └── src/main/java/io/casehub/ledger/graphql/
-        ├── LedgerQueryResolver.java             — @GraphQLApi @McpDomain("ledger"): ledgerEntries, ledgerEntry, ledgerAttestations, trustScore, trustCapabilityScore, trustRoutingProfile (composite), merkleVerification
-        ├── LedgerMutationResolver.java          — @GraphQLApi @McpDomain("ledger"): appendLedgerEntry (with domainData), createAttestation
-        ├── LedgerModelEnricher.java             — @McpDomain("ledger") ModelEnricher: summary + state for MCP hierarchical model
-        └── dto/                                 — GraphQL input/output records (decoupled from JPA entities)
-            ├── LedgerEntryType.java, LedgerAttestationType.java, TrustScoreType.java
-            ├── TrustCapabilityScoreType.java, TrustRoutingProfileType.java
-            ├── MerkleVerificationType.java, LedgerEntryPage.java
-            └── LedgerEntryFilterInput.java, AppendLedgerEntryInput.java, CreateAttestationInput.java
-└── rest/                                 — opt-in JAX-RS REST endpoints (plain JAR, not a Quarkus extension)
+        └── LedgerModelEnricher.java             — @McpDomain("ledger") ModelEnricher: summary + state for MCP hierarchical model
+    (APT generates: GeneratedLedgerEntriesResolver, GeneratedLedgerAttestationsResolver,
+     GeneratedLedgerVerificationResolver, GeneratedLedgerTrustResolver — from SPI interfaces in api/)
+└── rest/                                 — APT-generated JAX-RS REST endpoints (plain JAR, not a Quarkus extension)
     └── src/main/java/io/casehub/ledger/rest/
-        ├── LedgerEntryResource.java             — GET /api/v1/ledger/entries — query by subject or actor; GET /{id}; GET /{id}/caused-by
-        ├── MerkleVerificationResource.java      — GET /api/v1/ledger/verify — integrity check; GET /entries/{id}/proof — inclusion proof
-        ├── TrustScoreResource.java              — GET /api/v1/ledger/trust/{actorId} — global, capability, dimension scores
-        ├── AttestationResource.java             — GET/POST /api/v1/ledger/entries/{id}/attestations — list and create
         ├── LedgerExceptionMapper.java           — @Provider: maps domain exceptions to HTTP 400/404/409/500
         ├── LedgerNotFoundException.java         — 404 signal
-        ├── LedgerRestUtil.java                  — tenancy ID defaulting
-        └── dto/                                 — request/response records (decoupled from JPA entities)
-            ├── LedgerEntryResponse.java
-            ├── AttestationResponse.java
-            ├── CreateAttestationRequest.java
-            ├── InclusionProofResponse.java
-            ├── TrustScoreResponse.java
-            ├── VerificationResponse.java
-            └── LedgerDtoMapper.java             — entity → DTO conversion
+        └── LedgerRestUtil.java                  — tenancy ID defaulting
+    (APT generates: GeneratedLedgerEntriesResource, GeneratedLedgerAttestationsResource,
+     GeneratedLedgerVerificationResource, GeneratedLedgerTrustResource — from SPI interfaces in api/)
 └── annotations/                          — annotation-driven audit, compliance, and attestation (Quarkus extension)
     ├── pom.xml                           — aggregator POM
     ├── runtime/                          → io.casehub:casehub-ledger-annotations

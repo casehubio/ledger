@@ -32,9 +32,10 @@ class AttestationResourceTest {
 
         given()
                 .contentType("application/json")
-                .queryParam("tenancyId", "default")
+                .queryParam("arg1", "default")
                 .body("""
                         {
+                          "entryId": "%s",
                           "attestorId": "reviewer-1",
                           "attestorType": "AGENT",
                           "attestorRole": "reviewer",
@@ -43,16 +44,16 @@ class AttestationResourceTest {
                           "confidence": 0.95,
                           "capabilityTag": "*"
                         }
-                        """)
-                .when().post("/api/v1/ledger/entries/{entryId}/attestations", saved.id)
+                        """.formatted(saved.id))
+                .when().post("/api/ledger/attestations/create-attestation")
                 .then()
-                .statusCode(201)
+                .statusCode(200)
                 .body("attestorId", equalTo("reviewer-1"))
                 .body("verdict", equalTo("SOUND"));
 
         given()
-                .queryParam("tenancyId", "default")
-                .when().get("/api/v1/ledger/entries/{entryId}/attestations", saved.id)
+                .queryParam("arg1", "default")
+                .when().get("/api/ledger/attestations/list-attestations/{entryId}", saved.id)
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
@@ -60,21 +61,22 @@ class AttestationResourceTest {
     }
 
     @Test
-    void createAttestation_entryNotFound_returns404() {
+    void createAttestation_entryNotFound_returns400() {
         given()
                 .contentType("application/json")
-                .queryParam("tenancyId", "default")
+                .queryParam("arg1", "default")
                 .body("""
                         {
+                          "entryId": "%s",
                           "attestorId": "reviewer-1",
                           "attestorType": "AGENT",
                           "verdict": "SOUND",
                           "confidence": 0.9,
                           "capabilityTag": "*"
                         }
-                        """)
-                .when().post("/api/v1/ledger/entries/{entryId}/attestations", UUID.randomUUID())
+                        """.formatted(UUID.randomUUID()))
+                .when().post("/api/ledger/attestations/create-attestation")
                 .then()
-                .statusCode(404);
+                .statusCode(400);
     }
 }
