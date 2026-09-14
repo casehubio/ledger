@@ -24,11 +24,6 @@ trust scores, attestations, and Merkle verification. Thin-adapter pattern over l
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
-      <artifactId>casehub-ledger</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-graphql</artifactId>
     </dependency>
 
@@ -48,8 +43,19 @@ trust scores, attestations, and Merkle verification. Thin-adapter pattern over l
       <artifactId>casehub-platform-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Test -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-ledger</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -78,6 +84,29 @@ trust scores, attestations, and Merkle verification. Thin-adapter pattern over l
             <goals><goal>jandex</goal></goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-platform-graphql-generator</artifactId>
+              <version>0.2-SNAPSHOT</version>
+            </path>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-ledger-api</artifactId>
+              <version>${project.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-AdomainFilter=ledger/entries,ledger/attestations,ledger/verification,ledger/trust</arg>
+            <arg>-AgenerateRest=false</arg>
+          </compilerArgs>
+        </configuration>
       </plugin>
 
       <plugin>

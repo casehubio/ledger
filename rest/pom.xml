@@ -17,8 +17,14 @@
   <dependencies>
     <dependency>
       <groupId>io.casehub</groupId>
-      <artifactId>casehub-ledger</artifactId>
+      <artifactId>casehub-ledger-api</artifactId>
       <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-api</artifactId>
+      <version>0.2-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -37,6 +43,11 @@
       <artifactId>jakarta.ws.rs-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.eclipse.microprofile.openapi</groupId>
@@ -45,6 +56,12 @@
     </dependency>
 
     <!-- Test -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-ledger</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit</artifactId>
@@ -92,6 +109,28 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-platform-graphql-generator</artifactId>
+              <version>0.2-SNAPSHOT</version>
+            </path>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-ledger-api</artifactId>
+              <version>${project.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-AdomainFilter=ledger/entries,ledger/attestations,ledger/verification,ledger/trust</arg>
+            <arg>-AgenerateGraphQL=false</arg>
+          </compilerArgs>
+        </configuration>
       </plugin>
     </plugins>
   </build>
