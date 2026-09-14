@@ -1,11 +1,11 @@
 # ledger Workspace
 **Name:** casehub-ledger
-**Project repo:** /Users/mdproctor/claude/casehub/ledger
+**Project repo:** /Users/mdproctor/claude/casehub/slots/194/ledger
 **Workspace type:** public
 
 ## Session Start
 
-Run `add-dir /Users/mdproctor/claude/casehub/ledger` before any other work.
+Run `add-dir /Users/mdproctor/claude/casehub/slots/194/ledger` before any other work.
 
 ## Artifact Locations
 
