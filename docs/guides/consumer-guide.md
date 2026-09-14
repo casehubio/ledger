@@ -31,7 +31,7 @@ Zero knowledge of business domain. Consumers extend it; it never extends them. A
 | `runtime/` | `casehub-ledger` | Full Quarkus extension: JPA entities, services, Flyway migrations, CDI beans, enricher pipeline, trust computation, privacy/erasure. |
 | `deployment/` | `casehub-ledger-deployment` | Quarkus build-time augmentation. Includes `LedgerProcessor` which enforces `domainContentBytes()` override on subclasses with persistent join-table fields. |
 | `persistence-memory/` | `casehub-ledger-memory` | Zero-datasource in-memory `@Alternative @Priority(1)` implementations of all persistence SPIs -- for `@QuarkusTest` isolation and ephemeral installs. Add as `compile`-scope dependency to activate. Includes: `InMemoryLedgerEntryRepository`, `InMemoryCrossTenantLedgerEntryRepository`, `InMemoryActorTrustScoreRepository`, `InMemoryLedgerMerkleFrontierRepository`, `InMemoryKeyRotationRepository`, `InMemoryErasureReceiptRepository`, `InMemoryActorIdentityBindingRepository`, `InMemoryAgentSigner`, `NoOpCurrentPrincipal`. |
-| `rest/` | `casehub-ledger-rest` | APT-generated JAX-RS REST endpoints from `@McpDomain` SPI interfaces in `api/spi/`. Depends on `casehub-ledger-api` (compile). Generated at compile time by `casehub-platform-graphql-generator`. |
+| `rest/` | `casehub-ledger-rest` | JAX-RS REST API for ledger queries, attestations, Merkle verification, and trust scores -- opt-in via explicit dependency. Base path: `/api/v1/ledger/`. OpenAPI-annotated. |
 | `testing/` | `casehub-ledger-testing` | `NoOpLedgerEntryRepository` -- `@Alternative @Priority(1)` implementation that returns empty results for all queries and passes through saves unchanged. For consumer `@QuarkusTest` tests that do not need real persistence. Activate via `quarkus.arc.selected-alternatives`. |
 | `signing/` | (reactor POM) | Cloud-managed Ed25519 signing adapters. Each cloud provider has a pure Java module (framework-free) and a Quarkus CDI adapter module. See Cloud KMS Signers section below. |
 | `annotations/` | `casehub-ledger-annotations` / `casehub-ledger-annotations-deployment` | Annotation-driven audit: `@Audited`, `@Attested`, `@ComplianceSupplement`. Quarkus extension with build-time validation. See Annotation-Driven Audit section below. |
@@ -169,38 +169,36 @@ Consumer enrichers: implement `LedgerEntryEnricher`, annotate with `@Application
 
 ## REST API (casehub-ledger-rest)
 
-Opt-in module. Add `casehub-ledger-rest` dependency to expose APT-generated JAX-RS endpoints. Generated from `@McpDomain` SPI interfaces in `casehub-ledger-api`.
+Opt-in module. Add `casehub-ledger-rest` dependency to expose these JAX-RS endpoints. All endpoints are OpenAPI-annotated.
 
-### Ledger Entries -- `/api/ledger/entries`
-
-| Method | Path | Purpose | Parameters |
-|---|---|---|---|
-| `GET` | `/api/ledger/entries/list-entries` | Query entries by subject or actor | `subjectId` (UUID), `actorId` (string), `tenancyId`, `from`/`to` (Instant), `offset`/`limit` (Integer) |
-| `GET` | `/api/ledger/entries/get-entry/{id}` | Get single entry by ID | `tenancyId` |
-| `GET` | `/api/ledger/entries/get-caused-by/{id}` | Get entries causally triggered by this entry | `tenancyId` |
-| `POST` | `/api/ledger/entries/append-entry` | Append a new audit entry | `tenancyId`, JSON body: `AppendEntryRequest` |
-
-### Attestations -- `/api/ledger/attestations`
+### Ledger Entries -- `/api/v1/ledger/entries`
 
 | Method | Path | Purpose | Parameters |
 |---|---|---|---|
-| `GET` | `/api/ledger/attestations/list-attestations/{entryId}` | List attestations for an entry | `tenancyId`, `capabilityTag` (optional filter) |
-| `POST` | `/api/ledger/attestations/create-attestation` | Create attestation on an entry | `tenancyId`, JSON body: `CreateAttestationRequest` |
+| `GET` | `/api/v1/ledger/entries` | Query entries by subject or actor | `subjectId` (UUID), `actorId` (string), `tenancyId` (required), `from`/`to` (Instant) |
+| `GET` | `/api/v1/ledger/entries/{id}` | Get single entry by ID | `tenancyId` (required) |
+| `GET` | `/api/v1/ledger/entries/{id}/caused-by` | Get entries causally triggered by this entry | `tenancyId` (required) |
 
-### Merkle Verification -- `/api/ledger/verification`
-
-| Method | Path | Purpose | Parameters |
-|---|---|---|---|
-| `GET` | `/api/ledger/verification/verify` | Verify integrity of all entries for a subject | `subjectId` (UUID), `tenancyId` |
-| `GET` | `/api/ledger/verification/inclusion-proof/{entryId}` | Get Merkle inclusion proof for a single entry | `tenancyId` |
-
-### Trust Scores -- `/api/ledger/trust`
+### Attestations -- `/api/v1/ledger/entries/{entryId}/attestations`
 
 | Method | Path | Purpose | Parameters |
 |---|---|---|---|
-| `GET` | `/api/ledger/trust/trust-score/{actorId}` | Get all trust scores for an actor (global, capabilities, dimensions) | — |
-| `GET` | `/api/ledger/trust/capability-score/{actorId}/{capabilityTag}` | Get capability-specific score, decision count, and quality dimensions | — |
-| `GET` | `/api/ledger/trust/routing-profile/{actorId}/{capabilityTag}` | Composite routing profile — global + capability in one call | — |
+| `GET` | `/api/v1/ledger/entries/{entryId}/attestations` | List attestations for an entry | `tenancyId` (required), `capabilityTag` (optional filter) |
+| `POST` | `/api/v1/ledger/entries/{entryId}/attestations` | Create attestation on an entry | `tenancyId` (required), JSON body: `attestorId`, `attestorType`, `verdict`, `confidence`, `capabilityTag`, `evidence`, `attestorRole`, `trustDimension`, `dimensionScore` |
+
+### Merkle Verification -- `/api/v1/ledger/verify`
+
+| Method | Path | Purpose | Parameters |
+|---|---|---|---|
+| `GET` | `/api/v1/ledger/verify` | Verify integrity of all entries for a subject | `subjectId` (required), `tenancyId` (required) |
+| `GET` | `/api/v1/ledger/verify/entries/{entryId}/proof` | Get Merkle inclusion proof for a single entry | `tenancyId` (required) |
+
+### Trust Scores -- `/api/v1/ledger/trust`
+
+| Method | Path | Purpose | Parameters |
+|---|---|---|---|
+| `GET` | `/api/v1/ledger/trust/{actorId}` | Get all trust scores for an actor (global, capabilities, dimensions) | — |
+| `GET` | `/api/v1/ledger/trust/{actorId}/capability/{capabilityTag}` | Get capability-specific score, decision count, and quality dimensions | — |
 
 ---
 

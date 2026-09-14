@@ -31,9 +31,9 @@ class MerkleVerificationResourceTest {
         repository.save(entry, "default");
 
         given()
-                .queryParam("arg0", subjectId.toString())
-                .queryParam("arg1", "default")
-                .when().get("/api/ledger/verification/verify")
+                .queryParam("subjectId", subjectId.toString())
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/verify")
                 .then()
                 .statusCode(200)
                 .body("subjectId", equalTo(subjectId.toString()))
@@ -52,12 +52,21 @@ class MerkleVerificationResourceTest {
         final var saved = repository.save(entry, "default");
 
         given()
-                .queryParam("arg1", "default")
-                .when().get("/api/ledger/verification/inclusion-proof/{entryId}", saved.id)
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/verify/entries/{entryId}/proof", saved.id)
                 .then()
                 .statusCode(200)
                 .body("entryId", equalTo(saved.id.toString()))
                 .body("leafHash", notNullValue())
                 .body("treeRoot", notNullValue());
+    }
+
+    @Test
+    void verify_noSubjectId_returns400() {
+        given()
+                .queryParam("tenancyId", "default")
+                .when().get("/api/v1/ledger/verify")
+                .then()
+                .statusCode(400);
     }
 }
