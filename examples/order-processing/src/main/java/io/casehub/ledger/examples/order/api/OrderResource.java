@@ -23,6 +23,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntry;
 import io.casehub.ledger.examples.order.ledger.OrderLedgerEntryRepository;
+import jakarta.persistence.EntityManager;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.ledger.examples.order.model.Order;
 import io.casehub.ledger.examples.order.service.OrderService;
@@ -56,6 +57,9 @@ import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 @Path("/orders")
 @Produces(APPLICATION_JSON)
 public class OrderResource {
+
+    @Inject
+    EntityManager em;
 
     @Inject
     OrderService orderService;
@@ -112,13 +116,13 @@ public class OrderResource {
 
     @GET
     public List<Order> listOrders() {
-        return Order.listAll();
+        return em.createQuery("SELECT o FROM Order o", Order.class).getResultList();
     }
 
     @GET
     @Path("/{id}")
     public Order getOrder(@PathParam("id") final UUID orderId) {
-        return Order.findById(orderId);
+        return em.find(Order.class, orderId);
     }
 
     // -------------------------------------------------------------------------

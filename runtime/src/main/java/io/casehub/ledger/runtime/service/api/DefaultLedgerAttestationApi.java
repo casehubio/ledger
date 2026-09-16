@@ -2,12 +2,16 @@ package io.casehub.ledger.runtime.service.api;
 
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerAttestation;
-import io.casehub.ledger.api.spi.LedgerAttestationApi;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.ledger.api.view.AttestationView;
 import io.casehub.ledger.api.view.CreateAttestationRequest;
 import io.casehub.platform.api.identity.ActorType;
-import io.quarkus.arc.DefaultBean;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -15,16 +19,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-@DefaultBean
+@McpDomain("ledger/attestations")
 @ApplicationScoped
-public class DefaultLedgerAttestationApi implements LedgerAttestationApi {
+public class DefaultLedgerAttestationApi {
 
     @Inject LedgerEntryRepository repository;
 
-    @Override
-    public List<AttestationView> listAttestations(final UUID entryId,
-                                                    final String tenancyId,
-                                                    final String capabilityTag) {
+    @PlatformQuery("List attestations for a ledger entry, optionally filtered by capability tag")
+    public List<AttestationView> listAttestations(@PathParam UUID entryId,
+                                                    @ContextParam("tenancyId") String tenancyId,
+                                                    String capabilityTag) {
         final String tid = DefaultLedgerEntryApi.defaultTenancyId(tenancyId);
         final List<LedgerAttestation> attestations = capabilityTag != null
                 ? repository.findAttestationsByEntryIdAndCapabilityTag(
@@ -34,9 +38,9 @@ public class DefaultLedgerAttestationApi implements LedgerAttestationApi {
                 .map(DefaultLedgerAttestationApi::toView).toList();
     }
 
-    @Override
-    public AttestationView createAttestation(final CreateAttestationRequest request,
-                                              final String tenancyId) {
+    @PlatformMutation("Create an attestation on a ledger entry")
+    public AttestationView createAttestation(CreateAttestationRequest request,
+                                              @ContextParam("tenancyId") String tenancyId) {
         final String tid = DefaultLedgerEntryApi.defaultTenancyId(tenancyId);
         final var entry = repository.findEntryById(request.entryId(), tid)
                 .orElseThrow(() -> new IllegalArgumentException(

@@ -1,22 +1,24 @@
 package io.casehub.ledger.runtime.service.api;
 
-import io.casehub.ledger.api.spi.LedgerTrustApi;
 import io.casehub.ledger.api.spi.TrustScoreSource;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.ledger.api.view.CapabilityScoreView;
 import io.casehub.ledger.api.view.TrustRoutingProfileView;
 import io.casehub.ledger.api.view.TrustScoreView;
-import io.quarkus.arc.DefaultBean;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-@DefaultBean
+@McpDomain(value = "ledger/trust", basePath = "/api/v1/ledger/trust")
 @ApplicationScoped
-public class DefaultLedgerTrustApi implements LedgerTrustApi {
+public class DefaultLedgerTrustApi {
 
     @Inject TrustScoreSource trustScoreSource;
 
-    @Override
-    public TrustScoreView trustScore(final String actorId) {
+    @PlatformQuery("Global trust score for an actor — aggregate across all capabilities")
+    public TrustScoreView trustScore(@PathParam String actorId) {
         return new TrustScoreView(
                 actorId,
                 trustScoreSource.globalScore(actorId),
@@ -24,9 +26,9 @@ public class DefaultLedgerTrustApi implements LedgerTrustApi {
                 trustScoreSource.allDimensionScores(actorId));
     }
 
-    @Override
-    public CapabilityScoreView capabilityScore(final String actorId,
-                                                final String capabilityTag) {
+    @PlatformQuery("Capability-scoped trust score with quality dimensions")
+    public CapabilityScoreView capabilityScore(@PathParam String actorId,
+                                                @PathParam String capabilityTag) {
         return new CapabilityScoreView(
                 actorId, capabilityTag,
                 trustScoreSource.capabilityScore(actorId, capabilityTag),
@@ -34,9 +36,9 @@ public class DefaultLedgerTrustApi implements LedgerTrustApi {
                 trustScoreSource.qualityScores(actorId, capabilityTag));
     }
 
-    @Override
-    public TrustRoutingProfileView routingProfile(final String actorId,
-                                                    final String capabilityTag) {
+    @PlatformQuery("Composite trust routing profile — global + capability in one call")
+    public TrustRoutingProfileView routingProfile(@PathParam String actorId,
+                                                    @PathParam String capabilityTag) {
         return new TrustRoutingProfileView(
                 actorId, capabilityTag,
                 trustScoreSource.globalScore(actorId),

@@ -3,13 +3,17 @@ package io.casehub.ledger.runtime.service.api;
 import io.casehub.ledger.api.model.AuditRecord;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.spi.LedgerAppender;
-import io.casehub.ledger.api.spi.LedgerEntryApi;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.ledger.api.view.AppendEntryRequest;
 import io.casehub.ledger.api.view.LedgerEntryPage;
 import io.casehub.ledger.api.view.LedgerEntryView;
 import io.casehub.platform.api.identity.TenancyConstants;
-import io.quarkus.arc.DefaultBean;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -17,18 +21,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-@DefaultBean
+@McpDomain(value = "ledger/entries", basePath = "/api/v1/ledger")
 @ApplicationScoped
-public class DefaultLedgerEntryApi implements LedgerEntryApi {
+public class DefaultLedgerEntryApi {
 
     @Inject LedgerEntryRepository repository;
     @Inject LedgerAppender appender;
 
-    @Override
-    public LedgerEntryPage listEntries(final UUID subjectId, final String actorId,
-                                        final String tenancyId, final Instant from,
-                                        final Instant to, final Integer offset,
-                                        final Integer limit) {
+    @PlatformQuery("List ledger entries by subject or actor with optional time range")
+    public LedgerEntryPage listEntries(UUID subjectId, String actorId,
+                                        @ContextParam("tenancyId") String tenancyId,
+                                        Instant from, Instant to,
+                                        Integer offset, Integer limit) {
         final String tid = defaultTenancyId(tenancyId);
         final int off = offset != null ? offset : 0;
         final int lim = limit != null ? limit : 20;
@@ -55,22 +59,24 @@ public class DefaultLedgerEntryApi implements LedgerEntryApi {
         return new LedgerEntryPage(items, total, endIdx < total);
     }
 
-    @Override
-    public LedgerEntryView getEntry(final UUID id, final String tenancyId) {
+    @PlatformQuery("Get a single ledger entry by ID")
+    public LedgerEntryView getEntry(@PathParam UUID id,
+                                     @ContextParam("tenancyId") String tenancyId) {
         return repository.findEntryById(id, defaultTenancyId(tenancyId))
                 .map(DefaultLedgerEntryApi::toView)
                 .orElse(null);
     }
 
-    @Override
-    public List<LedgerEntryView> getCausedBy(final UUID id, final String tenancyId) {
+    @PlatformQuery("Get entries causally triggered by this entry")
+    public List<LedgerEntryView> getCausedBy(@PathParam UUID id,
+                                              @ContextParam("tenancyId") String tenancyId) {
         return repository.findCausedBy(id, defaultTenancyId(tenancyId))
                 .stream().map(DefaultLedgerEntryApi::toView).toList();
     }
 
-    @Override
-    public LedgerEntryView appendEntry(final AppendEntryRequest request,
-                                        final String tenancyId) {
+    @PlatformMutation("Append a new audit entry to the ledger")
+    public LedgerEntryView appendEntry(AppendEntryRequest request,
+                                        @ContextParam("tenancyId") String tenancyId) {
         final String tid = defaultTenancyId(tenancyId);
         AuditRecord record = AuditRecord.event(request.actorId(), request.subjectId());
         if (request.actorRole() != null) {

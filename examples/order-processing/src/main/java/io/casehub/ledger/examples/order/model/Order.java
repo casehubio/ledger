@@ -12,11 +12,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
 @Entity
 @Table(name = "orders")
-public class Order extends PanacheEntityBase {
+public class Order {
 
     @Id
     public UUID id;

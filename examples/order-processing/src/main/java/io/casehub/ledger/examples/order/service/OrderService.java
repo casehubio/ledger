@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import io.casehub.ledger.annotations.ActorId;
@@ -36,6 +37,9 @@ import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
 public class OrderService {
 
     @Inject
+    EntityManager em;
+
+    @Inject
     OrderLedgerEntryRepository ledgerRepo;
 
     @Inject
@@ -58,7 +62,7 @@ public class OrderService {
         order.customerId = customerId;
         order.total = total;
         order.status = OrderStatus.PLACED;
-        order.persist();
+        em.persist(order);
 
         if (ledgerConfig.enabled()) {
             record(order, "place", customerId);
@@ -112,7 +116,7 @@ public class OrderService {
     }
 
     private Order findOrThrow(final UUID orderId) {
-        return Optional.<Order> ofNullable(Order.findById(orderId))
+        return Optional.ofNullable(em.find(Order.class, orderId))
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
     }
 
