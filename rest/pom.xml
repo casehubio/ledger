@@ -39,8 +39,19 @@
     </dependency>
 
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.eclipse.microprofile.openapi</groupId>
       <artifactId>microprofile-openapi-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-api</artifactId>
       <scope>provided</scope>
     </dependency>
 
@@ -81,6 +92,29 @@
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-platform-graphql-generator</artifactId>
+              <version>0.2-SNAPSHOT</version>
+            </path>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-ledger-api</artifactId>
+              <version>${project.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Xlint:unchecked</arg>
+            <arg>-AdomainFilter=ledger/entries,ledger/attestations,ledger/trust,ledger/verification</arg>
+            <arg>-AgenerateGraphQL=false</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>io.smallrye</groupId>
         <artifactId>jandex-maven-plugin</artifactId>

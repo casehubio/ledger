@@ -1,4 +1,4 @@
-package io.casehub.ledger.runtime.service.api;
+package io.casehub.ledger.rest.api;
 
 import io.casehub.ledger.api.spi.TrustScoreSource;
 import io.casehub.platform.api.mcp.McpDomain;
