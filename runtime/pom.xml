@@ -78,6 +78,23 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- JAX-RS API — generated REST endpoints from @McpDomain classes -->
+    <dependency>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-jackson</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Scheduler — for nightly TrustScoreJob -->
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -175,7 +192,22 @@
               <artifactId>quarkus-extension-processor</artifactId>
               <version>${quarkus.version}</version>
             </path>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-platform-graphql-generator</artifactId>
+              <version>0.2-SNAPSHOT</version>
+            </path>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-ledger-api</artifactId>
+              <version>${project.version}</version>
+            </path>
           </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Xlint:unchecked</arg>
+            <arg>-AdomainFilter=ledger/entries,ledger/attestations,ledger/trust,ledger/verification</arg>
+            <arg>-AgenerateGraphQL=false</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
 
