@@ -17,7 +17,7 @@ import io.casehub.ledger.core.compliance.ChainEntry;
 import io.casehub.ledger.core.compliance.FrontierNode;
 import io.casehub.ledger.core.compliance.SubjectChain;
 import io.casehub.ledger.core.compliance.VerificationBundle;
-import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
+import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 
 @ApplicationScoped
 public class MerkleVerificationBundleService {
