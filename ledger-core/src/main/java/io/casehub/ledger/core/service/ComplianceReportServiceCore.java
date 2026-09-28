@@ -5,6 +5,7 @@ import io.casehub.ledger.api.model.supplement.ComplianceSupplement;
 import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.core.compliance.ComplianceReport;
+import io.casehub.ledger.core.compliance.ComplianceSummary;
 import io.casehub.ledger.core.compliance.DecisionRecord;
 
 import java.time.Instant;
@@ -30,7 +31,7 @@ public class ComplianceReportServiceCore {
                 .map(this::toDecisionRecord)
                 .toList();
         String merkleRoot = buildActorMerkleRoot(entries, tenancyId);
-        return new ComplianceReport(actorId, null, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
+        return new ComplianceReport(actorId, null, tenancyId, from, to, decisions.size(), decisions, ComplianceSummary.fromDecisions(decisions), merkleRoot);
     }
 
     public ComplianceReport reportForSubject(UUID subjectId, Instant from, Instant to, String tenancyId) {
@@ -40,7 +41,7 @@ public class ComplianceReportServiceCore {
                 .map(this::toDecisionRecord)
                 .toList();
         String merkleRoot = resolveSubjectMerkleRoot(subjectId, tenancyId);
-        return new ComplianceReport(null, subjectId, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
+        return new ComplianceReport(null, subjectId, tenancyId, from, to, decisions.size(), decisions, ComplianceSummary.fromDecisions(decisions), merkleRoot);
     }
 
     public ComplianceReport reportForTenancy(String tenancyId, Instant from, Instant to) {
@@ -50,7 +51,7 @@ public class ComplianceReportServiceCore {
                                                 .map(this::toDecisionRecord)
                                                 .toList();
         String merkleRoot = buildActorMerkleRoot(entries, tenancyId);
-        return new ComplianceReport(null, null, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
+        return new ComplianceReport(null, null, tenancyId, from, to, decisions.size(), decisions, ComplianceSummary.fromDecisions(decisions), merkleRoot);
     }
 
 
