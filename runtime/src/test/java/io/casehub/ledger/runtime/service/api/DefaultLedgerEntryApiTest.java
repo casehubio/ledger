@@ -16,8 +16,7 @@ class DefaultLedgerEntryApiTest {
 
     @BeforeEach
     void setUp() {
-        api = new DefaultLedgerEntryApi();
-        api.repository = new NoOpLedgerEntryRepository();
+        api = new DefaultLedgerEntryApi(new NoOpLedgerEntryRepository(), null);
     }
 
     @Test

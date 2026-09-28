@@ -16,9 +16,8 @@ class DefaultLedgerTrustApiTest {
 
     @BeforeEach
     void setUp() {
-        api = new DefaultLedgerTrustApi();
-        api.trustScoreSource = new MaterializedTrustScoreSource(
-                new NoOpActorTrustScoreRepository());
+        api = new DefaultLedgerTrustApi(new MaterializedTrustScoreSource(
+                new NoOpActorTrustScoreRepository()));
     }
 
     @Test
