@@ -12,7 +12,7 @@ import io.casehub.ledger.core.model.AttestationRecordedEvent;
 import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.core.signing.AgentEntrySigner;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.repository.LedgerMerkleFrontierRepository;
+import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
 import jakarta.annotation.Priority;

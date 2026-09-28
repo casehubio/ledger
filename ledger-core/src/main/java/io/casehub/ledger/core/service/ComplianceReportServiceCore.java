@@ -30,7 +30,7 @@ public class ComplianceReportServiceCore {
                 .map(this::toDecisionRecord)
                 .toList();
         String merkleRoot = buildActorMerkleRoot(entries, tenancyId);
-        return new ComplianceReport(actorId, null, from, to, decisions.size(), decisions, merkleRoot);
+        return new ComplianceReport(actorId, null, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
     }
 
     public ComplianceReport reportForSubject(UUID subjectId, Instant from, Instant to, String tenancyId) {
@@ -40,16 +40,27 @@ public class ComplianceReportServiceCore {
                 .map(this::toDecisionRecord)
                 .toList();
         String merkleRoot = resolveSubjectMerkleRoot(subjectId, tenancyId);
-        return new ComplianceReport(null, subjectId, from, to, decisions.size(), decisions, merkleRoot);
+        return new ComplianceReport(null, subjectId, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
     }
+
+    public ComplianceReport reportForTenancy(String tenancyId, Instant from, Instant to) {
+        List<LedgerEntry> entries = repo.findByTimeRange(from, to, tenancyId);
+        List<DecisionRecord> decisions = entries.stream()
+                                                .filter(e -> e.compliance().isPresent())
+                                                .map(this::toDecisionRecord)
+                                                .toList();
+        String merkleRoot = buildActorMerkleRoot(entries, tenancyId);
+        return new ComplianceReport(null, null, tenancyId, from, to, decisions.size(), decisions, null, merkleRoot);
+    }
+
 
     private DecisionRecord toDecisionRecord(LedgerEntry entry) {
         ComplianceSupplement cs = entry.compliance().orElseThrow();
         ProvenanceSupplement ps = entry.provenance().orElse(null);
         return new DecisionRecord(
-                entry.id, entry.occurredAt,
-                cs.algorithmRef, cs.confidenceScore,
-                cs.contestationUri, cs.humanOverrideAvailable,
+                entry.id, entry.entryType != null ? entry.entryType.name() : null, entry.occurredAt,
+                entry.actorId, cs.algorithmRef, cs.confidenceScore,
+                cs.planRef, cs.contestationUri, cs.humanOverrideAvailable,
                 ps != null ? ps.sourceEntityType : null,
                 ps != null ? ps.sourceEntityId : null);
     }
