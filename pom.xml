@@ -24,7 +24,8 @@
     <module>consumer-compat-test</module>
     <module>testing</module>
     <module>rest</module>
-    <module>graphql</module>
+    <!-- graphql requires casehub-platform-graphql-spring-generator (not yet published) -->
+    <!-- <module>graphql</module> -->
     <module>reporting</module>
     <module>ledger-spring</module>
     <module>ledger-spring-jpa</module>
