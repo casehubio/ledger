@@ -28,8 +28,10 @@
     <module>reporting</module>
     <module>ledger-spring</module>
     <module>ledger-spring-jpa</module>
-    <module>ledger-signing-spring</module>
-    <module>ledger-spring-integration-test</module>
+    <!-- signing-spring requires vault-transit/aws-kms/gcp-kms/azure-keyvault modules (not yet created) -->
+    <!-- <module>ledger-signing-spring</module> -->
+    <!-- spring-integration-test depends on signing-spring -->
+    <!-- <module>ledger-spring-integration-test</module> -->
   </modules>
 
   <repositories>
