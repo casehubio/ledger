@@ -363,7 +363,7 @@ This is a breaking change. No deployed instances exist.
 - `LedgerEntryEnricher.enrich()` parameter type changes:
   `runtime.model.LedgerEntry` → `api.model.LedgerEntry`
 - Engine's 5 `NoOpLedgerEntryRepository` copies need import update (#173)
-- `LedgerProcessor.LEDGER_ENTRY` DotName: `io.casehub.ledger.runtime.model.LedgerEntry`
+- `LedgerProcessor.LEDGER_ENTRY` DotName: `io.casehub.ledger.api.model.LedgerEntry`
   → `io.casehub.ledger.api.model.LedgerEntry`. Without this update, the
   `validateLedgerEntryFieldShadowing` and `validateDomainContentBytes` build-time
   validators silently stop finding subclasses (empty `getAllKnownSubclasses` result).

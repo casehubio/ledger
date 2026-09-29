@@ -10,7 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import io.casehub.ledger.runtime.model.ActorTrustScore;
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
 
 /**
  * REST facade for the EigenTrust mesh example.
@@ -63,7 +63,7 @@ public class MeshTrustResource {
             double globalTrustScore,
             int decisionCount) {
 
-        static ScoreView from(final ActorTrustScore s) {
+        static ScoreView from(final ActorTrustScoreBase s) {
             return new ScoreView(s.actorId, s.trustScore, s.globalTrustScore, s.decisionCount);
         }
     }

@@ -11,9 +11,9 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import io.casehub.ledger.runtime.service.LedgerVerificationService;
-import io.casehub.ledger.runtime.service.model.InclusionProof;
+import io.casehub.ledger.core.merkle.InclusionProof;
 
 /**
  * Demonstrates Merkle tree inclusion proof generation and independent verification.
@@ -36,13 +36,13 @@ public class MerkleVerificationExample {
             e.actorId = "example-actor";
             e.actorType = ActorType.SYSTEM;
             e.actorRole = "Demonstrator";
-            repo.save(e);
+            repo.save(e, "default");
         }
 
-        final String root = verification.treeRoot(subjectId);
+        final String root = verification.treeRoot(subjectId, "default");
 
-        final List<LedgerEntry> entries = repo.findBySubjectId(subjectId);
-        final InclusionProof proof = verification.inclusionProof(entries.get(2).id);
+        final List<LedgerEntry> entries = repo.findBySubjectId(subjectId, "default");
+        final InclusionProof proof = verification.inclusionProof(entries.get(2).id, "default");
 
         final boolean valid = LedgerMerkleTree.verifyProof(proof, root);
 

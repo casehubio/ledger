@@ -9,7 +9,7 @@ import jakarta.enterprise.event.ObservesAsync;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.service.routing.TrustScoreComputedAt;
+import io.casehub.ledger.core.event.TrustScoreComputedAt;
 
 @ApplicationScoped
 public class RoutingSignalLogger {

@@ -6,7 +6,7 @@
 
 Why a GDPR Art.17 erasure was performed.
 
-<p>Stored on `io.casehub.ledger.runtime.model.ErasureReceiptLedgerEntry`
+<p>Stored on `io.casehub.ledger.jpa.ErasureReceiptLedgerEntry`
 to make the legal basis for each erasure event queryable and auditable.
 
 ## Enum Constants

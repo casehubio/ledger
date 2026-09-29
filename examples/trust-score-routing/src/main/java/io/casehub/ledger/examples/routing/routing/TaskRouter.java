@@ -7,7 +7,7 @@ import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 
-import io.casehub.ledger.runtime.service.routing.TrustScoreFullPayload;
+import io.casehub.ledger.core.event.TrustScoreFullPayload;
 
 @ApplicationScoped
 public class TaskRouter {

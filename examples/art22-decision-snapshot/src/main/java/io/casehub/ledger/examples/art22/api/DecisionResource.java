@@ -14,8 +14,8 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntry;
 import io.casehub.ledger.examples.art22.service.DecisionService;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.jpa.JpaComplianceSupplement;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 
 @Path("/decisions")
 @Produces(MediaType.APPLICATION_JSON)

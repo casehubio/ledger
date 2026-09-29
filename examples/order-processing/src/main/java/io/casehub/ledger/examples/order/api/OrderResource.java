@@ -30,7 +30,7 @@ import io.casehub.ledger.examples.order.service.OrderService;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerAttestation;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 
 /**
  * REST API for the order-processing example.
@@ -183,7 +183,7 @@ public class OrderResource {
             @PathParam("entryId") final UUID entryId,
             final AttestationRequest req) {
 
-        final io.casehub.ledger.runtime.model.LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
+        final io.casehub.ledger.jpa.LedgerAttestation attestation = new io.casehub.ledger.jpa.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
         attestation.subjectId = orderId;
         attestation.attestorId = req.attestorId();

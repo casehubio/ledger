@@ -66,7 +66,7 @@ public class EventRecordingResource {
         entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         entry.eventName = request.name();
 
-        repo.save(entry);
+        repo.save(entry, "default");
         // traceId was auto-populated by LedgerTraceListener — no code needed here
 
         return Response.status(201).entity(new EventResponse(entry.id, entry.traceId)).build();
