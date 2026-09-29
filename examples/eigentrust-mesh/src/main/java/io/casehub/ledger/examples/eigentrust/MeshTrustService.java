@@ -11,10 +11,10 @@ import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.platform.api.identity.TenancyConstants;
 import jakarta.transaction.Transactional;
 
-import io.casehub.ledger.runtime.model.ActorTrustScore;
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
+import io.casehub.ledger.jpa.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
@@ -105,9 +105,9 @@ public class MeshTrustService {
     }
 
     /**
-     * Returns all computed {@link ActorTrustScore} records.
+     * Returns all computed {@link ActorTrustScoreBase} records.
      */
-    public List<ActorTrustScore> getScores() {
+    public List<ActorTrustScoreBase> getScores() {
         return trustRepo.findAll();
     }
 

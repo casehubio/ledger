@@ -7,7 +7,7 @@ import java.util.Optional;
 import io.casehub.ledger.api.model.LedgerAttestation;
 
 /**
- * SPI for determining which attestations contribute to the GLOBAL {@link io.casehub.ledger.runtime.model.ActorTrustScore}.
+ * SPI for determining which attestations contribute to the GLOBAL {@link io.casehub.ledger.jpa.ActorTrustScore}.
  *
  * <p>
  * Three built-in implementations reflect the three literature-backed positions on what

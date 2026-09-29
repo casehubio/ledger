@@ -3,7 +3,7 @@ package io.casehub.ledger.api.model;
 /**
  * Why a GDPR Art.17 erasure was performed.
  *
- * <p>Stored on {@link io.casehub.ledger.runtime.model.ErasureReceiptLedgerEntry}
+ * <p>Stored on {@link io.casehub.ledger.jpa.ErasureReceiptLedgerEntry}
  * to make the legal basis for each erasure event queryable and auditable.
  */
 public enum ErasureReason {

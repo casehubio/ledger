@@ -13,7 +13,7 @@ import io.casehub.ledger.examples.art12.ledger.DecisionEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.jpa.JpaComplianceSupplement;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 
 /**
@@ -51,16 +51,16 @@ public class AuditService {
         cs.humanOverrideAvailable = true;
         e.attach(cs);
 
-        repo.save(e);
+        repo.save(e, "default");
         return e;
     }
 
     public List<LedgerEntry> auditByActor(final String actorId,
             final Instant from, final Instant to) {
-        return repo.findByActorId(actorId, from, to);
+        return repo.findByActorId(actorId, from, to, "default");
     }
 
     public List<LedgerEntry> auditByTimeRange(final Instant from, final Instant to) {
-        return repo.findByTimeRange(from, to);
+        return repo.findByTimeRange(from, to, "default");
     }
 }

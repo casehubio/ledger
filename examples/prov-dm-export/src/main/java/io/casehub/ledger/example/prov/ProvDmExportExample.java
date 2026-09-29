@@ -8,8 +8,8 @@ import jakarta.transaction.Transactional;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.jpa.JpaComplianceSupplement;
+import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.ledger.runtime.service.LedgerProvExportService;

@@ -13,7 +13,7 @@ import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntry;
 import io.casehub.ledger.examples.art22.ledger.DecisionLedgerEntryRepository;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.jpa.JpaComplianceSupplement;
 import io.casehub.platform.api.identity.TenancyConstants;
 
 /**

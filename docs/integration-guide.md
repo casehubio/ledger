@@ -52,7 +52,7 @@ Flyway picks up `casehub-ledger`'s migrations (V1000, V1001, V1002, V1003) autom
 ## Step 2 — Create your LedgerEntry subclass
 
 ```java
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 import jakarta.persistence.*;
 import java.util.UUID;
 
