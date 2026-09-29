@@ -27,8 +27,10 @@
     <!-- graphql requires casehub-platform-graphql-spring-generator (not yet published) -->
     <!-- <module>graphql</module> -->
     <module>reporting</module>
-    <module>ledger-spring</module>
-    <module>ledger-spring-jpa</module>
+    <!-- ledger-spring uses casehub-platform-graphql-spring-generator plugin (not yet published) -->
+    <!-- <module>ledger-spring</module> -->
+    <!-- ledger-spring-jpa depends on ledger-spring -->
+    <!-- <module>ledger-spring-jpa</module> -->
     <!-- signing-spring requires vault-transit/aws-kms/gcp-kms/azure-keyvault modules (not yet created) -->
     <!-- <module>ledger-signing-spring</module> -->
     <!-- spring-integration-test depends on signing-spring -->
