@@ -21,7 +21,7 @@ import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
-import jakarta.annotation.Priority;
+import io.quarkus.arc.DefaultBean;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -54,12 +54,12 @@ import java.util.stream.Stream;
  * {@link EntityManager} directly.
  *
  * <p>
- * Auto-displaces the {@code @DefaultBean} NoOp via {@code @Priority(1)}.
- * When a domain-specific {@code LedgerEntryRepository} is present (e.g. Tarkus's
- * {@code JpaWorkItemLedgerEntryRepository}), the consumer's bean takes precedence.
+ * {@code @DefaultBean} so consumers can provide their own {@code LedgerEntryRepository}
+ * implementation (e.g. casehub-work's {@code JpaWorkItemLedgerEntryRepository})
+ * that automatically displaces this fallback.
  */
+@DefaultBean
 @ApplicationScoped
-@Priority(1)
 public class JpaLedgerEntryRepository implements LedgerEntryRepository {
 
     private static final Logger log = Logger.getLogger(JpaLedgerEntryRepository.class);
@@ -242,7 +242,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
         final LedgerEntry entry = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
                                     .setParameter("id", attestation.ledgerEntryId)
                                     .setParameter("tenancyId", tenancyId)
-                                    .getResultStream().findFirst().orElse(null);
+                                    .setMaxResults(1).getResultList().stream().findFirst().orElse(null);
         if (entry == null) {
             throw new IllegalArgumentException(
                     "LedgerEntry " + attestation.ledgerEntryId + " not found in tenant " + tenancyId);
