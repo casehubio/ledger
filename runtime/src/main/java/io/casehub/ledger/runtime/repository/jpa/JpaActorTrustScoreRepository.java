@@ -114,25 +114,44 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
             final int attestationPositive, final int attestationNegative,
             final Instant lastComputedAt) {
 
-        ActorTrustScore score = findExisting(actorId, scoreType, capabilityKey, dimensionKey);
-        if (score == null) {
-            score = new ActorTrustScore();
+        ActorTrustScore existing = findExisting(actorId, scoreType, capabilityKey, dimensionKey);
+        if (existing == null) {
+            ActorTrustScore score = new ActorTrustScore();
             score.id = UUID.randomUUID();
             score.actorId = actorId;
             score.scoreType = scoreType;
             score.capabilityKey = capabilityKey;
             score.dimensionKey = dimensionKey;
+            score.actorType = actorType;
+            score.trustScore = trustScore;
+            score.alphaValue    = alpha;
+            score.betaValue     = beta;
+            score.decisionCount = decisionCount;
+            score.overturnedCount = overturnedCount;
+            score.attestationPositive = attestationPositive;
+            score.attestationNegative = attestationNegative;
+            score.lastComputedAt = lastComputedAt;
+            em.persist(score);
+        } else {
+            em.createQuery("UPDATE ActorTrustScore s SET " +
+                    "s.actorType = :actorType, s.trustScore = :trustScore, " +
+                    "s.alphaValue = :alpha, s.betaValue = :beta, " +
+                    "s.decisionCount = :decisionCount, s.overturnedCount = :overturnedCount, " +
+                    "s.attestationPositive = :posAtt, s.attestationNegative = :negAtt, " +
+                    "s.lastComputedAt = :lastComputedAt " +
+                    "WHERE s.id = :id")
+                .setParameter("actorType", actorType)
+                .setParameter("trustScore", trustScore)
+                .setParameter("alpha", alpha)
+                .setParameter("beta", beta)
+                .setParameter("decisionCount", decisionCount)
+                .setParameter("overturnedCount", overturnedCount)
+                .setParameter("posAtt", attestationPositive)
+                .setParameter("negAtt", attestationNegative)
+                .setParameter("lastComputedAt", lastComputedAt)
+                .setParameter("id", existing.id)
+                .executeUpdate();
         }
-        score.actorType = actorType;
-        score.trustScore = trustScore;
-        score.alphaValue    = alpha;
-        score.betaValue     = beta;
-        score.decisionCount = decisionCount;
-        score.overturnedCount = overturnedCount;
-        score.attestationPositive = attestationPositive;
-        score.attestationNegative = attestationNegative;
-        score.lastComputedAt = lastComputedAt;
-        em.merge(score);
     }
 
     private ActorTrustScore findExisting(final String actorId, final ScoreType scoreType,
