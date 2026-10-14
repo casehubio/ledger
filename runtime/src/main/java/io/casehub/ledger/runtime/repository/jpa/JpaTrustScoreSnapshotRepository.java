@@ -3,7 +3,7 @@ package io.casehub.ledger.runtime.repository.jpa;
 import io.casehub.ledger.api.model.TrustScoreSnapshotBase;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
 import io.casehub.ledger.jpa.LedgerPersistenceUnit;
-import jakarta.annotation.Priority;
+import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.List;
 
 @ApplicationScoped
-@Priority(1)
+@DefaultBean
 public class JpaTrustScoreSnapshotRepository implements TrustScoreSnapshotRepository {
 
     @Inject
