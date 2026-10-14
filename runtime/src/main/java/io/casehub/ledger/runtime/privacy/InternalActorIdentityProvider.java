@@ -43,7 +43,7 @@ public class InternalActorIdentityProvider implements ActorIdentityProvider {
         }
         return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
                  .setParameter("actorId", rawActorId)
-                 .getResultStream()
+                 .setMaxResults(1).getResultList().stream()
                  .map(a -> a.token)
                  .findFirst()
                  .orElseGet(() -> {
@@ -61,7 +61,7 @@ public class InternalActorIdentityProvider implements ActorIdentityProvider {
                              || e.getCause() instanceof ConstraintViolationException) {
                              return em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
                                       .setParameter("actorId", rawActorId)
-                                      .getResultStream()
+                                      .setMaxResults(1).getResultList().stream()
                                       .map(a -> a.token)
                                       .findFirst()
                                       .orElseThrow(() -> new IllegalStateException(
@@ -87,7 +87,7 @@ public class InternalActorIdentityProvider implements ActorIdentityProvider {
         }
         return Optional.of(em.createNamedQuery("ActorIdentity.findByActorId", ActorIdentity.class)
                 .setParameter("actorId", rawActorId)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .map(a -> a.token)
                 .findFirst()
                 .orElse(rawActorId));

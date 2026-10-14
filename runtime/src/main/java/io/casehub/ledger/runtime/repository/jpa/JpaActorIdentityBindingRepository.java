@@ -34,7 +34,7 @@ public class JpaActorIdentityBindingRepository implements ActorIdentityBindingRe
                 .setParameter("actorId", actorId)
                 .setParameter("tenancyId", tenancyId)
                 .setMaxResults(1)
-                .getResultStream()
+                .getResultList().stream()
                 .findFirst();
     }
 

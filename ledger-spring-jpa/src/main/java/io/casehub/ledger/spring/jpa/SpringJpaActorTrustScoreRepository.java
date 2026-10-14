@@ -27,7 +27,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
         return em.createNamedQuery("ActorTrustScore.findGlobalByActorId", ActorTrustScore.class)
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.GLOBAL)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -38,7 +38,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.CAPABILITY)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -49,7 +49,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.DIMENSION)
                 .setParameter("dimensionKey", dimension)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -61,7 +61,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
                 .setParameter("scoreType", ScoreType.CAPABILITY_DIMENSION)
                 .setParameter("capabilityKey", capabilityTag)
                 .setParameter("dimensionKey", dimension)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -72,7 +72,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.CAPABILITY_DIMENSION)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -80,7 +80,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
         return em.createNamedQuery("ActorTrustScore.findByActorIdAndScoreType", ActorTrustScore.class)
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", scoreType)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -135,13 +135,13 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
     @Override
     public List<ActorTrustScoreBase> findAll() {
         return em.createNamedQuery("ActorTrustScore.findAll", ActorTrustScore.class)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
     public List<ActorTrustScoreBase> findAllDetached() {
         return em.createNamedQuery("ActorTrustScore.findAll", ActorTrustScore.class)
-                .getResultStream()
+                .getResultList().stream()
                 .peek(em::detach)
                 .<ActorTrustScoreBase>map(s -> s)
                 .toList();
@@ -151,7 +151,7 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
     public List<ActorTrustScoreBase> findAllByLastComputedAtAfter(Instant since) {
         return em.createNamedQuery("ActorTrustScore.findAllByLastComputedAtAfter", ActorTrustScore.class)
                 .setParameter("since", since)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -163,6 +163,6 @@ public class SpringJpaActorTrustScoreRepository implements ActorTrustScoreReposi
                 .setParameter("actorIds", actorIds)
                 .setParameter("scoreType", ScoreType.CAPABILITY)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 }

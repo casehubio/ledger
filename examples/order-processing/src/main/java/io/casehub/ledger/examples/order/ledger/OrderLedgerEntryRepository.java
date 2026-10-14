@@ -41,7 +41,7 @@ public class OrderLedgerEntryRepository extends JpaLedgerEntryRepository {
                 OrderLedgerEntry.class)
                 .setParameter("sid", orderId)
                 .setMaxResults(1)
-                .getResultStream()
+                .getResultList().stream()
                 .findFirst();
     }
 }
