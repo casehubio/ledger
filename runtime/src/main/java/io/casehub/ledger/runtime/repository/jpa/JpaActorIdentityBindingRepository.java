@@ -4,7 +4,7 @@ import io.casehub.ledger.jpa.ActorIdentityBindingEntry;
 import io.casehub.ledger.jpa.LedgerPersistenceUnit;
 import io.casehub.ledger.runtime.repository.ActorIdentityBindingRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.annotation.Priority;
+import io.quarkus.arc.DefaultBean;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 
@@ -16,10 +16,10 @@ import java.util.Optional;
  *
  * <p>Read-only — saves go through {@link io.casehub.ledger.api.spi.LedgerEntryRepository#save}.
  *
- * <p>Auto-displaces the {@code @DefaultBean} NoOp via {@code @Priority(1)}.
+ * <p>Auto-displaces the {@code @DefaultBean} NoOp via {@code @DefaultBean}.
  */
 @ApplicationScoped
-@Priority(1)
+@DefaultBean
 public class JpaActorIdentityBindingRepository implements ActorIdentityBindingRepository {
 
     @Inject
