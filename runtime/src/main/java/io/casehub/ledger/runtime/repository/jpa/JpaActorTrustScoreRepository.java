@@ -46,7 +46,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
         return em.createNamedQuery("ActorTrustScore.findGlobalByActorId", ActorTrustScore.class)
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.GLOBAL)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -57,7 +57,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.CAPABILITY)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -68,7 +68,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.DIMENSION)
                 .setParameter("dimensionKey", dimension)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -81,7 +81,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
                 .setParameter("scoreType", ScoreType.CAPABILITY_DIMENSION)
                 .setParameter("capabilityKey", capabilityTag)
                 .setParameter("dimensionKey", dimension)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .<ActorTrustScoreBase>map(s -> s)
                 .findFirst();
     }
@@ -92,7 +92,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", ScoreType.CAPABILITY_DIMENSION)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -101,7 +101,7 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
         return em.createNamedQuery("ActorTrustScore.findByActorIdAndScoreType", ActorTrustScore.class)
                 .setParameter("actorId", actorId)
                 .setParameter("scoreType", scoreType)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -157,14 +157,14 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
     @Override
     public List<ActorTrustScoreBase> findAll() {
         return em.createNamedQuery("ActorTrustScore.findAll", ActorTrustScore.class)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
     public List<ActorTrustScoreBase> findAllByLastComputedAtAfter(final Instant since) {
         return em.createNamedQuery("ActorTrustScore.findAllByLastComputedAtAfter", ActorTrustScore.class)
                 .setParameter("since", since)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 
     @Override
@@ -177,6 +177,6 @@ public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
                 .setParameter("actorIds", actorIds)
                 .setParameter("scoreType", ScoreType.CAPABILITY)
                 .setParameter("capabilityKey", capabilityTag)
-                .getResultStream().<ActorTrustScoreBase>map(s -> s).toList();
+                .getResultList().stream().<ActorTrustScoreBase>map(s -> s).toList();
     }
 }

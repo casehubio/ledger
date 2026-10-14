@@ -158,7 +158,7 @@ public class SpringJpaLedgerEntryRepository implements LedgerEntryRepository {
                 .setParameter("subjectId", subjectId)
                 .setParameter("tenancyId", tenancyId)
                 .setMaxResults(1)
-                .getResultStream()
+                .getResultList().stream()
                 .findFirst();
         result.ifPresent(this::loadSupplements);
         return result;
@@ -169,7 +169,7 @@ public class SpringJpaLedgerEntryRepository implements LedgerEntryRepository {
         Optional<LedgerEntry> result = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
                 .setParameter("id", id)
                 .setParameter("tenancyId", tenancyId)
-                .getResultStream()
+                .setMaxResults(1).getResultList().stream()
                 .findFirst();
         result.ifPresent(this::loadSupplements);
         return result;
@@ -189,7 +189,7 @@ public class SpringJpaLedgerEntryRepository implements LedgerEntryRepository {
         LedgerEntry entry = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
                 .setParameter("id", attestation.ledgerEntryId)
                 .setParameter("tenancyId", tenancyId)
-                .getResultStream().findFirst().orElse(null);
+                .setMaxResults(1).getResultList().stream().findFirst().orElse(null);
         if (entry == null) {
             throw new IllegalArgumentException(
                     "LedgerEntry " + attestation.ledgerEntryId + " not found in tenant " + tenancyId);

@@ -202,7 +202,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
                                                .setParameter("subjectId", subjectId)
                                                .setParameter("tenancyId", tenancyId)
                                                .setMaxResults(1)
-                                               .getResultStream()
+                                               .getResultList().stream()
                                                .findFirst();
         result.ifPresent(this::loadSupplements);
         return result;
@@ -216,7 +216,7 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
         final Optional<LedgerEntry> result = em.createNamedQuery("LedgerEntry.findByIdAndTenancyId", LedgerEntry.class)
                                                .setParameter("id", id)
                                                .setParameter("tenancyId", tenancyId)
-                                               .getResultStream()
+                                               .setMaxResults(1).getResultList().stream()
                                                .findFirst();
         result.ifPresent(this::loadSupplements);
         return result;
