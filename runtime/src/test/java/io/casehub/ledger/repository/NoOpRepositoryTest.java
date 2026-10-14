@@ -11,14 +11,13 @@ import org.junit.jupiter.api.Test;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.jpa.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.NoOpActorIdentityBindingRepository;
 import io.casehub.ledger.core.repository.NoOpActorTrustScoreRepository;
 import io.casehub.ledger.core.repository.NoOpLedgerEntryRepository;
 import io.casehub.ledger.service.supplement.TestEntry;
 import io.casehub.platform.api.identity.ActorType;
 
 /**
- * Unit tests for {@link NoOpLedgerEntryRepository} and {@link NoOpActorIdentityBindingRepository}.
+ * Unit tests for {@link NoOpLedgerEntryRepository} and {@link NoOpActorTrustScoreRepository}.
  *
  * <p>No Quarkus container — both no-ops have zero CDI dependencies and are instantiated
  * directly. Tests verify the CDI-satisfaction contract: all read methods return empty,
@@ -27,7 +26,6 @@ import io.casehub.platform.api.identity.ActorType;
 class NoOpRepositoryTest {
 
     private final NoOpLedgerEntryRepository ledgerRepo = new NoOpLedgerEntryRepository();
-    private final NoOpActorIdentityBindingRepository bindingRepo = new NoOpActorIdentityBindingRepository();
     private final NoOpActorTrustScoreRepository trustRepo = new NoOpActorTrustScoreRepository();
 
     // ── NoOpLedgerEntryRepository ─────────────────────────────────────────────
@@ -108,18 +106,6 @@ class NoOpRepositoryTest {
     void ledgerRepo_findAttestationsByAttestorIdAndCapabilityTag_returnsEmpty() {
         assertThat(ledgerRepo.findAttestationsByAttestorIdAndCapabilityTag(
                 "attestor", "*", "tenant")).isEmpty();
-    }
-
-    // ── NoOpActorIdentityBindingRepository ───────────────────────────────────
-
-    @Test
-    void bindingRepo_latestBindingFor_returnsEmpty() {
-        assertThat(bindingRepo.latestBindingFor("actor", "tenant")).isEmpty();
-    }
-
-    @Test
-    void bindingRepo_bindingHistoryFor_returnsEmpty() {
-        assertThat(bindingRepo.bindingHistoryFor("actor", "tenant")).isEmpty();
     }
 
     // ── NoOpActorTrustScoreRepository ─────────────────────────────────────────
