@@ -42,7 +42,7 @@ public class LedgerCoreProducer {
     }
 
     @Produces
-    @ApplicationScoped
+    @DefaultBean
     public TrustScoreCalculator trustScoreCalculator(final DecayFunction decayFunction,
                                                      final GlobalScoreStrategy globalStrategy,
                                                      final AttestorCredibilityPolicy credibilityPolicy) {
@@ -50,19 +50,19 @@ public class LedgerCoreProducer {
     }
 
     @Produces
-    @ApplicationScoped
+    @DefaultBean
     public TrustGateService trustGateService(final TrustScoreSource source) {
         return new TrustGateService(source);
     }
 
     @Produces
-    @ApplicationScoped
+    @DefaultBean
     public AttestationAggregator attestationAggregator() {
         return new AttestationAggregator();
     }
 
     @Produces
-    @ApplicationScoped
+    @DefaultBean
     public AgentEntrySigner agentEntrySigner(final AgentSigner signer) {
         return new AgentEntrySigner(signer);
     }
