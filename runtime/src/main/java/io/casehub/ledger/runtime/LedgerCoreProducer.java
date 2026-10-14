@@ -1,7 +1,6 @@
 package io.casehub.ledger.runtime;
 
 import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
@@ -10,7 +9,6 @@ import io.casehub.ledger.core.federation.NoOpTrustBootstrapSource;
 import io.casehub.ledger.core.federation.NoOpTrustImportService;
 import io.casehub.ledger.core.federation.TrustBootstrapSource;
 import io.casehub.ledger.core.federation.TrustImportService;
-import io.casehub.ledger.core.repository.NoOpLedgerEntryRepository;
 import io.casehub.ledger.core.signing.AgentEntrySigner;
 import io.casehub.ledger.core.signing.AgentSigner;
 import io.casehub.ledger.core.trust.AllAttestationsGlobalStrategy;
@@ -67,12 +65,6 @@ public class LedgerCoreProducer {
     @ApplicationScoped
     public AgentEntrySigner agentEntrySigner(final AgentSigner signer) {
         return new AgentEntrySigner(signer);
-    }
-
-    @Produces
-    @DefaultBean
-    public LedgerEntryRepository noOpLedgerEntryRepository() {
-        return new NoOpLedgerEntryRepository();
     }
 
     @Produces
