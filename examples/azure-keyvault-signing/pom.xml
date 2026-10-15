@@ -8,7 +8,7 @@
 
   <groupId>io.casehub.ledger.examples</groupId>
   <artifactId>casehub-ledger-example-azure-keyvault-signing</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.3</version>
 
   <name>CaseHub Ledger - Example: Azure Key Vault Signing</name>
   <description>
@@ -20,7 +20,7 @@
 
   <properties>
     <quarkus.version>3.32.2</quarkus.version>
-    <casehub-ledger.version>0.2-SNAPSHOT</casehub-ledger.version>
+    <casehub-ledger.version>0.3</casehub-ledger.version>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
