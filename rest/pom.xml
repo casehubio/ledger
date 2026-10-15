@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.casehub</groupId>
     <artifactId>casehub-ledger-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
   </parent>
 
   <artifactId>casehub-ledger-rest</artifactId>
@@ -99,7 +99,7 @@
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.2-SNAPSHOT</version>
+              <version>0.3</version>
             </path>
             <path>
               <groupId>io.casehub</groupId>
