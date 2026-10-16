@@ -6,7 +6,7 @@
 
   <groupId>io.casehub</groupId>
   <artifactId>casehub-ledger-parent</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>CaseHub Ledger - Parent</name>
@@ -97,17 +97,17 @@
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-api</artifactId>
-        <version>0.3</version>
+        <version>0.4-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-identity</artifactId>
-        <version>0.3</version>
+        <version>0.4-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-graphql</artifactId>
-        <version>0.3</version>
+        <version>0.4-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
