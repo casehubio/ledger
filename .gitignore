@@ -32,3 +32,5 @@ proj
 .worktrees
 .claude
 .claude/
+
+.flattened-pom.xml
