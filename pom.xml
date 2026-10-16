@@ -6,7 +6,7 @@
 
   <groupId>io.casehub</groupId>
   <artifactId>casehub-ledger-parent</artifactId>
-  <version>0.4-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <name>CaseHub Ledger - Parent</name>
@@ -68,6 +68,7 @@
   </scm>
 
   <properties>
+    <revision>0.4-SNAPSHOT</revision>
     <quarkus.version>3.32.2</quarkus.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
@@ -172,6 +173,7 @@
         </property>
       </activation>
       <properties>
+    <revision>0.4-SNAPSHOT</revision>
         <skipITs>false</skipITs>
         <quarkus.native.enabled>true</quarkus.native.enabled>
       </properties>
