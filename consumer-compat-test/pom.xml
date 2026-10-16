@@ -11,7 +11,7 @@
 
   <groupId>io.casehub.ledger.compat</groupId>
   <artifactId>casehub-ledger-consumer-compat-test</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
 
   <name>CaseHub Ledger - Consumer Compatibility Test</name>
   <description>
@@ -22,7 +22,7 @@
 
   <properties>
     <quarkus.version>3.32.2</quarkus.version>
-    <casehub.version>0.3</casehub.version>
+    <casehub.version>0.4-SNAPSHOT</casehub.version>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>

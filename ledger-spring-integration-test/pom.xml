@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-ledger-parent</artifactId>
-        <version>0.3</version>
+        <version>0.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>casehub-ledger-spring-integration-test</artifactId>
@@ -65,7 +65,7 @@
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-platform-spring-testing</artifactId>
-            <version>0.3</version>
+            <version>0.4-SNAPSHOT</version>
         </dependency>
 
         <!-- Spring Boot starters -->

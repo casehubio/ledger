@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-ledger-parent</artifactId>
-        <version>0.3</version>
+        <version>0.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>casehub-ledger-core</artifactId>
@@ -26,7 +26,7 @@
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-platform-api</artifactId>
-            <version>0.3</version>
+            <version>0.4-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
