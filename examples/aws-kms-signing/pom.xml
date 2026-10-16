@@ -8,7 +8,7 @@
 
   <groupId>io.casehub.ledger.examples</groupId>
   <artifactId>casehub-ledger-example-aws-kms-signing</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
 
   <name>CaseHub Ledger - Example: AWS KMS Signing</name>
   <description>

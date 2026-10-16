@@ -10,7 +10,7 @@
 
   <groupId>io.casehub.ledger.examples</groupId>
   <artifactId>casehub-ledger-example-merkle-verification</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
 
   <name>CaseHub Ledger :: Example :: Merkle Verification</name>
   <description>

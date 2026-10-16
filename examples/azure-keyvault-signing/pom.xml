@@ -8,7 +8,7 @@
 
   <groupId>io.casehub.ledger.examples</groupId>
   <artifactId>casehub-ledger-example-azure-keyvault-signing</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
 
   <name>CaseHub Ledger - Example: Azure Key Vault Signing</name>
   <description>

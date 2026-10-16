@@ -10,7 +10,7 @@
 
   <groupId>io.casehub.ledger.examples</groupId>
   <artifactId>casehub-ledger-example-trust-score-routing</artifactId>
-  <version>0.3</version>
+  <version>0.4-SNAPSHOT</version>
 
   <name>CaseHub Ledger - Example: Trust Score Routing</name>
   <description>
