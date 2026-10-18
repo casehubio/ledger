@@ -1,6 +1,7 @@
 package io.casehub.ledger.core.trust;
 
 import io.casehub.ledger.api.model.AttestationVerdict;
+
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
@@ -15,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 class ExponentialDecayFunctionTest {
+
 
     private static final int HALF_LIFE = 90;
     private static final double PERSISTENCE_MULTIPLIER = 0.5;
@@ -105,5 +108,6 @@ class ExponentialDecayFunctionTest {
             this.actorType = ActorType.AGENT;
             this.occurredAt = occurredAt;
         }};
+
     }
 }
