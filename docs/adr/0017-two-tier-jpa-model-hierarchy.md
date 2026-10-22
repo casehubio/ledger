@@ -9,7 +9,7 @@ The ledger's api module had shadow copies of entity classes (`LedgerEntry`, `Led
 
 ## Decision Drivers
 
-* Consumers (blocks, engine) need the write SPI (`LedgerEntryRepository`) at the api tier without depending on ledger runtime
+* Consumers (agency, engine) need the write SPI (`LedgerEntryRepository`) at the api tier without depending on ledger runtime
 * The platform supports H2, PostgreSQL, MongoDB, and Redis — persistence must be behind the SPI, not baked into model types
 * PLATFORM.MD mandates "consumer-facing SPI interfaces go in `api/spi/`" and "JPA entities must not co-locate with domain SPIs"
 * `@MappedSuperclass` with `@Column` is already the established pattern (`api.model.LedgerAttestation`)
