@@ -4,7 +4,7 @@
 **Status:** Approved
 **Scope:** New `casehub-ledger-annotations` module (runtime + deployment)
 **Issue:** casehubio/ledger#195
-**Epic:** casehubio/blocks#115 (annotation-driven agent programming model)
+**Epic:** casehubio/agency#115 (annotation-driven agent programming model)
 
 ## Motivation
 
@@ -53,7 +53,7 @@ annotations/
 - `quarkus-core-deployment` — BuildStep, Jandex
 - runtime module
 
-**No langchain4j-agentic dependency.** Ledger annotations are pure governance annotations that compose onto any CDI method. Cross-module composition with LC4j happens in the blocks build extension (casehub-blocks-engine-adapter), not via a direct ledger dependency.
+**No langchain4j-agentic dependency.** Ledger annotations are pure governance annotations that compose onto any CDI method. Cross-module composition with LC4j happens in the blocks build extension (casehub-agency-engine-adapter), not via a direct ledger dependency.
 
 ### Maven coordinates
 
@@ -346,7 +346,7 @@ New optional field (defaults to `LedgerEntryType.EVENT`). Currently `OutcomeReco
 
 ## Relationship to Blocks @Attestation
 
-Blocks `@Attestation` (in `casehub-blocks` api) is an orchestration-level annotation that wires `LifecycleAttestationObserver` for pattern execution results — it fires attestation intents via `AttestationIntentWriter`.
+Blocks `@Attestation` (in `casehub-agency` api) is an orchestration-level annotation that wires `LifecycleAttestationObserver` for pattern execution results — it fires attestation intents via `AttestationIntentWriter`.
 
 Ledger `@Attested` is the recording layer — it writes attestation entries to the ledger directly via `OutcomeRecorder`. Different concerns, different layers. A method could have both: `@Attestation` for orchestration-level lifecycle observation, `@Attested` for direct ledger recording.
 
