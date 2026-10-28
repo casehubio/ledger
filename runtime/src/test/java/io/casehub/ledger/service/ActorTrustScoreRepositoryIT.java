@@ -3,6 +3,13 @@ package io.casehub.ledger.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import io.quarkus.arc.Arc;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -33,6 +40,38 @@ class ActorTrustScoreRepositoryIT {
 
     @Inject
     ActorTrustScoreRepository repo;
+
+    @Test
+    void capabilityReads_areIsolatedAcrossThreadsSharingRequestContext() throws Exception {
+        final String actorId = "actor-parallel-" + System.nanoTime();
+        repo.upsert(actorId, ScoreType.CAPABILITY, "security-review", null, ActorType.AGENT,
+                0.85, 5, 0, 3.0, 1.0, 5, 0, Instant.now());
+        final var requestState = Arc.container().requestContext().getState();
+        final var start = new CountDownLatch(1);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            final var reads = new ArrayList<Future<?>>();
+            for (int i = 0; i < 8; i++) {
+                reads.add(executor.submit(() -> {
+                    final var requestContext = Arc.container().requestContext();
+                    requestContext.activate(requestState);
+                    try {
+                        start.await();
+                        for (int j = 0; j < 20; j++) {
+                            assertThat(repo.findCapabilityScore(actorId, "security-review"))
+                                    .get().extracting(score -> score.trustScore).isEqualTo(0.85);
+                        }
+                        return null;
+                    } finally {
+                        requestContext.deactivate();
+                    }
+                }));
+            }
+            start.countDown();
+            for (var read : reads) {
+                read.get(20, TimeUnit.SECONDS);
+            }
+        }
+    }
 
     // ── Backward compat: findByActorId still returns the GLOBAL score ─────────
 
