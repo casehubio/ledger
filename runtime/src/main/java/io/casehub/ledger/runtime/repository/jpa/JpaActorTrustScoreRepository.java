@@ -34,6 +34,7 @@ import java.util.UUID;
  * safe in practice.
  */
 @ApplicationScoped
+@Transactional
 @DefaultBean
 public class JpaActorTrustScoreRepository implements ActorTrustScoreRepository {
 
