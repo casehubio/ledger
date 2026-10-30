@@ -4,6 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>io.casehub</groupId>
+    <artifactId>casehub-parent</artifactId>
+    <version>0.4-SNAPSHOT</version>
+    <relativePath/>
+  </parent>
+
   <groupId>io.casehub</groupId>
   <artifactId>casehub-ledger-parent</artifactId>
   <version>0.4-SNAPSHOT</version>
@@ -37,17 +44,6 @@
     <!-- <module>ledger-spring-integration-test</module> -->
   </modules>
 
-  <repositories>
-    <repository>
-      <id>github</id>
-      <name>casehubio GitHub Packages</name>
-      <url>https://maven.pkg.github.com/casehubio/*</url>
-      <releases><enabled>false</enabled></releases>
-
-      <snapshots><enabled>true</enabled></snapshots>
-    </repository>
-  </repositories>
-
   <distributionManagement>
     <repository>
       <id>github</id>
@@ -70,22 +66,11 @@
   </scm>
 
   <properties>
-    <quarkus.version>3.32.2</quarkus.version>
-    <compiler-plugin.version>3.13.0</compiler-plugin.version>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <surefire-plugin.version>3.2.5</surefire-plugin.version>
+    <quarkus.version>${quarkus.platform.version}</quarkus.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>io.quarkus.platform</groupId>
-        <artifactId>quarkus-bom</artifactId>
-        <version>${quarkus.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-ledger-core</artifactId>
@@ -98,29 +83,8 @@
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-api</artifactId>
-        <version>0.4-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-identity</artifactId>
-        <version>0.4-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-graphql</artifactId>
-        <version>0.4-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
         <artifactId>casehub-ledger-testing</artifactId>
         <version>${project.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>3.26.3</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
