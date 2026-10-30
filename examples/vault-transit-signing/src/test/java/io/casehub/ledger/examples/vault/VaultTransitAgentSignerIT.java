@@ -20,8 +20,6 @@ import java.util.Optional;
 
 import jakarta.inject.Inject;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,23 +27,15 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 
 import io.casehub.ledger.runtime.service.AgentSignature;
 import io.casehub.ledger.runtime.service.AgentSigner;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@QuarkusTestResource(VaultWireMockResource.class)
 class VaultTransitAgentSignerIT {
 
-    static WireMockServer wireMock;
-
-    @BeforeAll
-    static void startWireMock() {
-        wireMock = new WireMockServer(8099);
-        wireMock.start();
-    }
-
-    @AfterAll
-    static void stopWireMock() {
-        wireMock.stop();
-    }
+    @InjectWireMock
+    WireMockServer wireMock;
 
     @BeforeEach
     void resetWireMock() {
@@ -82,7 +72,7 @@ class VaultTransitAgentSignerIT {
                 Base64.getEncoder().encodeToString(sigBytes) + "\"}}";
     }
 
-    private static void stubKeyInfo(final KeyPair kp) {
+    private void stubKeyInfo(final KeyPair kp) {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/reviewer-key"))
                 .withHeader("X-Vault-Token", equalTo("test-token"))
                 .willReturn(okJson(keyInfoResponse(kp))));
@@ -95,7 +85,7 @@ class VaultTransitAgentSignerIT {
         return sig.sign();
     }
 
-    private static void stubSign(final KeyPair kp, final byte[] data) throws Exception {
+    private void stubSign(final KeyPair kp, final byte[] data) throws Exception {
         final byte[] sigBytes = realSign(kp, data);
         wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
                 .withHeader("X-Vault-Token", equalTo("test-token"))

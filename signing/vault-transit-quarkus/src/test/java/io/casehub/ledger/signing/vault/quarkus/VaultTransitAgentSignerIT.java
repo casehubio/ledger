@@ -25,8 +25,6 @@ import java.util.Optional;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,6 +38,7 @@ import io.casehub.ledger.core.signing.AgentSigner;
 import io.casehub.ledger.signing.vault.VaultAuthenticationException;
 import io.casehub.ledger.signing.vault.quarkus.VaultTransitConfig.AuthConfig;
 import io.casehub.ledger.signing.vault.quarkus.VaultTransitConfig.AuthMethod;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -48,20 +47,11 @@ import io.quarkus.test.junit.QuarkusTest;
  * {@code casehub-ledger-memory} satisfies repository SPIs without a real database.
  */
 @QuarkusTest
+@QuarkusTestResource(VaultWireMockResource.class)
 class VaultTransitAgentSignerIT {
 
-    static WireMockServer wireMock;
-
-    @BeforeAll
-    static void startWireMock() {
-        wireMock = new WireMockServer(8098);
-        wireMock.start();
-    }
-
-    @AfterAll
-    static void stopWireMock() {
-        wireMock.stop();
-    }
+    @InjectWireMock
+    WireMockServer wireMock;
 
     @BeforeEach
     void resetWireMock() {
@@ -99,7 +89,7 @@ class VaultTransitAgentSignerIT {
                 Base64.getEncoder().encodeToString(sigBytes) + "\"}}";
     }
 
-    private static void stubKeyInfo(final KeyPair kp) {
+    private void stubKeyInfo(final KeyPair kp) {
         wireMock.stubFor(get(urlEqualTo("/v1/transit/keys/reviewer-key"))
                 .willReturn(okJson(keyInfoResponse(kp))));
     }
@@ -111,7 +101,7 @@ class VaultTransitAgentSignerIT {
         return sig.sign();
     }
 
-    private static void stubSign(final KeyPair kp, final byte[] data) throws Exception {
+    private void stubSign(final KeyPair kp, final byte[] data) throws Exception {
         final byte[] sigBytes = realSign(kp, data);
         wireMock.stubFor(post(urlEqualTo("/v1/transit/sign/reviewer-key"))
                 .willReturn(okJson(signResponse(sigBytes))));
@@ -373,16 +363,16 @@ class VaultTransitAgentSignerIT {
                 .withRequestBody(containing("eyJhbGciOiJSUzI1NiJ9.k8s-sa")));
     }
 
-    private static VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
+    private VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
             final Optional<String> jwt, final Optional<String> mountPathOpt) {
         return jwtConfig(jwtPath, jwt, mountPathOpt, Optional.of("my-role"));
     }
 
-    private static VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
+    private VaultTransitConfig jwtConfig(final Optional<String> jwtPath,
             final Optional<String> jwt, final Optional<String> mountPathOpt,
             final Optional<String> role) {
         return new VaultTransitConfig() {
-            @Override public String address() { return "http://localhost:8098"; }
+            @Override public String address() { return wireMock.baseUrl(); }
             @Override public java.util.Map<String, String> keyMapping() {
                 return java.util.Map.of("claude:reviewer@v1", "reviewer-key");
             }
@@ -402,10 +392,10 @@ class VaultTransitAgentSignerIT {
         };
     }
 
-    private static VaultTransitConfig kubernetesConfig(final Optional<String> role,
+    private VaultTransitConfig kubernetesConfig(final Optional<String> role,
             final Optional<String> jwtPath, final Optional<String> mountPath) {
         return new VaultTransitConfig() {
-            @Override public String address() { return "http://localhost:8098"; }
+            @Override public String address() { return wireMock.baseUrl(); }
             @Override public java.util.Map<String, String> keyMapping() {
                 return java.util.Map.of("claude:reviewer@v1", "reviewer-key");
             }
