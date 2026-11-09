@@ -4,11 +4,9 @@ import io.casehub.ledger.api.spi.TrustScoreSource;
 import io.casehub.ledger.api.view.CapabilityScoreView;
 import io.casehub.ledger.api.view.TrustRoutingProfileView;
 import io.casehub.ledger.api.view.TrustScoreView;
-import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformQuery;
 
-@McpDomain(value = "ledger/trust", basePath = "/api/v1/ledger/trust")
 public class LedgerTrustApiCore {
 
     private final TrustScoreSource trustScoreSource;

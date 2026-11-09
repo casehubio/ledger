@@ -16,6 +16,7 @@ import jakarta.inject.Inject;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @McpDomain(value = "ledger/entries", app = "ledger", basePath = "/api/v1/ledger", summary = "Ledger entry queries — by subject, actor, or ID with causal chain")
@@ -29,12 +30,13 @@ public class DefaultLedgerEntryApi {
         this.core = new io.casehub.ledger.core.api.LedgerEntryApiCore(repository, appender);
     }
 
-    @PlatformQuery("List ledger entries by subject or actor with optional time range")
-    public LedgerEntryPage listEntries(UUID subjectId, String actorId,
+    @PlatformQuery("List ledger entries filtered by subject or actor. Provide subjectId OR actorId — at least one required. Time range (from/to) narrows results. Returns paginated LedgerEntryPage")
+    public LedgerEntryPage listEntries(Optional<UUID> subjectId, Optional<String> actorId,
                                        @ContextParam("tenancyId") String tenancyId,
-                                       Instant from, Instant to,
-                                       Integer offset, Integer limit) {
-        return core.listEntries(subjectId, actorId, tenancyId, from, to, offset, limit);
+                                       Optional<Instant> from, Optional<Instant> to,
+                                       Optional<Integer> offset, Optional<Integer> limit) {
+        return core.listEntries(subjectId.orElse(null), actorId.orElse(null), tenancyId,
+                from.orElse(null), to.orElse(null), offset.orElse(null), limit.orElse(null));
     }
 
     @PlatformQuery("Get a single ledger entry by ID")

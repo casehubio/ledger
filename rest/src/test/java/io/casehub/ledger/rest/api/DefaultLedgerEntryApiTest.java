@@ -6,6 +6,7 @@ import io.casehub.ledger.core.repository.NoOpLedgerEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,7 +24,8 @@ class DefaultLedgerEntryApiTest {
     void listEntriesReturnsEmptyPageWhenNoEntries() {
         final UUID subjectId = UUID.randomUUID();
         final LedgerEntryPage page = api.listEntries(
-                subjectId, null, null, null, null, null, null);
+                Optional.of(subjectId), Optional.empty(), null,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertThat(page.entries()).isEmpty();
         assertThat(page.totalCount()).isZero();
         assertThat(page.hasMore()).isFalse();
@@ -32,7 +34,8 @@ class DefaultLedgerEntryApiTest {
     @Test
     void listEntriesReturnsEmptyWhenNeitherSubjectNorActor() {
         final LedgerEntryPage page = api.listEntries(
-                null, null, null, null, null, null, null);
+                Optional.empty(), Optional.empty(), null,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertThat(page.entries()).isEmpty();
     }
 

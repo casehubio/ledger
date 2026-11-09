@@ -8,7 +8,6 @@ import io.casehub.ledger.api.view.CreateAttestationRequest;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.platform.api.mcp.ContextParam;
-import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformMutation;
 import io.casehub.platform.api.mcp.PlatformQuery;
@@ -17,7 +16,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-@McpDomain("ledger/attestations")
 public class LedgerAttestationApiCore {
 
     private final LedgerEntryRepository repository;
