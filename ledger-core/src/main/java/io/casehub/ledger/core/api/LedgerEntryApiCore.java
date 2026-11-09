@@ -9,7 +9,6 @@ import io.casehub.ledger.api.view.LedgerEntryPage;
 import io.casehub.ledger.api.view.LedgerEntryView;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.platform.api.mcp.ContextParam;
-import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformMutation;
 import io.casehub.platform.api.mcp.PlatformQuery;
@@ -18,7 +17,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-@McpDomain(value = "ledger/entries", basePath = "/api/v1/ledger")
 public class LedgerEntryApiCore {
 
     private final LedgerEntryRepository repository;

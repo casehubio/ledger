@@ -6,13 +6,11 @@ import io.casehub.ledger.core.merkle.InclusionProof;
 import io.casehub.ledger.core.service.VerificationServiceCore;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.platform.api.mcp.ContextParam;
-import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformQuery;
 
 import java.util.UUID;
 
-@McpDomain(value = "ledger/verification", basePath = "/api/v1/ledger")
 public class LedgerVerificationApiCore {
 
     private final VerificationServiceCore verificationService;
