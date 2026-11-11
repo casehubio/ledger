@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-ledger-parent</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
     </parent>
 
     <artifactId>casehub-ledger-spring</artifactId>
@@ -122,7 +122,7 @@
             <plugin>
                 <groupId>io.casehub</groupId>
                 <artifactId>casehub-platform-graphql-spring-generator</artifactId>
-                <version>0.2-SNAPSHOT</version>
+                <version>0.3</version>
                 <executions>
                     <execution>
                         <id>generate</id>
