@@ -1,4 +1,4 @@
-package io.casehub.ledger.rest.api;
+package io.casehub.ledger.runtime.service.api;
 
 import io.casehub.ledger.api.model.AuditRecord;
 import io.casehub.ledger.api.model.LedgerEntry;

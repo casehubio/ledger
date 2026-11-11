@@ -1,4 +1,4 @@
-package io.casehub.ledger.rest.api;
+package io.casehub.ledger.runtime.service.api;
 
 import io.casehub.ledger.api.view.InclusionProofView;
 import io.casehub.platform.api.mcp.ContextParam;
