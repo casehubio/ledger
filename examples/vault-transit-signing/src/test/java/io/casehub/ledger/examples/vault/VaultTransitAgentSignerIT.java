@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 
-import io.casehub.ledger.runtime.service.AgentSignature;
-import io.casehub.ledger.runtime.service.AgentSigner;
+import io.casehub.ledger.core.signing.AgentSignature;
+import io.casehub.ledger.core.signing.AgentSigner;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
