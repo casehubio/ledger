@@ -25,6 +25,7 @@ class GcpKmsExampleIT {
 
     @Test
     void returnsEmpty_forUnmappedActor() {
+        assertThat(agentSigner).isInstanceOf(io.casehub.ledger.signing.gcp.quarkus.GcpKmsAgentSigner.class);
         final Optional<AgentSignature> result = agentSigner.sign("unmapped-actor", new byte[]{1});
         assertThat(result).isEmpty();
     }

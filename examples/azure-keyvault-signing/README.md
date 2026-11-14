@@ -50,12 +50,11 @@ This example demonstrates remote signing of ledger entries via Azure Key Vault. 
 ### Application Configuration
 
 ```properties
-casehub.ledger.azure-keyvault.vault-url=https://your-vault.vault.azure.net/
 casehub.ledger.azure-keyvault.refresh-interval=1h
 
 # Map actorId to Key Vault key name
-casehub.ledger.azure-keyvault.key-mapping."claude:reviewer@v1"=reviewer-signing-key
-casehub.ledger.azure-keyvault.key-mapping."claude:tester@v1"=tester-signing-key
+casehub.ledger.azure-keyvault.key-mapping."claude:reviewer@v1"=https://your-vault.vault.azure.net/#reviewer-signing-key
+casehub.ledger.azure-keyvault.key-mapping."claude:tester@v1"=https://your-vault.vault.azure.net/#tester-signing-key
 ```
 
 ### Azure Authentication
@@ -97,3 +96,6 @@ mvn test
 
 - [Azure Key Vault Documentation](https://learn.microsoft.com/en-us/azure/key-vault/)
 - [casehub-ledger-azure-keyvault-quarkus module](../../signing/azure-keyvault-quarkus/)
+
+This module is a Quarkus test fixture, not a standalone application. `mvn verify`
+runs its integration tests and packages the fixture JAR without building an application image.

@@ -94,3 +94,6 @@ mvn test
 
 - [AWS KMS Developer Guide](https://docs.aws.amazon.com/kms/latest/developerguide/)
 - [casehub-ledger-aws-kms-quarkus module](../../signing/aws-kms-quarkus/)
+
+This module is a Quarkus test fixture, not a standalone application. `mvn verify`
+runs its integration tests and packages the fixture JAR without building an application image.

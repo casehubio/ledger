@@ -47,14 +47,11 @@ This example demonstrates remote signing of ledger entries via Google Cloud Key 
 ### Application Configuration
 
 ```properties
-casehub.ledger.gcp-kms.project-id=your-gcp-project
-casehub.ledger.gcp-kms.location-id=us-east1
-casehub.ledger.gcp-kms.key-ring-id=ledger-signing
 casehub.ledger.gcp-kms.refresh-interval=1h
 
 # Map actorId to CryptoKey name
-casehub.ledger.gcp-kms.key-mapping."claude:reviewer@v1"=reviewer-signing-key
-casehub.ledger.gcp-kms.key-mapping."claude:tester@v1"=tester-signing-key
+casehub.ledger.gcp-kms.key-mapping."claude:reviewer@v1"=projects/test-project/locations/us-east1/keyRings/test-keyring/cryptoKeys/reviewer-signing-key/cryptoKeyVersions/1
+casehub.ledger.gcp-kms.key-mapping."claude:tester@v1"=projects/test-project/locations/us-east1/keyRings/test-keyring/cryptoKeys/tester-signing-key/cryptoKeyVersions/1
 ```
 
 ### GCP Authentication
@@ -95,3 +92,6 @@ mvn test
 
 - [GCP Cloud KMS Documentation](https://cloud.google.com/kms/docs)
 - [casehub-ledger-gcp-kms-quarkus module](../../signing/gcp-kms-quarkus/)
+
+This module is a Quarkus test fixture, not a standalone application. `mvn verify`
+runs its integration tests and packages the fixture JAR without building an application image.
