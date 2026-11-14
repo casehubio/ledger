@@ -38,6 +38,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build and test Azure signing adapters
+        run: mvn --batch-mode -Pwith-signing -pl signing/azure-keyvault-quarkus -am verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to GitHub Packages
         if: github.event_name != 'pull_request' && github.repository == 'casehubio/ledger'
         run: mvn --batch-mode deploy -DskipTests
