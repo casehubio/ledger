@@ -43,6 +43,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compile optional signing examples
+        run: mvn --batch-mode -Pwith-signing,with-examples test-compile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to GitHub Packages
         if: github.event_name != 'pull_request' && github.repository == 'casehubio/ledger'
         run: mvn --batch-mode deploy -DskipTests
