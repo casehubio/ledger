@@ -13,7 +13,7 @@ public class GcpKmsAgentSignerCore extends AbstractCachingAgentSigner<GcpKmsCont
 
     private static final Logger LOG = Logger.getLogger(GcpKmsAgentSignerCore.class.getName());
 
-    private final GcpKmsSigningClient client;
+    private GcpKmsSigningClient client;
     private final Map<String, String> keyMapping;
 
     protected GcpKmsAgentSignerCore() {
@@ -23,13 +23,19 @@ public class GcpKmsAgentSignerCore extends AbstractCachingAgentSigner<GcpKmsCont
 
     public GcpKmsAgentSignerCore(final Map<String, String> keyMapping) {
         this.keyMapping = keyMapping;
-        this.client = new GcpKmsSigningClient();
     }
 
     protected GcpKmsAgentSignerCore(final Map<String, String> keyMapping,
             final GcpKmsSigningClient client) {
         this.keyMapping = keyMapping;
         this.client = client;
+    }
+
+    private synchronized GcpKmsSigningClient client() {
+        if (client == null) {
+            client = new GcpKmsSigningClient();
+        }
+        return client;
     }
 
     @Override
@@ -39,13 +45,13 @@ public class GcpKmsAgentSignerCore extends AbstractCachingAgentSigner<GcpKmsCont
             LOG.log(Level.FINE, "No GCP Cloud KMS key configured for actor {0} — skipping signing", actorId);
             return Optional.empty();
         }
-        return Optional.ofNullable(client.fetchPublicKey(versionName));
+        return Optional.ofNullable(client().fetchPublicKey(versionName));
     }
 
     @Override
     protected AgentSignature performSign(final String actorId, final GcpKmsContext context,
             final byte[] data) {
-        final byte[] sigBytes = client.sign(context.versionName(), context.algorithm(), data);
+        final byte[] sigBytes = client().sign(context.versionName(), context.algorithm(), data);
         final byte[] pubEncoded = context.publicKey().getEncoded();
         final String keyRef = AgentSignature.computeKeyRef(pubEncoded);
         return new AgentSignature(sigBytes, pubEncoded, keyRef);
