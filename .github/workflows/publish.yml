@@ -43,11 +43,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install optional signing adapters
+        run: >-
+          mvn --batch-mode -Pwith-signing
+          -pl signing/aws-kms-quarkus,signing/azure-keyvault-quarkus,signing/gcp-kms-quarkus,signing/vault-transit-quarkus
+          -am install -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Verify optional signing examples
         run: >-
           mvn --batch-mode -Pwith-signing,with-examples
-          -pl examples/aws-kms-signing,examples/azure-keyvault-signing,examples/gcp-kms-signing,examples/vault-transit-signing
-          -am verify
+          -pl signing/gcp-kms,signing/gcp-kms-quarkus,examples/aws-kms-signing,examples/azure-keyvault-signing,examples/gcp-kms-signing,examples/vault-transit-signing
+          verify
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
