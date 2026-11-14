@@ -25,6 +25,7 @@ class AzureKeyVaultExampleIT {
 
     @Test
     void returnsEmpty_forUnmappedActor() {
+        assertThat(agentSigner).isInstanceOf(io.casehub.ledger.signing.azure.quarkus.AzureKeyVaultAgentSigner.class);
         final Optional<AgentSignature> result = agentSigner.sign("unmapped-actor", new byte[]{1});
         assertThat(result).isEmpty();
     }

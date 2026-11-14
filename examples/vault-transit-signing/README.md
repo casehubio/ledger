@@ -38,3 +38,6 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl examples/vault-transit-si
 ```
 
 The tests use WireMock to simulate the Vault Transit API — no real Vault instance required.
+
+This module is a Quarkus test fixture, not a standalone application. `mvn verify`
+runs its integration tests and packages the fixture JAR without building an application image.
