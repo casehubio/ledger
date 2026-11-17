@@ -13,6 +13,7 @@ import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.jpa.JpaLedgerEntry;
 import io.casehub.ledger.core.model.AgentKeyRotatedEvent;
 import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -37,6 +38,7 @@ import java.util.Optional;
  */
 @ApplicationScoped
 @Priority(50)
+@IfBuildProperty(name = "casehub.ledger.identity.enrichers.enabled", stringValue = "true", enableIfMissing = true)
 public class ActorIdentityValidationEnricher implements LedgerEntryEnricher {
 
     private static final Logger LOG = Logger.getLogger(ActorIdentityValidationEnricher.class);

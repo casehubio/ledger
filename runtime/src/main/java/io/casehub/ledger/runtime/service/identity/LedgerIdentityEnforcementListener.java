@@ -4,6 +4,8 @@ import io.casehub.ledger.core.model.LedgerIdentityViolationException;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.jpa.JpaLedgerEntry;
+import io.quarkus.arc.DefaultBean;
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.PrePersist;
@@ -28,7 +30,9 @@ import jakarta.persistence.PrePersist;
  * {@code SELECT MAX(sequenceNumber) + 1} within the same {@code @Transactional}
  * boundary. A thrown exception rolls back the transaction including that computation.
  */
+@DefaultBean
 @ApplicationScoped
+@IfBuildProperty(name = "casehub.ledger.identity.enrichers.enabled", stringValue = "true", enableIfMissing = true)
 public class LedgerIdentityEnforcementListener {
 
     @Inject

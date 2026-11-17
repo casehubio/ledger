@@ -7,6 +7,8 @@ import io.casehub.platform.api.identity.AgentIdentityValidatedEvent;
 import io.casehub.platform.api.identity.AgentIdentityViolationEvent;
 import io.casehub.platform.api.identity.CredentialValidationResult;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
+import io.quarkus.arc.DefaultBean;
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
@@ -28,7 +30,9 @@ import static jakarta.transaction.Transactional.TxType.REQUIRES_NEW;
  * <p>Uses {@code REQUIRES_NEW} so the binding entry commits in its own transaction,
  * independent of the parent entry's lifecycle. Failure is logged and swallowed.
  */
+@DefaultBean
 @ApplicationScoped
+@IfBuildProperty(name = "casehub.ledger.identity.enrichers.enabled", stringValue = "true", enableIfMissing = true)
 public class ActorIdentityBindingObserver {
 
     private static final Logger LOG = Logger.getLogger(ActorIdentityBindingObserver.class);
