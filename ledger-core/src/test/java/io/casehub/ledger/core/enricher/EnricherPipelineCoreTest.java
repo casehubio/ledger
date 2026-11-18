@@ -2,6 +2,7 @@ package io.casehub.ledger.core.enricher;
 
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.platform.api.identity.ActorType;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ class EnricherPipelineCoreTest {
                 new TestEnricher("second", 20, order),
                 new TestEnricher("first", 10, order),
                 new TestEnricher("third", 30, order)
-        );
+                                                    );
         var pipeline = new EnricherPipelineCore(enrichers);
         pipeline.enrich(stubEntry());
         assertThat(order).containsExactly("first", "second", "third");
@@ -87,6 +88,12 @@ class EnricherPipelineCoreTest {
         public int priority() {
             return prio;
         }
+
+        @Override
+        public String name() {
+            return "failing";
+        }
+
     }
 
     private static LedgerEntry stubEntry() {

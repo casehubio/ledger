@@ -1,8 +1,8 @@
 package io.casehub.ledger.runtime.service;
 
 import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.ledger.api.spi.LedgerTraceIdProvider;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,4 +27,8 @@ public class TraceIdEnricher implements LedgerEntryEnricher {
     public int priority() {
         return core.priority();
     }
+
+    @Override
+    public String name() {return core.name();}
+
 }

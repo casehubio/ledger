@@ -10,7 +10,7 @@ import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.api.spi.LedgerTraceIdProvider;
 import io.casehub.ledger.core.config.LedgerProperties;
 import io.casehub.ledger.core.enricher.EnricherPipelineCore;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.core.privacy.PassThroughActorIdentityProvider;
 import io.casehub.ledger.core.privacy.PassThroughContentSanitiser;

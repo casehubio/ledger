@@ -1,18 +1,18 @@
 package io.casehub.ledger.runtime.service.identity;
 
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
+import io.casehub.ledger.core.model.AgentKeyRotatedEvent;
+import io.casehub.ledger.jpa.JpaLedgerEntry;
+import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.platform.api.identity.AgentCredentialValidator;
 import io.casehub.platform.api.identity.AgentIdentityValidatedEvent;
 import io.casehub.platform.api.identity.AgentIdentityViolationEvent;
 import io.casehub.platform.api.identity.CredentialValidationResult;
 import io.casehub.platform.api.identity.DIDDocument;
-import io.casehub.platform.identity.AbstractCachingIdentityProvider;
 import io.casehub.platform.api.identity.DIDResolver;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
-import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.jpa.JpaLedgerEntry;
-import io.casehub.ledger.core.model.AgentKeyRotatedEvent;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.casehub.platform.identity.AbstractCachingIdentityProvider;
 import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -97,6 +97,10 @@ public class ActorIdentityValidationEnricher implements LedgerEntryEnricher {
                 entry.actorId, e.getMessage());
         }
     }
+
+    @Override
+    public String name() {return "identity-validation";}
+
 
     public void invalidate(final String actorId) {
         statusCache.invalidate(actorId);

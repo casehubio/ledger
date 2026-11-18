@@ -1,12 +1,11 @@
 package io.casehub.ledger.runtime.service.intercept;
 
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
+import io.casehub.ledger.jpa.JpaComplianceSupplement;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.jpa.JpaComplianceSupplement;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
 
 @ApplicationScoped
 @Priority(35)
@@ -31,6 +30,12 @@ public class ComplianceSupplementEnricher implements LedgerEntryEnricher {
         cs.decisionContext = state.decisionContext();
         entry.attach(cs);
     }
+
+    @Override
+    public String name() {
+        return "compliance-supplement";
+    }
+
 
     private static String emptyToNull(final String value) {
         return (value == null || value.isEmpty()) ? null : value;

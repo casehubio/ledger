@@ -304,6 +304,7 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │           ├── AttestationRelevanceFactor.java  — SPI: per-attestation relevance factor (org proximity, capability overlap, etc.); discovered via Instance<>; see #231
 │           ├── AttestationRelevanceContext.java  — record: per-attestation context for relevance assessment (attestor, actor, snapshot map)
 │           ├── RelevanceAssessment.java          — record: weight ∈ [0,1] + diagnostic reason; NEUTRAL constant
+│           ├── LedgerEntryEnricher.java          — SPI: write-time entry enricher (pluggable @PrePersist pipeline); Priority-ordered, non-fatal; moved from ledger-core in #242
 │           └── LedgerAttestationEnricher.java    — SPI: write-time attestation enricher (populates relevanceSnapshot JSON); sibling of LedgerEntryEnricher
 ├── runtime/
 │   └── src/main/resources/META-INF/

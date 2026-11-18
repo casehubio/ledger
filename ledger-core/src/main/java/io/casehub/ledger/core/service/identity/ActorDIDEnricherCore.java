@@ -1,7 +1,7 @@
 package io.casehub.ledger.core.service.identity;
 
 import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.platform.api.identity.ActorDIDProvider;
 
 import java.util.function.Predicate;
@@ -39,4 +39,10 @@ public class ActorDIDEnricherCore implements LedgerEntryEnricher {
     public int priority() {
         return 40;
     }
+
+    @Override
+    public String name() {
+        return "actor-did";
+    }
+
 }

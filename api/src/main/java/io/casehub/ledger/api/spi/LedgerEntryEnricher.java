@@ -1,4 +1,4 @@
-package io.casehub.ledger.core.enricher;
+package io.casehub.ledger.api.spi;
 
 import io.casehub.ledger.api.model.LedgerEntry;
 
@@ -9,5 +9,11 @@ public interface LedgerEntryEnricher {
     default int priority() {
         return Integer.MAX_VALUE;
     }
+
+    /**
+     * Short identifier for diagnostics, e.g. {@code "trace-id"}.
+     */
+    String name();
+
 
 }

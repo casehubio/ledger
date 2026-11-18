@@ -1,33 +1,31 @@
 package io.casehub.ledger.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.Instant;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.service.supplement.TestEntry;
+import io.casehub.platform.api.identity.ActorType;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.TraceFlags;
 import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.context.Scope;
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.api.spi.LedgerEntryRepository;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
-import io.casehub.ledger.service.supplement.TestEntry;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the LedgerEntryEnricher pipeline properties: non-fatal failure and full execution.
@@ -50,6 +48,12 @@ class LedgerEnricherPipelineIT {
         public void enrich(final LedgerEntry entry) {
             throw new RuntimeException("simulated enricher failure");
         }
+
+        @Override
+        public String name() {
+            return "throwing";
+        }
+
     }
 
     /** Counts invocations — used to verify all enrichers run. */
@@ -61,6 +65,12 @@ class LedgerEnricherPipelineIT {
         public void enrich(final LedgerEntry entry) {
             count.incrementAndGet();
         }
+
+        @Override
+        public String name() {
+            return "counting";
+        }
+
     }
 
     @Inject

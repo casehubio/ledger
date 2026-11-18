@@ -1,14 +1,13 @@
 package io.casehub.ledger.core.service.identity;
 
 import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.platform.api.identity.AgentCredentialValidator;
 import io.casehub.platform.api.identity.CredentialValidationResult;
 import io.casehub.platform.api.identity.DIDDocument;
 import io.casehub.platform.api.identity.DIDResolver;
 import io.casehub.platform.api.identity.IdentityBindingStatus;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +57,12 @@ public class IdentityValidationEnricherCore implements LedgerEntryEnricher {
     public int priority() {
         return 50;
     }
+
+    @Override
+    public String name() {
+        return "identity-validation";
+    }
+
 
     private IdentityBindingStatus computeStatus(LedgerEntry entry) {
         Optional<DIDDocument> docOpt = resolver.resolve(entry.actorId, entry.actorDid);

@@ -209,7 +209,7 @@ These are the primary entry points for consumers writing to the ledger.
 | `DecisionContextSanitiser` | runtime | `PassThroughDecisionContextSanitiser` (no-op) | Sanitise PII from `ComplianceSupplement.decisionContext` JSON before storage. |
 | `LedgerTraceIdProvider` | api | `OtelTraceIdProvider` (reads from active OpenTelemetry span) | Override OTel trace ID extraction. |
 | `AgentSigner` | runtime | `ConfiguredAgentSigner` (reads PEM keys from config) | Ed25519 signing of entry canonical bytes. Return `Optional.empty()` for actors not configured for signing. Cloud KMS adapters implement this. |
-| `LedgerEntryEnricher` | runtime | (multiple built-in enrichers) | Auto-populate fields on `LedgerEntry` at persist time, before hashing and signing. Priority-ordered. Consumer enrichers are CDI-discovered. See Enricher Pipeline section. |
+| `LedgerEntryEnricher` | api | (multiple built-in enrichers) | Auto-populate fields on `LedgerEntry` at persist time, before hashing and signing. Priority-ordered. Consumer enrichers are CDI-discovered. See Enricher Pipeline section. |
 | `TrustImportService` | runtime | `NoOpTrustImportService` | Import trust scores from an external `TrustExportPayload`. Built-in alternative: `JpaTrustImportService` (seed-if-absent). |
 | `TrustBootstrapSource` | runtime | `NoOpTrustBootstrapSource` (returns empty -- Beta(1,1) prior) | Fetch prior trust data for first-time actors from an external source. |
 | `AttestorCredibilityPolicy` | api | `DefaultAttestorCredibilityPolicy` (all attestors equally credible) | Weight attestor credibility in trust computation. Override to discount low-trust attestors. |

@@ -1,12 +1,11 @@
 package io.casehub.ledger.runtime.service.intercept;
 
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
+import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.jpa.JpaProvenanceSupplement;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
 
 /**
  * {@link LedgerEntryEnricher} that auto-attaches a {@link JpaProvenanceSupplement} when a
@@ -44,6 +43,12 @@ public class ProvenanceCaptureEnricher implements LedgerEntryEnricher {
                 .ifPresent(hash -> ps.agentConfigHash = hash);
         entry.attach(ps);
     }
+
+    @Override
+    public String name() {
+        return "provenance-capture";
+    }
+
 
     private static String emptyToNull(final String value) {
         return (value == null || value.isEmpty()) ? null : value;

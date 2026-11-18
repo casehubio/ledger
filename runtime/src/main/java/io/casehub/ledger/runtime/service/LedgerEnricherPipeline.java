@@ -2,7 +2,7 @@ package io.casehub.ledger.runtime.service;
 
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.core.enricher.EnricherPipelineCore;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;

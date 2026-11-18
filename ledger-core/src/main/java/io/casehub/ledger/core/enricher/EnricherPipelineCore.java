@@ -1,6 +1,7 @@
 package io.casehub.ledger.core.enricher;
 
 import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 
 import java.util.Comparator;
 import java.util.List;

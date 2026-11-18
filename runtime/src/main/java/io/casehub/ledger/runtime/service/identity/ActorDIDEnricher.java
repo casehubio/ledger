@@ -1,10 +1,10 @@
 package io.casehub.ledger.runtime.service.identity;
 
 import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
-import io.quarkus.arc.properties.IfBuildProperty;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.ledger.jpa.ActorIdentityBindingEntry;
 import io.casehub.platform.api.identity.ActorDIDProvider;
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -31,4 +31,10 @@ public class ActorDIDEnricher implements LedgerEntryEnricher {
     public int priority() {
         return core.priority();
     }
+
+    @Override
+    public String name() {
+        return core.name();
+    }
+
 }

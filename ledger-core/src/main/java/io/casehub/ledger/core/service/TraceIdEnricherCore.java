@@ -1,8 +1,8 @@
 package io.casehub.ledger.core.service;
 
 import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.LedgerEntryEnricher;
 import io.casehub.ledger.api.spi.LedgerTraceIdProvider;
-import io.casehub.ledger.core.enricher.LedgerEntryEnricher;
 
 public class TraceIdEnricherCore implements LedgerEntryEnricher {
 
@@ -22,4 +22,10 @@ public class TraceIdEnricherCore implements LedgerEntryEnricher {
     public int priority() {
         return 10;
     }
+
+    @Override
+    public String name() {
+        return "trace-id";
+    }
+
 }
