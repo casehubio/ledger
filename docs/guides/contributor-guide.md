@@ -10,7 +10,7 @@
 
 | Module | Artifact ID | Purpose |
 |--------|-------------|---------|
-| `api/` | `casehub-ledger-api` | Pure-Java SPIs and model types -- no JPA, no Quarkus framework deps. Two-tier `LedgerEntry` model: `@MappedSuperclass` base in `api/`, `JpaLedgerEntry` entity in `runtime/`. Contains `LedgerAppender`, `OutcomeRecorder`, `LedgerEntryRepository`, `TrustScoreSource`, `ActorIdentityProvider`, `LedgerTraceIdProvider` SPIs and the `AuditRecord` / `OutcomeRecord` value types. Enums: `LedgerEntryType`, `AttestationVerdict`, `ScoreType`, `CapabilityTag`, `ErasureReason`, `KeyRotationReason`. Supplements: `ComplianceSupplement`, `ProvenanceSupplement` (`@MappedSuperclass`). |
+| `api/` | `casehub-ledger-api` | Pure-Java SPIs and model types -- no JPA, no Quarkus framework deps. Two-tier `LedgerEntry` model: `@MappedSuperclass` base in `api/`, `JpaLedgerEntry` entity in `runtime/`. Contains `LedgerAppender`, `OutcomeRecorder`, `LedgerEntryRepository`, `TrustScoreSource`, `ActorIdentityProvider`, `LedgerTraceIdProvider`, `LedgerEntryEnricher`, `LedgerAttestationEnricher` SPIs and the `AuditRecord` / `OutcomeRecord` value types. Enums: `LedgerEntryType`, `AttestationVerdict`, `ScoreType`, `CapabilityTag`, `ErasureReason`, `KeyRotationReason`. Supplements: `ComplianceSupplement`, `ProvenanceSupplement` (`@MappedSuperclass`). |
 | `runtime/` | `casehub-ledger` | Full Quarkus extension: JPA entities (`JpaLedgerEntry`, `PlainLedgerEntry`, `KeyRotationEntry`, `ActorIdentityBindingEntry`, `ErasureReceiptLedgerEntry`, `ActorTrustScore`, `LedgerMerkleFrontier`, `ActorIdentity`, `LedgerEntryArchiveRecord`), all services, repositories, enrichers, privacy, federation, routing, config, and Flyway migrations. |
 | `deployment/` | `casehub-ledger-deployment` | Quarkus build-time augmentation. `LedgerProcessor` enforces `domainContentBytes()` override on subclasses with persistent fields and rejects `@RequestScoped` beans injecting `@CrossTenant`. |
 | `persistence-memory/` | `casehub-ledger-memory` | Zero-datasource in-memory `@Alternative @Priority(1)` implementations of all persistence SPIs -- for `@QuarkusTest` isolation and ephemeral installs. |
@@ -133,7 +133,7 @@ CDI qualifier (`io.casehub.ledger.runtime.qualifier`) disambiguating `CrossTenan
 
 ### LedgerEnricherPipeline
 
-`@ApplicationScoped` CDI bean that owns enricher pipeline execution -- shared by the JPA `@EntityListeners` path and the in-memory path. It is not an SPI (consumers do not implement it) but is the shared execution point. Enrichers are CDI-discovered via `@Inject @Any Instance<LedgerEntryEnricher>` and invoked in ascending `@Priority` order. Exceptions are logged and swallowed -- enrichers must never block persistence.
+`@ApplicationScoped` CDI bean that owns enricher pipeline execution -- shared by the JPA `@EntityListeners` path and the in-memory path. It is not an SPI (consumers do not implement it) but is the shared execution point. The `LedgerEntryEnricher` SPI is defined in `api/spi/` (moved from `ledger-core` in #242) so consumers can implement enrichers without depending on internal modules. Enrichers are CDI-discovered via `@Inject @Any Instance<LedgerEntryEnricher>` and sorted by `priority()` (ascending, default `MAX_VALUE`). Each enricher provides a `name()` for diagnostics logging. Exceptions are logged and swallowed -- enrichers must never block persistence.
 
 Built-in enrichers:
 
