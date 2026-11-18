@@ -916,6 +916,9 @@ Pseudonymisation with severable token mappings — erasure severs the mapping; e
 **After:** `ActorTrustScore` entity with four score types via two-column key model (`capability_key`, `dimension_key`). `TrustScoreCalculator` runs a pure four-pass computation (capability → dimension → cap×dim → global).
 
 - **Bayesian Beta** — alpha/beta accumulation with exponential decay (`2^(-age/halfLife)`); FLAGGED decays slower via valence multiplier
+- **Four-factor weight chain** — each attestation's effective weight is `decay × confidence × credibility × normalised_relevance`. Decay via `DecayFunction` SPI (ADR 0007). Confidence from the attestation field. Credibility via `AttestorCredibilityPolicy` (attestor-scoped — same weight for all attestations by that attestor). Relevance via `AttestationRelevanceFactor` SPI (pair-scoped — varies per attestation based on attestor-actor relationship; ADR 0018)
+- **Relevance pipeline** — `AttestationRelevanceFactor` beans discovered via `Instance<>`. `RelevanceComposer` multiplies factor weights with a configurable floor (`casehub.ledger.trust-score.relevance.min-weight`, default 0.5). Raw weights feed into per-pass mass-preserving normalisation in `TrustScoreComputer`: `normFactor = sumBase / sumRelevance`, so relevance redistributes influence without inflating or deflating the aggregate. Zero factors → all weights 1.0 (backward compatible)
+- **Write-time relevance snapshot** — `LedgerAttestationEnricher` pipeline populates `relevanceSnapshot` JSON on attestations at persist time. Each enricher writes its own keys (e.g. `"org-distance": 2`); factors read their own key at computation time. Snapshot is immutable after write — auditability: the basis for a weight is permanently recorded
 - **Multi-dimensional** — `capabilityTag` on attestations scopes trust per capability; `trustDimension`/`dimensionScore` adds continuous quality dimensions; CAPABILITY_DIMENSION composite scores
 - **Three global strategies** — `AllAttestationsGlobalStrategy` (default, Wang & Vassileva 2003), `ExplicitGlobalAttestationsStrategy`, `FrequencyWeightedGlobalStrategy`
 - **EigenTrust** — opt-in power iteration for transitive trust across agent meshes; applicable when 3+ independent attestors and 10+ distinct actors
@@ -935,6 +938,12 @@ Not closed here: agent identity binding does not affect trust scores directly (L
 - `runtime/.../service/EigenTrustComputer.java` — power iteration; pure Java, no CDI
 - `runtime/.../service/GlobalScoreStrategy.java` — SPI with three `@Alternative` implementations
 - `runtime/.../service/DecayFunction.java` — SPI; default `ExponentialDecayFunction` with valence multiplier
+- `api/.../spi/AttestationRelevanceFactor.java` — SPI: per-attestation relevance factor (pair-scoped)
+- `api/.../spi/AttestationRelevanceContext.java` — record: per-attestation context for relevance assessment
+- `api/.../spi/RelevanceAssessment.java` — record: weight ∈ [0,1] + diagnostic reason
+- `api/.../spi/LedgerAttestationEnricher.java` — SPI: write-time attestation enricher (populates relevanceSnapshot)
+- `ledger-core/.../trust/RelevanceComposer.java` — aggregates factors: product with floor
+- `ledger-core/.../trust/AttestationWeights.java` — groups credibility + relevance weights for computation
 - `runtime/.../service/PerActorTrustComputer.java` — delegates to `TrustScoreCalculator`, persists, fires events
 - `runtime/.../service/federation/TrustExportService.java` — structured read-model for cross-deployment export
 
@@ -954,13 +963,15 @@ Not closed here: agent identity binding does not affect trust scores directly (L
 
 **Why decay-weighted average for dimensions rather than Bayesian Beta (ADR 0009):** Dimension scores are continuous [0,1] assessments. Beta model is for binary success/failure. Decay-weighted average preserves the continuous signal. Valence asymmetry deliberately suppressed — all dimension attestations pass SOUND to DecayFunction.
 
+**Why pair-scoped relevance is separate from attestor-scoped credibility (ADR 0018):** Credibility reflects the attestor's own track record — same weight for every attestation they make. Relevance reflects the attestor-actor relationship — same attestor may be highly relevant to one actor (same team) and irrelevant to another (different org). Conflating them into one weight prevents independent variation along both axes. The composition model (product with floor, mass-preserving normalisation) allows accuracy-biased and independence-biased factors to coexist.
+
 #### Pattern introduced
 
-Multi-dimensional Bayesian Beta trust scoring with SPI strategy pattern — four score types, three global strategies, three read strategies.
+Multi-dimensional Bayesian Beta trust scoring with SPI strategy pattern — four score types, four-factor weight chain (decay × confidence × credibility × relevance), three global strategies, three read strategies.
 
 #### Pattern anchor
 
-`TrustScoreCalculator.compute()`, `ActorTrustScore`, `TrustGateService.meetsThreshold()`
+`TrustScoreCalculator.compute()`, `ActorTrustScore`, `TrustGateService.meetsThreshold()`, `RelevanceComposer.assess()`
 
 #### Gotchas
 
@@ -976,6 +987,7 @@ Multi-dimensional Bayesian Beta trust scoring with SPI strategy pattern — four
 3. Define a `GlobalScoreStrategy` SPI. Provide at least one default implementation as `@DefaultBean`.
 4. Define a `TrustScoreSource` SPI to decouple read from write. Implement Materialized (DB), Cached (in-memory with event refresh), and Computed (on-read) strategies as `@Alternative` beans.
 5. Wire incremental updates via CDI `@Observes(AFTER_SUCCESS)` on the attestation-recorded event. Run in `REQUIRES_NEW` to avoid the outer transaction's lifecycle.
+6. Define an `AttestationRelevanceFactor` SPI for per-attestation pair-scoped weighting. Compose via product with floor. Normalise per pass to preserve total evidence mass. Capture relevance data in a JSON snapshot at write time — factors read snapshot at computation time for auditability.
 
 ---
 
@@ -1271,7 +1283,7 @@ Decisions captured inline in §9.4 Layer entries are not repeated here. This sec
 
 **Cloud KMS signing adapters (issue #102):** Four first-class signing modules under `signing/` — Vault Transit, AWS KMS, GCP Cloud KMS, Azure Key Vault. Two-layer architecture: pure Java signing client (zero framework deps) + Quarkus CDI adapter extending `AbstractCachingAgentSigner`. EC keys only. `AgentSigner.keyMaterial()` default method avoids wasted cloud KMS sign calls in `AgentEntrySigner.prepareKey()`. Azure adapter includes `EcSignatureConverter` for R‖S→DER signature format conversion.
 
-Full ADR catalogue: `docs/adr/INDEX.md` (17 ADRs; 2 superseded).
+Full ADR catalogue: `docs/adr/INDEX.md` (18 ADRs; 2 superseded).
 
 ---
 
@@ -1298,6 +1310,7 @@ Full ADR catalogue: `docs/adr/INDEX.md` (17 ADRs; 2 superseded).
 | EU AI Act enforcement deadline (2 August 2026) | Non-compliance penalties up to EUR 15M / 3% turnover | Compliance infrastructure complete; consumer integration testing in progress |
 | EigenTrust non-convergence on small graphs | Degenerate trust scores for deployments with < 10 actors | ADR 0016: gated behind applicability criteria, default disabled |
 | Anti-gaming gap — Sybil attacks and trust-building-then-exploit | Coordinated malicious agents can accumulate trust then defect | Identity layer (bilateral signing + key rotation + SUSPECT) addresses identity; social gaming remains open |
+| In-unit amplification from org-proximity weighting | Attestors in the same org unit are weighted higher (accuracy bias), but correlated attestors can amplify each other's assessments | Floor on relevance weight (default 0.5) bounds amplification; independence-biased factors can be contributed via same SPI; mass-preserving normalisation prevents total score inflation |
 | H2 dialect divergence from PostgreSQL | Tests pass on H2 but fail on real PostgreSQL | PostgreSQL Testcontainers in CI; three-way dialect detection in LedgerSequenceAllocator |
 
 ### Technical Debt
@@ -1323,6 +1336,8 @@ L1 (Core Entity Model) is modified by 11 of 12 chapters. This is expected for a 
 |---|---|
 | `actorId` | Convention string identifying the entity that produced a ledger entry — human username, agent persona name, or system identifier |
 | `actorDid` | Decentralized Identifier (DID) anchoring an actor to a cryptographic identity document |
+| `AttestationRelevanceFactor` | SPI: per-attestation pair-scoped relevance factor. Discovered via `Instance<>`. Each factor computes one dimension (org proximity, capability overlap, etc.). Composed via product with floor by `RelevanceComposer` |
+| `AttestationWeights` | Parameter object grouping `credibilityByAttestorId` and `relevanceByAttestationId` for `TrustScoreComputer.compute()` — prevents positional parameter errors |
 | `capabilityTag` | String scoping an attestation to a specific capability domain; `"*"` sentinel for global (cross-capability) attestations |
 | `canonicalBytes()` | Deterministic byte serialisation of all tamper-critical fields on a `LedgerEntry`; input to both leaf hash and agent signature |
 | `domainContentBytes()` | Subclass-provided byte serialisation of join-table fields; included in `canonicalBytes()` for content-aware Merkle hashing |
@@ -1331,7 +1346,10 @@ L1 (Core Entity Model) is modified by 11 of 12 chapters. This is expected for a 
 | `@DefaultBean` | CDI annotation marking a bean as the default; displaced by any `@ApplicationScoped` or `@Alternative` implementation |
 | EigenTrust | Power iteration algorithm for transitive global trust scores across agent meshes; opt-in, default disabled |
 | `keyRef` | `Base64URL(SHA-256(publicKey))` — self-derived key reference stored on each signed entry; zero operator configuration |
+| `LedgerAttestationEnricher` | SPI: write-time enricher for attestations (sibling of `LedgerEntryEnricher`). Populates `relevanceSnapshot` JSON on the attestation. Each enricher writes its own keys. Failures non-fatal |
 | Merkle Mountain Range | Append-only hash tree using stored frontier (at most log₂(N) rows per subject); provides O(log N) inclusion proofs |
+| `RelevanceComposer` | Aggregates `AttestationRelevanceFactor` beans into a single raw relevance weight per attestation. Product of factor weights, floored at configurable minimum (default 0.5). Zero factors → 1.0 (NEUTRAL) |
+| `relevanceSnapshot` | JSON map on `LedgerAttestation` populated at write time by `LedgerAttestationEnricher` pipeline. Immutable after persist. Extensibility mechanism: new factors add keys without schema migration |
 | `sequenceNumber` | Monotonically increasing integer per (subjectId, tenancyId) pair; allocated atomically by `LedgerSequenceAllocator` |
 | `subjectId` | UUID identifying the aggregate a ledger entry belongs to; consumers map it to their domain entity (WorkItem, Channel, CaseInstance) |
 | Supplement | Optional joined table extending `LedgerEntry` with domain-specific data (`ComplianceSupplement`, `ProvenanceSupplement`); zero cost when unused |
