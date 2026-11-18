@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-28
 **Status:** Accepted
-**Refs:** #67
+**Refs:** #67, #242
 
 ## Context
 
@@ -25,12 +25,23 @@ Quarkus's ArC CDI container processes `@ApplicationScoped` beans and
 configuration is required — ArC handles discovery and registration for native image
 compilation.
 
+## Relocation to API module (#242)
+
+Originally defined in `io.casehub.ledger.core.enricher`, the `LedgerEntryEnricher`
+interface was moved to `io.casehub.ledger.api.spi` alongside its sibling
+`LedgerAttestationEnricher`. The SPI belongs in the API module so consumers can
+implement enrichers without depending on internal modules.
+
+The interface gained two default methods: `int priority()` (default `MAX_VALUE`) for
+explicit ordering, and `String name()` for diagnostics logging. `EnricherPipelineCore`
+sorts enrichers by priority ascending before execution.
+
 ## Consequences
 
 - `LedgerTraceListener` is now a thin pipeline runner; all enrichment logic lives in
   enricher beans.
 - Enricher failures are logged and swallowed — the persist is never blocked.
-- Enricher ordering is CDI-discovery order (unspecified). Enrichers must not depend on
-  execution order.
+- Enricher execution order is determined by `priority()` (ascending). Lower values run
+  first.
 - `#59` (ProvenanceSupplement) becomes a `ProvenanceCaptureEnricher` — one mechanism
   for all field auto-population at persist time.
