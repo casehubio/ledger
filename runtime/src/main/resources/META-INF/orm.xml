@@ -110,6 +110,9 @@
             <basic name="occurredAt">
                 <column name="occurred_at" nullable="false"/>
             </basic>
+            <basic name="relevanceSnapshot">
+                <column name="relevance_snapshot"/>
+            </basic>
         </attributes>
     </mapped-superclass>
 

@@ -58,7 +58,8 @@ CREATE TABLE ledger_attestation (
     capability_tag   VARCHAR(255)     NOT NULL DEFAULT '*',
     trust_dimension  VARCHAR(255),
     dimension_score  DOUBLE PRECISION,
-    occurred_at      TIMESTAMP        NOT NULL,
+    occurred_at         TIMESTAMP        NOT NULL,
+    relevance_snapshot  TEXT,
     CONSTRAINT pk_ledger_attestation PRIMARY KEY (id),
     CONSTRAINT fk_attestation_entry FOREIGN KEY (ledger_entry_id) REFERENCES ledger_entry (id)
 );

@@ -1,9 +1,9 @@
 package io.casehub.ledger.api.model;
 
+import io.casehub.platform.api.identity.ActorType;
+
 import java.time.Instant;
 import java.util.UUID;
-
-import io.casehub.platform.api.identity.ActorType;
 
 
 /**
@@ -45,4 +45,9 @@ public class LedgerAttestation {
     public Double dimensionScore;
 
     public Instant occurredAt;
+    /**
+     * Write-time enricher JSON snapshot for relevance factors. Null when no enrichers ran.
+     */
+    public String  relevanceSnapshot;
+
 }
