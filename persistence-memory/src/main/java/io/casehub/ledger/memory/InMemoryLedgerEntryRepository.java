@@ -218,6 +218,9 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
                     "LedgerEntry " + attestation.ledgerEntryId + " does not belong to tenant " + tenancyId);
         }
 
+        // Clear caller-supplied snapshot — system-derived only
+        attestation.relevanceSnapshot = null;
+
         // Enrich before tokenisation — enrichers need raw attestor identity
         if (entry != null) {
             attestationEnricherPipeline.enrich(attestation, entry);

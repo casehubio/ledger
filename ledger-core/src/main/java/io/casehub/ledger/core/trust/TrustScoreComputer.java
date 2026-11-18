@@ -2,9 +2,9 @@ package io.casehub.ledger.core.trust;
 
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CredibilityFlag;
+import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
-import io.casehub.ledger.api.model.LedgerAttestation;
 
 import java.time.Instant;
 import java.util.List;
@@ -83,42 +83,41 @@ public final class TrustScoreComputer {
     /**
      * Compute a Bayesian Beta trust score for one actor.
      *
-     * @param decisions EVENT ledger entries where this actor was the decision-maker
+     * @param decisions             EVENT ledger entries where this actor was the decision-maker
      * @param attestationsByEntryId map from entry id to its attestations
-     * @param now reference timestamp for age calculation
+     * @param now                   reference timestamp for age calculation
      * @return the computed score and metrics
      */
     public ActorScore compute(
             final List<LedgerEntry> decisions,
             final Map<UUID, List<LedgerAttestation>> attestationsByEntryId,
             final Instant now) {
-        return compute(decisions, attestationsByEntryId, now, Map.of());
+        return compute(decisions, attestationsByEntryId, now, AttestationWeights.NEUTRAL);
     }
 
     public ActorScore compute(
             final List<LedgerEntry> decisions,
             final Map<UUID, List<LedgerAttestation>> attestationsByEntryId,
             final Instant now,
-            final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId) {
-
+            final AttestationWeights weights) {
         if (decisions.isEmpty()) {
             return new ActorScore(0.5, 1.0, 1.0, 0, 0, 0, 0, 1.0);
         }
 
-        double alpha                    = 1.0;
-        double beta                     = 1.0;
-        int    overturnedCount          = 0;
-        int    totalPositive            = 0;
-        int    totalNegative            = 0;
-        double totalRawWeight           = 0.0;
-        double totalEffectiveWeight     = 0.0;
-        int    assessedAttestationCount = 0;
+        final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId =
+                weights.credibilityByAttestorId();
+        final Map<UUID, Double> relevanceByAttestationId = weights.relevanceByAttestationId();
+
+        // ── Pass 1: compute normalisation factor ─────────────────────────────
+        double sumBase      = 0.0;
+        double sumRelevance = 0.0;
 
         for (final LedgerEntry entry : decisions) {
             final List<LedgerAttestation> attestations = attestationsByEntryId.getOrDefault(entry.id, List.of());
-            boolean                       hasNegative  = false;
-
             for (final LedgerAttestation attestation : attestations) {
+                if (attestation.attestorId != null && attestation.attestorId.equals(entry.actorId)) {
+                    continue; // self-attestation excluded
+                }
                 final Instant attestationTime = attestation.occurredAt != null ? attestation.occurredAt : now;
                 final long    ageInDays       = Math.max(0, java.time.Duration.between(attestationTime, now).toDays());
                 final double  decayWeight     = decayFunction.weight(ageInDays, attestation.verdict);
@@ -128,13 +127,53 @@ public final class TrustScoreComputer {
                         credibilityByAttestorId.getOrDefault(attestation.attestorId,
                                                              AttestorCredibilityPolicy.CredibilityAssessment.NEUTRAL);
                 final double credibilityWeight = Math.max(0.0, Math.min(1.0, assessment.weight()));
-                final double effectiveWeight   = rawWeight * credibilityWeight;
+                final double baseMass          = rawWeight * credibilityWeight;
+                final double relevWeight       = relevanceByAttestationId.getOrDefault(attestation.id, 1.0);
 
+                sumBase += baseMass;
+                sumRelevance += baseMass * relevWeight;
+            }
+        }
+
+        final double normFactor = sumRelevance == 0.0 ? 1.0 : sumBase / sumRelevance;
+
+        // ── Pass 2: accumulate alpha/beta with normalised relevance ──────────
+        double alpha                    = 1.0;
+        double beta                     = 1.0;
+        int    overturnedCount          = 0;
+        int    totalPositive            = 0;
+        int    totalNegative            = 0;
+        double totalRawWeight           = 0.0;
+        double totalCredWeight          = 0.0;
+        int    assessedAttestationCount = 0;
+
+        for (final LedgerEntry entry : decisions) {
+            final List<LedgerAttestation> attestations = attestationsByEntryId.getOrDefault(entry.id, List.of());
+            boolean                       hasNegative  = false;
+
+            for (final LedgerAttestation attestation : attestations) {
+                if (attestation.attestorId != null && attestation.attestorId.equals(entry.actorId)) {
+                    continue; // self-attestation excluded
+                }
+                final Instant attestationTime = attestation.occurredAt != null ? attestation.occurredAt : now;
+                final long    ageInDays       = Math.max(0, java.time.Duration.between(attestationTime, now).toDays());
+                final double  decayWeight     = decayFunction.weight(ageInDays, attestation.verdict);
+                final double  rawWeight       = decayWeight * Math.max(0.0, Math.min(1.0, attestation.confidence));
+
+                final AttestorCredibilityPolicy.CredibilityAssessment assessment =
+                        credibilityByAttestorId.getOrDefault(attestation.attestorId,
+                                                             AttestorCredibilityPolicy.CredibilityAssessment.NEUTRAL);
+                final double credibilityWeight   = Math.max(0.0, Math.min(1.0, assessment.weight()));
+                final double relevWeight         = relevanceByAttestationId.getOrDefault(attestation.id, 1.0);
+                final double normalisedRelevance = relevWeight * normFactor; // may exceed 1.0
+                final double effectiveWeight     = rawWeight * credibilityWeight * normalisedRelevance;
+
+                // credibilityRetention uses credibility-only accumulator
                 final boolean hasInsufficientData = assessment.flags() != null
                                                     && assessment.flags().contains(CredibilityFlag.INSUFFICIENT_DATA);
                 if (!hasInsufficientData) {
                     totalRawWeight += rawWeight;
-                    totalEffectiveWeight += effectiveWeight;
+                    totalCredWeight += rawWeight * credibilityWeight;
                     assessedAttestationCount++;
                 }
 
@@ -159,7 +198,7 @@ public final class TrustScoreComputer {
         final double trustScore = Math.max(0.0, Math.min(1.0, alpha / (alpha + beta)));
         final double retention = assessedAttestationCount == 0
                                  ? Double.NaN
-                                 : (totalRawWeight > 0.0 ? totalEffectiveWeight / totalRawWeight : 1.0);
+                                 : (totalRawWeight > 0.0 ? totalCredWeight / totalRawWeight : 1.0);
 
         return new ActorScore(
                 trustScore, alpha, beta,
@@ -189,13 +228,17 @@ public final class TrustScoreComputer {
     public OptionalDouble computeDimensionScore(
             final List<LedgerAttestation> dimensionAttestations,
             final Instant now) {
-        return computeDimensionScore(dimensionAttestations, now, Map.of());
+        return computeDimensionScore(dimensionAttestations, now, AttestationWeights.NEUTRAL);
     }
 
     public OptionalDouble computeDimensionScore(
             final List<LedgerAttestation> dimensionAttestations,
             final Instant now,
-            final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId) {
+            final AttestationWeights weights) {
+        final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityByAttestorId =
+                weights.credibilityByAttestorId();
+        final Map<UUID, Double> relevanceByAttestationId = weights.relevanceByAttestationId();
+
         double weightedSum = 0.0;
         double totalWeight = 0.0;
 
@@ -212,7 +255,8 @@ public final class TrustScoreComputer {
                     credibilityByAttestorId.getOrDefault(a.attestorId,
                                                          AttestorCredibilityPolicy.CredibilityAssessment.NEUTRAL);
             final double credibilityWeight = Math.max(0.0, Math.min(1.0, assessment.weight()));
-            final double weight            = rawWeight * credibilityWeight;
+            final double relevWeight       = relevanceByAttestationId.getOrDefault(a.id, 1.0);
+            final double weight            = rawWeight * credibilityWeight * relevWeight;
 
             weightedSum += weight * a.dimensionScore;
             totalWeight += weight;

@@ -9,6 +9,8 @@ import io.casehub.ledger.api.model.TrustScoreSnapshotBase;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
 import io.casehub.platform.api.identity.ActorType;
+
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -32,7 +34,8 @@ class PerActorTrustComputerCoreTest {
         var calculator = new TrustScoreCalculator(
                 new ExponentialDecayFunction(90, 1.5),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new RelevanceComposer(List.of(), 0.5));
 
         var computer = new PerActorTrustComputerCore(calculator, trustRepo, snapshotRepo);
 
@@ -60,7 +63,8 @@ class PerActorTrustComputerCoreTest {
         var calculator = new TrustScoreCalculator(
                 new ExponentialDecayFunction(90, 1.5),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new RelevanceComposer(List.of(), 0.5));
 
         var computer = new PerActorTrustComputerCore(calculator, trustRepo, snapshotRepo);
         var results = computer.computeForActor(
@@ -77,7 +81,8 @@ class PerActorTrustComputerCoreTest {
         var calculator = new TrustScoreCalculator(
                 new ExponentialDecayFunction(90, 1.5),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new RelevanceComposer(List.of(), 0.5));
 
         var computer = new PerActorTrustComputerCore(calculator, trustRepo, snapshotRepo);
 

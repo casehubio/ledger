@@ -48,6 +48,6 @@ public class LedgerAttestation {
     /**
      * Write-time enricher JSON snapshot for relevance factors. Null when no enrichers ran.
      */
-    public String  relevanceSnapshot;
+    public String relevanceSnapshot;
 
 }

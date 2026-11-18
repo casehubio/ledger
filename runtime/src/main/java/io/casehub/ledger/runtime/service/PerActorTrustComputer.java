@@ -9,6 +9,7 @@ import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
 import io.casehub.ledger.core.trust.DecayFunction;
 import io.casehub.ledger.core.trust.GlobalScoreStrategy;
 import io.casehub.ledger.core.trust.PerActorTrustComputerCore;
+import io.casehub.ledger.core.trust.RelevanceComposer;
 import io.casehub.ledger.core.trust.TrustScoreCalculator;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -34,9 +35,10 @@ class PerActorTrustComputer {
                           ActorTrustScoreRepository trustRepo,
                           TrustScoreSnapshotRepository snapshotRepo,
                           GlobalScoreStrategy globalScoreStrategy,
-                          AttestorCredibilityPolicy credibilityPolicy) {
+                          AttestorCredibilityPolicy credibilityPolicy,
+                          RelevanceComposer relevanceComposer) {
         this.core = new PerActorTrustComputerCore(
-                new TrustScoreCalculator(decayFunction, globalScoreStrategy, credibilityPolicy),
+                new TrustScoreCalculator(decayFunction, globalScoreStrategy, credibilityPolicy, relevanceComposer),
                 trustRepo, snapshotRepo);
     }
 

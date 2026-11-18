@@ -1,9 +1,10 @@
 package io.casehub.ledger.core.trust;
 
 import io.casehub.ledger.api.model.CapabilityTag;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
 import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.spi.AttestationRelevanceContext;
+import io.casehub.ledger.api.spi.AttestorCredibilityPolicy;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,17 +23,23 @@ import java.util.stream.Collectors;
  * here for the actual computation.
  */
 public class TrustScoreCalculator {
+    private static final com.fasterxml.jackson.databind.ObjectMapper SNAPSHOT_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
+    private static final java.util.logging.Logger                    log             = java.util.logging.Logger.getLogger(TrustScoreCalculator.class.getName());
+
 
     private final DecayFunction             decayFunction;
     private final GlobalScoreStrategy       globalScoreStrategy;
     private final AttestorCredibilityPolicy credibilityPolicy;
+    private final RelevanceComposer         relevanceComposer;
 
     public TrustScoreCalculator(final DecayFunction decayFunction,
                                 final GlobalScoreStrategy globalScoreStrategy,
-                                final AttestorCredibilityPolicy credibilityPolicy) {
+                                final AttestorCredibilityPolicy credibilityPolicy,
+                                final RelevanceComposer relevanceComposer) {
         this.decayFunction = decayFunction;
         this.globalScoreStrategy = globalScoreStrategy;
         this.credibilityPolicy = credibilityPolicy;
+        this.relevanceComposer = relevanceComposer;
     }
 
     public record ComputedScores(
@@ -48,7 +55,9 @@ public class TrustScoreCalculator {
         final TrustScoreComputer computer = new TrustScoreComputer(decayFunction);
 
         final List<LedgerAttestation> rawAttestations = new ArrayList<>();
+        final Map<UUID, LedgerEntry>  entryById       = new LinkedHashMap<>();
         for (final LedgerEntry decision : decisions) {
+            entryById.put(decision.id, decision);
             rawAttestations.addAll(attestationsByEntry.getOrDefault(decision.id, List.of()));
         }
 
@@ -59,6 +68,33 @@ public class TrustScoreCalculator {
                                                                  .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
         final Map<String, AttestorCredibilityPolicy.CredibilityAssessment> credibilityMap =
                 credibilityPolicy.assessBatch(attestorIds);
+
+        // ── Resolve relevance for all attestations ───────────────────────────
+        final List<AttestationRelevanceContext> relevanceContexts = new ArrayList<>();
+        for (final LedgerAttestation att : rawAttestations) {
+            final LedgerEntry   entry         = entryById.get(att.ledgerEntryId);
+            final String        scoredActorId = entry != null ? entry.actorId : null;
+            final String        tenancyId     = entry != null ? entry.tenancyId : null;
+            Map<String, Object> snapshot      = null;
+            if (att.relevanceSnapshot != null && !att.relevanceSnapshot.isBlank()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> parsed = SNAPSHOT_MAPPER.readValue(att.relevanceSnapshot, Map.class);
+                    snapshot = parsed;
+                } catch (Exception ex) {
+                    log.log(java.util.logging.Level.FINE,
+                            "Failed to parse relevanceSnapshot for attestation {0}: {1}",
+                            new Object[]{att.id, ex.getMessage()});
+                }
+            }
+            relevanceContexts.add(new AttestationRelevanceContext(
+                    att.id, att.attestorId, att.attestorType, att.attestorRole,
+                    scoredActorId, tenancyId, att.capabilityTag, att.trustDimension,
+                    att.occurredAt, snapshot));
+        }
+        final Map<UUID, Double> relevanceMap = relevanceComposer.assess(relevanceContexts);
+
+        final AttestationWeights weights = new AttestationWeights(credibilityMap, relevanceMap);
 
         // ── Capability pass ──────────────────────────────────────────────────
         final Map<String, Map<UUID, List<LedgerAttestation>>> byCapabilityAndEntry =
@@ -73,7 +109,7 @@ public class TrustScoreCalculator {
         for (final Map.Entry<String, Map<UUID, List<LedgerAttestation>>> capEntry :
                 byCapabilityAndEntry.entrySet()) {
             capabilityScores.put(capEntry.getKey(),
-                                 computer.compute(decisions, capEntry.getValue(), now, credibilityMap));
+                                 computer.compute(decisions, capEntry.getValue(), now, weights));
         }
 
         // ── Dimension pass ───────────────────────────────────────────────────
@@ -83,7 +119,7 @@ public class TrustScoreCalculator {
 
         final Map<String, Double> dimensionScores = new LinkedHashMap<>();
         for (final Map.Entry<String, List<LedgerAttestation>> dimEntry : byDimension.entrySet()) {
-            computer.computeDimensionScore(dimEntry.getValue(), now, credibilityMap)
+            computer.computeDimensionScore(dimEntry.getValue(), now, weights)
                     .ifPresent(score -> dimensionScores.put(dimEntry.getKey(), score));
         }
 
@@ -104,7 +140,7 @@ public class TrustScoreCalculator {
             final Map<String, Double> dims = new LinkedHashMap<>();
             for (final Map.Entry<String, List<LedgerAttestation>> dimEntry :
                     capEntry.getValue().entrySet()) {
-                computer.computeDimensionScore(dimEntry.getValue(), now, credibilityMap)
+                computer.computeDimensionScore(dimEntry.getValue(), now, weights)
                         .ifPresent(score -> dims.put(dimEntry.getKey(), score));
             }
             if (!dims.isEmpty()) {
@@ -118,7 +154,7 @@ public class TrustScoreCalculator {
         final Map<UUID, List<LedgerAttestation>> selectedByEntry = selected.stream()
                                                                            .collect(Collectors.groupingBy(a -> a.ledgerEntryId));
 
-        final TrustScoreComputer.ActorScore betaGlobal = computer.compute(decisions, selectedByEntry, now, credibilityMap);
+        final TrustScoreComputer.ActorScore betaGlobal = computer.compute(decisions, selectedByEntry, now, weights);
         final TrustScoreComputer.ActorScore globalScore =
                 globalScoreStrategy.derive(capabilityScores, rawAttestations)
                                    .orElse(betaGlobal);

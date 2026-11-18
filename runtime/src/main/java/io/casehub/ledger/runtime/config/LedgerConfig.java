@@ -320,6 +320,23 @@ public interface LedgerConfig {
          */
         EigenTrustConfig eigentrust();
 
+        /** Attestation relevance settings. */
+        RelevanceConfig relevance();
+
+        /** Attestation relevance composition settings. */
+        interface RelevanceConfig {
+
+            /**
+             * Floor for the product of all relevance factors. Prevents compounding
+             * from driving weights to near-zero. Effectively caps the maximum influence
+             * ratio between any two attestations at {@code 1 / minWeight}.
+             *
+             * @return minimum weight floor (default 0.5)
+             */
+            @WithDefault("0.5")
+            double minWeight();
+        }
+
         /** EigenTrust power iteration settings. */
         interface EigenTrustConfig {
 

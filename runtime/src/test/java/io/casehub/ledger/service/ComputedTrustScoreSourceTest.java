@@ -9,6 +9,7 @@ import io.casehub.ledger.api.model.SubjectSequenceStats;
 import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.core.trust.AllAttestationsGlobalStrategy;
 import io.casehub.ledger.core.trust.NoOpAttestorCredibilityPolicy;
+import io.casehub.ledger.core.trust.RelevanceComposer;
 import io.casehub.ledger.core.trust.TrustScoreCalculator;
 import io.casehub.ledger.runtime.service.ComputedTrustScoreSource;
 import io.casehub.platform.api.identity.ActorType;
@@ -40,7 +41,7 @@ class ComputedTrustScoreSourceTest {
     void setUp() {
         ledgerRepo = new StubLedgerEntryRepository();
         final TrustScoreCalculator calculator = new TrustScoreCalculator(
-                (age, verdict) -> 1.0, new AllAttestationsGlobalStrategy(), new NoOpAttestorCredibilityPolicy());
+                (age, verdict) -> 1.0, new AllAttestationsGlobalStrategy(), new NoOpAttestorCredibilityPolicy(), new RelevanceComposer(List.of(), 0.5));
         source = new ComputedTrustScoreSource(ledgerRepo, calculator);
     }
 

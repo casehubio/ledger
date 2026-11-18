@@ -5,6 +5,7 @@ import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.core.trust.DecayFunction;
+import io.casehub.ledger.core.trust.AttestationWeights;
 import io.casehub.ledger.core.trust.TrustScoreComputer;
 import io.casehub.platform.api.identity.ActorType;
 import org.junit.jupiter.api.Test;
@@ -708,7 +709,7 @@ class TrustScoreComputerTest {
                 List.of(entry),
                 Map.of(entry.id, List.of(a)),
                 now,
-                credibility);
+                new AttestationWeights(credibility, Map.of()));
 
         // weight = decayWeight(~1.0) × confidence(1.0) × credibility(0.5) = ~0.5
         // alpha = 1.0 (prior) + 0.5 = 1.5, beta = 1.0 (prior)
@@ -743,7 +744,7 @@ class TrustScoreComputerTest {
                 List.of(entry),
                 Map.of(entry.id, List.of(a)),
                 now,
-                credibility);
+                new AttestationWeights(credibility, Map.of()));
 
         assertThat(result.credibilityRetention()).isNaN();
     }
@@ -768,7 +769,7 @@ class TrustScoreComputerTest {
                 List.of(entry),
                 Map.of(entry.id, List.of(a1, a2)),
                 now,
-                credibility);
+                new AttestationWeights(credibility, Map.of()));
 
         // Only assessed-reviewer counts for retention: effective=0.5, raw=1.0 → retention=0.5
         assertThat(result.credibilityRetention()).isCloseTo(0.5, within(0.01));
@@ -792,7 +793,7 @@ class TrustScoreComputerTest {
                                                0.5, "low", java.util.Set.of()));
 
         final OptionalDouble withCredibility = computer.computeDimensionScore(
-                List.of(a), now, credibility);
+                List.of(a), now, new AttestationWeights(credibility, Map.of()));
         final OptionalDouble withoutCredibility = computer.computeDimensionScore(
                 List.of(a), now);
 

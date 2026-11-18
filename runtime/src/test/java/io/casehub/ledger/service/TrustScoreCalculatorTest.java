@@ -5,6 +5,7 @@ import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.core.trust.NoOpAttestorCredibilityPolicy;
+import io.casehub.ledger.core.trust.RelevanceComposer;
 import io.casehub.ledger.jpa.LedgerAttestation;
 import io.casehub.ledger.core.trust.AllAttestationsGlobalStrategy;
 import io.casehub.ledger.core.trust.DecayFunction;
@@ -35,7 +36,7 @@ class TrustScoreCalculatorTest {
     private final Instant now = Instant.now();
 
     private TrustScoreCalculator calculator(final DecayFunction decay) {
-        return new TrustScoreCalculator(decay, new AllAttestationsGlobalStrategy(), new NoOpAttestorCredibilityPolicy());
+        return new TrustScoreCalculator(decay, new AllAttestationsGlobalStrategy(), new NoOpAttestorCredibilityPolicy(), new RelevanceComposer(List.of(), 0.5));
     }
 
     private TrustScoreCalculator calculator() {
@@ -240,7 +241,7 @@ class TrustScoreCalculatorTest {
     @Test
     void globalScore_withDeriveStrategy_usesCapabilityFrequencyWeights() {
         final TrustScoreCalculator freqCalculator = new TrustScoreCalculator(
-                NO_DECAY, new FrequencyWeightedGlobalStrategy(), new NoOpAttestorCredibilityPolicy());
+                NO_DECAY, new FrequencyWeightedGlobalStrategy(), new NoOpAttestorCredibilityPolicy(), new RelevanceComposer(List.of(), 0.5));
 
         final TestLedgerEntry d1 = decision("alice");
         final TestLedgerEntry d2 = decision("alice");
@@ -263,7 +264,7 @@ class TrustScoreCalculatorTest {
     @Test
     void globalPass_deriveReceivesRawAttestationsForFrequencyWeights() {
         final TrustScoreCalculator freqCalculator = new TrustScoreCalculator(
-                NO_DECAY, new FrequencyWeightedGlobalStrategy(), new NoOpAttestorCredibilityPolicy());
+                NO_DECAY, new FrequencyWeightedGlobalStrategy(), new NoOpAttestorCredibilityPolicy(), new RelevanceComposer(List.of(), 0.5));
 
         final TestLedgerEntry d = decision("alice");
         final LedgerAttestation r1 = attestation(d.id, AttestationVerdict.SOUND, "review");

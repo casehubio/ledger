@@ -49,7 +49,8 @@ class PerActorTrustComputerTest {
                 trustRepo,
                 new NoOpTrustScoreSnapshotRepository(),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new io.casehub.ledger.core.trust.RelevanceComposer(java.util.List.of(), 0.5));
     }
 
     // ── Test 1: No attestations → neutral GLOBAL score ───────────────────────

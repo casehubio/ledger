@@ -13,10 +13,13 @@ import io.casehub.ledger.core.trust.ExponentialDecayFunction;
 import io.casehub.ledger.core.trust.GlobalScoreStrategy;
 import io.casehub.ledger.core.trust.NoOpAttestorCredibilityPolicy;
 import io.casehub.ledger.core.trust.TrustGateService;
+import io.casehub.ledger.core.trust.RelevanceComposer;
 import io.casehub.ledger.core.trust.TrustScoreCalculator;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
 
 @ApplicationScoped
@@ -40,8 +43,18 @@ public class LedgerCoreProducer {
     @DefaultBean
     public TrustScoreCalculator trustScoreCalculator(final DecayFunction decayFunction,
                                                      final GlobalScoreStrategy globalStrategy,
-                                                     final AttestorCredibilityPolicy credibilityPolicy) {
-        return new TrustScoreCalculator(decayFunction, globalStrategy, credibilityPolicy);
+                                                     final AttestorCredibilityPolicy credibilityPolicy,
+                                                     final RelevanceComposer relevanceComposer) {
+        return new TrustScoreCalculator(decayFunction, globalStrategy, credibilityPolicy, relevanceComposer);
+    }
+
+    @Produces
+    @DefaultBean
+    public RelevanceComposer relevanceComposer(
+            @Any Instance<io.casehub.ledger.api.spi.AttestationRelevanceFactor> factors,
+            LedgerConfig config) {
+        return new RelevanceComposer(factors.stream().toList(),
+                config.trustScore().relevance().minWeight());
     }
 
     @Produces

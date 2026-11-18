@@ -68,7 +68,8 @@ class TrustScoreComputationServiceTest {
         var calculator = new TrustScoreCalculator(
                 new ExponentialDecayFunction(90, 1.5),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new RelevanceComposer(java.util.List.of(), 0.5));
         var perActor = new PerActorTrustComputerCore(calculator, trustRepo, snapshotRepo);
 
         var publisherCore = new TrustScorePublisherCore(publisher, props);
@@ -114,7 +115,8 @@ class TrustScoreComputationServiceTest {
         var calculator = new TrustScoreCalculator(
                 new ExponentialDecayFunction(90, 1.5),
                 new AllAttestationsGlobalStrategy(),
-                new NoOpAttestorCredibilityPolicy());
+                new NoOpAttestorCredibilityPolicy(),
+                new RelevanceComposer(java.util.List.of(), 0.5));
         var perActor = new PerActorTrustComputerCore(calculator, trustRepo, snapshotRepo);
 
         var publisherCore = new TrustScorePublisherCore(publisher, props);
