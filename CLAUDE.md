@@ -583,9 +583,10 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl runtime   # QuarkusTest + IT
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl api        # pure JUnit 5, no Quarkus runtime
 
-# If you edited api/ and want to run only runtime tests, install api first:
-# (mvn test -pl runtime resolves api from .m2 cache — source changes in api are invisible otherwise)
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -pl api -q && \
+# Single-module tests resolve upstream deps from .m2 cache — if you edited
+# an upstream module, install it first or tests will use stale classes.
+# Upstream chain: api → ledger-core → annotations/{runtime,deployment} → runtime
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -pl api,ledger-core,annotations/runtime,annotations/deployment -DskipTests -q && \
   JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl runtime
 
 # Run signing module tests (requires with-signing profile)
