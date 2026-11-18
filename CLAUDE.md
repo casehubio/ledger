@@ -300,7 +300,11 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │           ├── OutcomeRecorder.java             — write-path SPI: record(outcome, actorId, subjectId, tenancyId) → UUID entryId
 │           ├── ReactiveOutcomeRecorder.java     — reactive write-path SPI: recordAsync(outcome, actorId, subjectId, tenancyId) → Uni<UUID>
 │           ├── TrustScoreSource.java            — read-path SPI: globalScore(actorId), capabilityScore(actorId, capabilityTag), dimensionScore(actorId, dimension), capabilityDimensionScore(actorId, capability, dimension)
-│           └── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
+│           ├── LedgerTraceIdProvider.java       — SPI: readCurrentTraceId() → Optional<String> (OTel or custom trace context)
+│           ├── AttestationRelevanceFactor.java  — SPI: per-attestation relevance factor (org proximity, capability overlap, etc.); discovered via Instance<>; see #231
+│           ├── AttestationRelevanceContext.java  — record: per-attestation context for relevance assessment (attestor, actor, snapshot map)
+│           ├── RelevanceAssessment.java          — record: weight ∈ [0,1] + diagnostic reason; NEUTRAL constant
+│           └── LedgerAttestationEnricher.java    — SPI: write-time attestation enricher (populates relevanceSnapshot JSON); sibling of LedgerEntryEnricher
 ├── runtime/
 │   └── src/main/resources/META-INF/
 │       └── orm.xml                          — JPA mapped-superclass declarations for api/ model classes (LedgerEntry, LedgerAttestation, LedgerSupplement, ComplianceSupplement, ProvenanceSupplement)
@@ -380,8 +384,10 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── LedgerRetentionJob.java      — @Scheduled daily retention sweep (EU AI Act Art.12)
 │       │   ├── DecayFunction.java           — SPI: attestation decay weight (ageInDays, verdict) → weight
 │       │   ├── ExponentialDecayFunction.java — @DefaultBean: 2^(-age/halfLife) × valence multiplier (FLAGGED slower decay)
-│       │   ├── TrustScoreComputer.java      — Bayesian Beta trust scoring (compute) + decay-weighted dimension average (computeDimensionScore); delegates decay to DecayFunction (pure Java)
-│       │   ├── TrustScoreCalculator.java    — @ApplicationScoped: pure four-pass computation (capability → dimension → cap×dim → global); no persistence, no CDI events; used by PerActorTrustComputer (write path) and ComputedTrustScoreSource (read path)
+│       │   ├── TrustScoreComputer.java      — Bayesian Beta trust scoring (compute) + decay-weighted dimension average (computeDimensionScore); four-factor weight chain: decay × confidence × credibility × normalised_relevance; self-attestation exclusion; per-pass mass-preserving normalisation; delegates decay to DecayFunction (pure Java)
+│       │   ├── TrustScoreCalculator.java    — @ApplicationScoped: pure four-pass computation (capability → dimension → cap×dim → global); builds AttestationRelevanceContext, batch-resolves relevance via RelevanceComposer; no persistence, no CDI events; used by PerActorTrustComputer (write path) and ComputedTrustScoreSource (read path)
+│       │   ├── RelevanceComposer.java       — concrete: iterates Instance<AttestationRelevanceFactor>, product with floor (casehub.ledger.trust-score.relevance.min-weight, default 0.5); zero factors → NEUTRAL
+│       │   ├── AttestationWeights.java      — record: groups credibilityByAttestorId + relevanceByAttestationId; NEUTRAL constant for tests
 │       │   ├── MaterializedTrustScoreSource.java — @DefaultBean TrustScoreSource: reads ActorTrustScoreRepository per call
 │       │   ├── CachedTrustScoreSource.java  — @Alternative TrustScoreSource: in-memory ConcurrentHashMap cache; observes TrustScoreFullPayload + TrustScoreActorUpdatedEvent for refresh
 │       │   ├── ComputedTrustScoreSource.java — @Alternative TrustScoreSource: on-read computation from raw attestation history; per-actor computation cache with event-driven invalidation
