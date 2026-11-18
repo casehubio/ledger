@@ -7,12 +7,13 @@ import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import io.casehub.ledger.core.model.AttestationRecordedEvent;
 import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.core.signing.AgentEntrySigner;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
+import io.casehub.ledger.runtime.service.LedgerAttestationEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
 import jakarta.annotation.Priority;
@@ -63,6 +64,9 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
 
     @Inject
     LedgerEnricherPipeline enricherPipeline;
+    @Inject
+    LedgerAttestationEnricherPipeline attestationEnricherPipeline;
+
 
     @Inject
     AgentEntrySigner agentEntrySigner;
@@ -206,8 +210,6 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
         if (attestation.occurredAt == null) {
             attestation.occurredAt = Instant.now();
         }
-        attestation.attestorId = actorIdentityProvider.tokenise(
-                attestation.attestorId, attestation.attestorType);
 
         // Validate the entry belongs to the specified tenant
         final LedgerEntry entry = entries.get(attestation.ledgerEntryId);
@@ -215,6 +217,14 @@ public class InMemoryLedgerEntryRepository implements LedgerEntryRepository {
             throw new IllegalArgumentException(
                     "LedgerEntry " + attestation.ledgerEntryId + " does not belong to tenant " + tenancyId);
         }
+
+        // Enrich before tokenisation — enrichers need raw attestor identity
+        if (entry != null) {
+            attestationEnricherPipeline.enrich(attestation, entry);
+        }
+
+        attestation.attestorId = actorIdentityProvider.tokenise(
+                attestation.attestorId, attestation.attestorType);
 
         attestations.put(attestation.id, attestation);
 

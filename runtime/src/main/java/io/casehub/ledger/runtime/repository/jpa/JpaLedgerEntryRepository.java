@@ -6,22 +6,23 @@ import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.spi.ActorIdentityProvider;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import io.casehub.ledger.core.model.AttestationRecordedEvent;
 import io.casehub.ledger.core.privacy.ContentSanitiser;
 import io.casehub.ledger.core.signing.AgentEntrySigner;
-import io.casehub.ledger.jpa.JpaLedgerEntry;
-import io.casehub.ledger.jpa.LedgerSequenceAllocator;
-import io.casehub.ledger.runtime.config.LedgerConfig;
+import io.casehub.ledger.runtime.service.LedgerAttestationEnricherPipeline;
 import io.casehub.ledger.jpa.JpaComplianceSupplement;
+import io.casehub.ledger.jpa.JpaLedgerEntry;
 import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import io.casehub.ledger.jpa.LedgerPersistenceUnit;
-import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
+import io.casehub.ledger.jpa.LedgerSequenceAllocator;
+import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.service.LedgerEnricherPipeline;
 import io.casehub.ledger.runtime.service.LedgerMerklePublisher;
+import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
-import io.quarkus.arc.DefaultBean;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -88,6 +89,9 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
 
     @Inject
     LedgerEnricherPipeline enricherPipeline;
+    @Inject
+    LedgerAttestationEnricherPipeline attestationEnricherPipeline;
+
 
     @Inject
     AgentEntrySigner agentEntrySigner;
@@ -247,6 +251,8 @@ public class JpaLedgerEntryRepository implements LedgerEntryRepository {
             throw new IllegalArgumentException(
                     "LedgerEntry " + attestation.ledgerEntryId + " not found in tenant " + tenancyId);
         }
+
+        attestationEnricherPipeline.enrich(attestation, entry);
 
         attestation.attestorId = actorIdentityProvider.tokenise(
                 attestation.attestorId, attestation.attestorType);
