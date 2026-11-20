@@ -1,5 +1,8 @@
 package io.casehub.ledger.core.trust;
 
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.LedgerAttestation;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -8,9 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.LedgerAttestation;
 
 /**
  * Computes EigenTrust global trust scores via power iteration.
@@ -53,17 +53,29 @@ public final class EigenTrustComputer {
     /**
      * Compute EigenTrust global trust scores for all actors found in the attestation data.
      *
-     * @param allAttestations all ledger attestations to derive peer trust opinions from
-     * @param entryActorIndex map from ledger entry id to the actor who made the decision
+     * @param allAttestations  all ledger attestations to derive peer trust opinions from
+     * @param entryActorIndex  map from ledger entry id to the actor who made the decision
      * @param preTrustedActors actor IDs considered unconditionally trustworthy; if empty, a
-     *        uniform distribution over all actors is used as the seed
+     *                         uniform distribution over all actors is used as the seed
      * @return map from actorId to global trust share in [0.0, 1.0]; values sum to ≤ 1.0 across
-     *         all actors; empty if {@code allAttestations} is empty
+     * all actors; empty if {@code allAttestations} is empty
      */
     public Map<String, Double> compute(
             final List<LedgerAttestation> allAttestations,
             final Map<UUID, String> entryActorIndex,
-            final Set<String> preTrustedActors) {
+            final Set<String> preTrustedActors) {return compute(allAttestations, entryActorIndex, preTrustedActors, Map.of());}
+
+    /**
+     * Compute EigenTrust global trust scores with per-attestation edge weights.
+     *
+     * @param edgeWeights map from attestation UUID to effective weight; attestations not in the map
+     *                    default to 1.0. Weight is applied as a multiplier on the ±1.0 verdict contribution.
+     */
+    public Map<String, Double> compute(
+            final List<LedgerAttestation> allAttestations,
+            final Map<UUID, String> entryActorIndex,
+            final Set<String> preTrustedActors,
+            final Map<UUID, Double> edgeWeights) {
 
         if (allAttestations.isEmpty()) {
             return Map.of();
@@ -79,14 +91,14 @@ public final class EigenTrustComputer {
             }
         }
 
-        final List<String> actors = new ArrayList<>(actorSet);
+        final List<String>         actors     = new ArrayList<>(actorSet);
         final Map<String, Integer> actorIndex = new LinkedHashMap<>();
         for (int i = 0; i < actors.size(); i++) {
             actorIndex.put(actors.get(i), i);
         }
         final int n = actors.size();
 
-        // s[i][j] = (positive attestations from i on j's decisions) - (negative)
+        // s[i][j] = weighted sum of attestations from i on j's decisions
         final double[][] s = new double[n][n];
         for (final LedgerAttestation att : allAttestations) {
             final String decisionActor = entryActorIndex.get(att.ledgerEntryId);
@@ -98,17 +110,18 @@ public final class EigenTrustComputer {
             if (i == null || j == null || i.equals(j)) {
                 continue; // skip unknowns and self-attestation
             }
+            final double weight = edgeWeights.getOrDefault(att.id, 1.0);
             if (att.verdict == AttestationVerdict.SOUND || att.verdict == AttestationVerdict.ENDORSED) {
-                s[i][j] += 1.0;
+                s[i][j] += weight;
             } else if (att.verdict == AttestationVerdict.FLAGGED || att.verdict == AttestationVerdict.CHALLENGED) {
-                s[i][j] -= 1.0;
+                s[i][j] -= weight;
             }
         }
 
         // c[i][j] = max(s[i][j], 0) / sum_k max(s[i][k], 0)
         // Actors with no positive attestations get a uniform row (dangling-node fix)
-        final double[][] c = new double[n][n];
-        final double uniform = 1.0 / n;
+        final double[][] c       = new double[n][n];
+        final double     uniform = 1.0 / n;
         for (int i = 0; i < n; i++) {
             double rowSum = 0.0;
             for (int j = 0; j < n; j++) {
@@ -126,9 +139,9 @@ public final class EigenTrustComputer {
         final double[] p = buildPreTrustedDistribution(actors, actorIndex, preTrustedActors, n);
 
         // Power iteration: t = (1-alpha) * Cᵀ * t + alpha * p
-        double[] t = Arrays.copyOf(p, n);
-        final double[] tNext = new double[n];
-        final double oneMinusAlpha = 1.0 - alpha;
+        double[]       t             = Arrays.copyOf(p, n);
+        final double[] tNext         = new double[n];
+        final double   oneMinusAlpha = 1.0 - alpha;
 
         for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
             Arrays.fill(tNext, 0.0);
@@ -169,6 +182,7 @@ public final class EigenTrustComputer {
         }
         return result;
     }
+
 
     private double[] buildPreTrustedDistribution(
             final List<String> actors,
