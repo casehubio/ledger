@@ -1,5 +1,28 @@
 package io.casehub.ledger.runtime.service;
 
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.api.model.ScoreType;
+import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
+import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
+import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
+import io.casehub.ledger.api.spi.AttestationRelevanceContext;
+import io.casehub.ledger.core.trust.DecayFunction;
+import io.casehub.ledger.core.trust.EigenTrustComputer;
+import io.casehub.ledger.core.trust.EigenTrustEdgeWeights;
+import io.casehub.ledger.core.trust.RelevanceComposer;
+import io.casehub.ledger.jpa.LedgerPersistenceUnit;
+import io.casehub.ledger.runtime.config.LedgerConfig;
+import io.casehub.ledger.runtime.qualifier.CrossTenant;
+import io.casehub.ledger.runtime.service.federation.TrustBootstrapService;
+import io.casehub.ledger.runtime.service.routing.TrustScoreRoutingPublisher;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -8,26 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import io.casehub.ledger.core.trust.EigenTrustComputer;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-
-import io.casehub.ledger.api.model.ScoreType;
-import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.api.model.ActorTrustScoreBase;
-import io.casehub.ledger.api.model.LedgerAttestation;
-import io.casehub.ledger.api.model.LedgerEntry;
-import io.casehub.ledger.jpa.LedgerPersistenceUnit;
-import io.casehub.ledger.runtime.qualifier.CrossTenant;
-import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
-import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
-import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
-import io.casehub.ledger.runtime.service.federation.TrustBootstrapService;
-import io.casehub.ledger.runtime.service.routing.TrustScoreRoutingPublisher;
-import io.quarkus.scheduler.Scheduled;
 
 /**
  * Nightly scheduled job that recomputes Bayesian Beta trust scores for all
@@ -66,6 +69,12 @@ public class TrustScoreJob {
 
     @Inject
     TrustScoreSnapshotRepository snapshotRepo;
+    @Inject
+    DecayFunction                decayFunction;
+
+    @Inject
+    RelevanceComposer relevanceComposer;
+
 
     @Inject
     @LedgerPersistenceUnit
@@ -75,7 +84,7 @@ public class TrustScoreJob {
     @Transactional
     public void computeTrustScores() {
         if (!config.trustScore().enabled()
-                || !config.trustScore().materialization().enabled()) {
+            || !config.trustScore().materialization().enabled()) {
             return;
         }
         runComputation();
@@ -95,17 +104,17 @@ public class TrustScoreJob {
         final Map<String, ActorTrustScoreBase> previousSnapshot;
         if (routingPublisher.needsPreviousSnapshot()) {
             previousSnapshot = trustRepo.findAll().stream()
-                    .filter(s -> s.scoreType == ScoreType.GLOBAL)
-                    .peek(s -> em.detach(s))
-                    .collect(Collectors.toMap(s -> s.actorId, s -> s));
+                                        .filter(s -> s.scoreType == ScoreType.GLOBAL)
+                                        .peek(s -> em.detach(s))
+                                        .collect(Collectors.toMap(s -> s.actorId, s -> s));
         } else {
             previousSnapshot = Map.of();
         }
 
         final List<LedgerEntry> allEvents = ledgerRepo.findAllEvents();
         final Map<String, List<LedgerEntry>> byActor = allEvents.stream()
-                .filter(e -> e.actorId != null)
-                .collect(Collectors.groupingBy(e -> e.actorId));
+                                                                .filter(e -> e.actorId != null)
+                                                                .collect(Collectors.groupingBy(e -> e.actorId));
 
         // Bootstrap pre-pass: seed trust scores for actors appearing for the first time.
         // findAll() loads all score rows to extract existing actor IDs. At production scale
@@ -115,8 +124,8 @@ public class TrustScoreJob {
         // durability is needed).
         if (config.trustScore().bootstrap().enabled()) {
             final Set<String> existingActors = trustRepo.findAll().stream()
-                    .map(s -> s.actorId)
-                    .collect(Collectors.toSet());
+                                                        .map(s -> s.actorId)
+                                                        .collect(Collectors.toSet());
             final Set<String> newActors = new LinkedHashSet<>(byActor.keySet());
             newActors.removeAll(existingActors);
             if (!newActors.isEmpty()) {
@@ -127,17 +136,16 @@ public class TrustScoreJob {
         final Instant now = Instant.now();
 
         final Set<UUID> entryIds = allEvents.stream()
-                .map(e -> e.id)
-                .collect(Collectors.toSet());
-        @SuppressWarnings("unchecked")
-        final Map<UUID, List<LedgerAttestation>> attestationsByEntry = (Map<UUID, List<LedgerAttestation>>) (Map<?,?>) ledgerRepo.findAttestationsForEntries(entryIds);
+                                            .map(e -> e.id)
+                                            .collect(Collectors.toSet());
+        @SuppressWarnings("unchecked") final Map<UUID, List<LedgerAttestation>> attestationsByEntry = (Map<UUID, List<LedgerAttestation>>) (Map<?, ?>) ledgerRepo.findAttestationsForEntries(entryIds);
 
         for (final Map.Entry<String, List<LedgerEntry>> actorEntry : byActor.entrySet()) {
-            final String actorId = actorEntry.getKey();
+            final String            actorId   = actorEntry.getKey();
             final List<LedgerEntry> decisions = actorEntry.getValue();
 
             final Set<UUID> actorEntryIds = decisions.stream()
-                    .map(e -> e.id).collect(Collectors.toSet());
+                                                     .map(e -> e.id).collect(Collectors.toSet());
             final Map<UUID, List<LedgerAttestation>> actorAttestationsByEntry = new LinkedHashMap<>();
             for (final UUID eid : actorEntryIds) {
                 if (attestationsByEntry.containsKey(eid)) {
@@ -155,8 +163,8 @@ public class TrustScoreJob {
         // Routing signals — after all writes, within the same transaction
         // Detach before publish so observers receive value snapshots, not managed entities
         final List<ActorTrustScoreBase> currentScores = trustRepo.findAll().stream()
-                .peek(em::detach)
-                .collect(Collectors.toList());
+                                                                 .peek(em::detach)
+                                                                 .collect(Collectors.toList());
         routingPublisher.publish(currentScores, previousSnapshot, now);
 
         // Snapshot retention trimming
@@ -169,24 +177,36 @@ public class TrustScoreJob {
     private void runEigenTrustPass(
             final List<LedgerEntry> allEvents,
             final Map<UUID, List<LedgerAttestation>> attestationsByEntry) {
-
         final Map<UUID, String> entryActorIndex = allEvents.stream()
-                .filter(e -> e.actorId != null)
-                .collect(Collectors.toMap(e -> e.id, e -> e.actorId));
+                                                           .filter(e -> e.actorId != null)
+                                                           .collect(Collectors.toMap(e -> e.id, e -> e.actorId));
 
         final List<LedgerAttestation> allAttestations = attestationsByEntry.values().stream()
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+                                                                           .flatMap(List::stream)
+                                                                           .collect(Collectors.toList());
 
         final Set<String> preTrustedActors = config.trustScore().eigentrust().preTrustedActors()
-                .map(LinkedHashSet::new)
-                .orElseGet(LinkedHashSet::new);
+                                                   .map(LinkedHashSet::new)
+                                                   .orElseGet(LinkedHashSet::new);
+
+        final Instant now = Instant.now();
+
+        final Map<UUID, Double> relevanceMap = relevanceComposer.assess(
+                allAttestations.stream()
+                               .map(att -> new AttestationRelevanceContext(
+                                       att.id, att.attestorId, att.attestorType, att.attestorRole,
+                                       entryActorIndex.get(att.ledgerEntryId), null,
+                                       att.capabilityTag, att.trustDimension, att.occurredAt, Map.of()))
+                               .toList());
+
+        final Map<UUID, Double> edgeWeights = EigenTrustEdgeWeights.compute(
+                allAttestations, decayFunction, relevanceMap, now);
 
         final EigenTrustComputer eigenTrust = new EigenTrustComputer(
                 config.trustScore().eigentrust().alpha());
 
         final Map<String, Double> globalScores = eigenTrust.compute(
-                allAttestations, entryActorIndex, preTrustedActors);
+                allAttestations, entryActorIndex, preTrustedActors, edgeWeights);
 
         for (final Map.Entry<String, Double> entry : globalScores.entrySet()) {
             trustRepo.updateGlobalTrustScore(entry.getKey(), entry.getValue());

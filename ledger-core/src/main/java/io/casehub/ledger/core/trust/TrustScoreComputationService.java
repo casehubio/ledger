@@ -5,6 +5,7 @@ import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
+import io.casehub.ledger.api.spi.AttestationRelevanceContext;
 import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
 import io.casehub.ledger.core.config.TrustScoreProperties;
@@ -23,13 +24,15 @@ import java.util.stream.Collectors;
 public class TrustScoreComputationService {
 
     private final CrossTenantLedgerEntryRepository ledgerRepo;
-    private final ActorTrustScoreRepository trustRepo;
-    private final TrustScoreSnapshotRepository snapshotRepo;
-    private final PerActorTrustComputerCore perActorComputer;
-    private final TrustScorePublisherCore publisher;
-    private final TrustScoreProperties properties;
-    private final TrustBootstrapServiceCore bootstrapService;
-    private final EigenTrustComputer eigenTrustComputer;
+    private final ActorTrustScoreRepository        trustRepo;
+    private final TrustScoreSnapshotRepository     snapshotRepo;
+    private final PerActorTrustComputerCore        perActorComputer;
+    private final TrustScorePublisherCore          publisher;
+    private final TrustScoreProperties             properties;
+    private final TrustBootstrapServiceCore        bootstrapService;
+    private final EigenTrustComputer               eigenTrustComputer;
+    private final DecayFunction                    decayFunction;
+    private final RelevanceComposer                relevanceComposer;
 
     public TrustScoreComputationService(CrossTenantLedgerEntryRepository ledgerRepo,
                                         ActorTrustScoreRepository trustRepo,
@@ -38,36 +41,40 @@ public class TrustScoreComputationService {
                                         TrustScorePublisherCore publisher,
                                         TrustScoreProperties properties,
                                         TrustBootstrapServiceCore bootstrapService,
-                                        EigenTrustComputer eigenTrustComputer) {
-        this.ledgerRepo = ledgerRepo;
-        this.trustRepo = trustRepo;
-        this.snapshotRepo = snapshotRepo;
-        this.perActorComputer = perActorComputer;
-        this.publisher = publisher;
-        this.properties = properties;
-        this.bootstrapService = bootstrapService;
+                                        EigenTrustComputer eigenTrustComputer,
+                                        DecayFunction decayFunction,
+                                        RelevanceComposer relevanceComposer) {
+        this.ledgerRepo         = ledgerRepo;
+        this.trustRepo          = trustRepo;
+        this.snapshotRepo       = snapshotRepo;
+        this.perActorComputer   = perActorComputer;
+        this.publisher          = publisher;
+        this.properties         = properties;
+        this.bootstrapService   = bootstrapService;
         this.eigenTrustComputer = eigenTrustComputer;
+        this.decayFunction      = decayFunction;
+        this.relevanceComposer  = relevanceComposer;
     }
 
     public void runComputation() {
         Map<String, ActorTrustScoreBase> previousSnapshot;
         if (publisher.needsPreviousSnapshot()) {
             previousSnapshot = trustRepo.findAllDetached().stream()
-                    .filter(s -> s.scoreType == ScoreType.GLOBAL)
-                    .collect(Collectors.toMap(s -> s.actorId, s -> s));
+                                        .filter(s -> s.scoreType == ScoreType.GLOBAL)
+                                        .collect(Collectors.toMap(s -> s.actorId, s -> s));
         } else {
             previousSnapshot = Map.of();
         }
 
         List<LedgerEntry> allEvents = ledgerRepo.findAllEvents();
         Map<String, List<LedgerEntry>> byActor = allEvents.stream()
-                .filter(e -> e.actorId != null)
-                .collect(Collectors.groupingBy(e -> e.actorId));
+                                                          .filter(e -> e.actorId != null)
+                                                          .collect(Collectors.groupingBy(e -> e.actorId));
 
         if (properties.bootstrap().enabled()) {
             Set<String> existingActors = trustRepo.findAll().stream()
-                    .map(s -> s.actorId)
-                    .collect(Collectors.toSet());
+                                                  .map(s -> s.actorId)
+                                                  .collect(Collectors.toSet());
             Set<String> newActors = new LinkedHashSet<>(byActor.keySet());
             newActors.removeAll(existingActors);
             if (!newActors.isEmpty()) {
@@ -78,18 +85,18 @@ public class TrustScoreComputationService {
         Instant now = Instant.now();
 
         Set<UUID> entryIds = allEvents.stream()
-                .map(e -> e.id)
-                .collect(Collectors.toSet());
+                                      .map(e -> e.id)
+                                      .collect(Collectors.toSet());
         @SuppressWarnings("unchecked")
         Map<UUID, List<LedgerAttestation>> attestationsByEntry =
                 (Map<UUID, List<LedgerAttestation>>) (Map<?, ?>) ledgerRepo.findAttestationsForEntries(entryIds);
 
         for (Map.Entry<String, List<LedgerEntry>> actorEntry : byActor.entrySet()) {
-            String actorId = actorEntry.getKey();
+            String            actorId   = actorEntry.getKey();
             List<LedgerEntry> decisions = actorEntry.getValue();
 
             Set<UUID> actorEntryIds = decisions.stream()
-                    .map(e -> e.id).collect(Collectors.toSet());
+                                               .map(e -> e.id).collect(Collectors.toSet());
             Map<UUID, List<LedgerAttestation>> actorAttestationsByEntry = new LinkedHashMap<>();
             for (UUID eid : actorEntryIds) {
                 if (attestationsByEntry.containsKey(eid)) {
@@ -116,19 +123,32 @@ public class TrustScoreComputationService {
     private void runEigenTrustPass(List<LedgerEntry> allEvents,
                                    Map<UUID, List<LedgerAttestation>> attestationsByEntry) {
         Map<UUID, String> entryActorIndex = allEvents.stream()
-                .filter(e -> e.actorId != null)
-                .collect(Collectors.toMap(e -> e.id, e -> e.actorId));
+                                                     .filter(e -> e.actorId != null)
+                                                     .collect(Collectors.toMap(e -> e.id, e -> e.actorId));
 
         List<LedgerAttestation> allAttestations = attestationsByEntry.values().stream()
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+                                                                     .flatMap(List::stream)
+                                                                     .collect(Collectors.toList());
 
         Set<String> preTrustedActors = properties.eigentrust().preTrustedActors()
-                .map(LinkedHashSet::new)
-                .orElseGet(LinkedHashSet::new);
+                                                 .map(LinkedHashSet::new)
+                                                 .orElseGet(LinkedHashSet::new);
+
+        Instant now = Instant.now();
+
+        Map<UUID, Double> relevanceMap = relevanceComposer.assess(
+                allAttestations.stream()
+                               .map(att -> new AttestationRelevanceContext(
+                                       att.id, att.attestorId, att.attestorType, att.attestorRole,
+                                       entryActorIndex.get(att.ledgerEntryId), null,
+                                       att.capabilityTag, att.trustDimension, att.occurredAt, Map.of()))
+                               .toList());
+
+        Map<UUID, Double> edgeWeights = EigenTrustEdgeWeights.compute(
+                allAttestations, decayFunction, relevanceMap, now);
 
         Map<String, Double> globalScores = eigenTrustComputer.compute(
-                allAttestations, entryActorIndex, preTrustedActors);
+                allAttestations, entryActorIndex, preTrustedActors, edgeWeights);
 
         for (Map.Entry<String, Double> entry : globalScores.entrySet()) {
             trustRepo.updateGlobalTrustScore(entry.getKey(), entry.getValue());

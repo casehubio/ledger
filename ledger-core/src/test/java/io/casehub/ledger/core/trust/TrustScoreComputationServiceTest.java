@@ -80,7 +80,9 @@ class TrustScoreComputationServiceTest {
 
         var service = new TrustScoreComputationService(
                 ledgerRepo, trustRepo, snapshotRepo, perActor, publisherCore,
-                props, bootstrap, eigenTrust);
+                props, bootstrap, eigenTrust,
+                new ExponentialDecayFunction(90, 1.5),
+                new RelevanceComposer(java.util.List.of(), 0.5));
 
         service.runComputation();
 
@@ -125,7 +127,9 @@ class TrustScoreComputationServiceTest {
 
         var service = new TrustScoreComputationService(
                 ledgerRepo, trustRepo, snapshotRepo, perActor, publisherCore,
-                props, bootstrap, eigenTrust);
+                props, bootstrap, eigenTrust,
+                new ExponentialDecayFunction(90, 1.5),
+                new RelevanceComposer(java.util.List.of(), 0.5));
 
         service.runComputation();
 

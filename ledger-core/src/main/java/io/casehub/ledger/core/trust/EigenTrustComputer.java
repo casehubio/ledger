@@ -36,15 +36,15 @@ import java.util.UUID;
  */
 public final class EigenTrustComputer {
 
-    static final int MAX_ITERATIONS = 100;
+    static final int    MAX_ITERATIONS        = 100;
     static final double CONVERGENCE_THRESHOLD = 1e-6;
 
     private final double alpha;
 
     /**
      * @param alpha dampening constant in (0.0, 1.0); higher values anchor the result closer to
-     *        the pre-trusted distribution and improve convergence in cyclic graphs. Values outside
-     *        (0, 1) default to 0.15.
+     *              the pre-trusted distribution and improve convergence in cyclic graphs. Values outside
+     *              (0, 1) default to 0.15.
      */
     public EigenTrustComputer(final double alpha) {
         this.alpha = (alpha > 0.0 && alpha < 1.0) ? alpha : 0.15;
@@ -63,7 +63,9 @@ public final class EigenTrustComputer {
     public Map<String, Double> compute(
             final List<LedgerAttestation> allAttestations,
             final Map<UUID, String> entryActorIndex,
-            final Set<String> preTrustedActors) {return compute(allAttestations, entryActorIndex, preTrustedActors, Map.of());}
+            final Set<String> preTrustedActors) {
+        return compute(allAttestations, entryActorIndex, preTrustedActors, Map.of());
+    }
 
     /**
      * Compute EigenTrust global trust scores with per-attestation edge weights.
