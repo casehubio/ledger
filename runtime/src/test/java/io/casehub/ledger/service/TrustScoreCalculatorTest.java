@@ -4,19 +4,24 @@ import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.CapabilityTag;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.core.trust.NoOpAttestorCredibilityPolicy;
-import io.casehub.ledger.core.trust.RelevanceComposer;
-import io.casehub.ledger.jpa.LedgerAttestation;
+import io.casehub.ledger.api.spi.AttestationRelevanceContext;
+import io.casehub.ledger.api.spi.AttestationRelevanceFactor;
+import io.casehub.ledger.api.spi.RelevanceAssessment;
 import io.casehub.ledger.core.trust.AllAttestationsGlobalStrategy;
 import io.casehub.ledger.core.trust.DecayFunction;
 import io.casehub.ledger.core.trust.FrequencyWeightedGlobalStrategy;
+import io.casehub.ledger.core.trust.NoOpAttestorCredibilityPolicy;
+import io.casehub.ledger.core.trust.RelevanceComposer;
 import io.casehub.ledger.core.trust.TrustScoreCalculator;
 import io.casehub.ledger.core.trust.TrustScoreCalculator.ComputedScores;
 import io.casehub.ledger.core.trust.TrustScoreComputer;
+import io.casehub.ledger.jpa.LedgerAttestation;
 import io.casehub.platform.api.identity.ActorType;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,6 +47,11 @@ class TrustScoreCalculatorTest {
     private TrustScoreCalculator calculator() {
         return calculator(NO_DECAY);
     }
+
+    private TrustScoreCalculator calculatorWithRelevance(final AttestationRelevanceFactor... factors) {
+        return new TrustScoreCalculator(NO_DECAY, new AllAttestationsGlobalStrategy(), new NoOpAttestorCredibilityPolicy(), new RelevanceComposer(List.of(factors), 0.1));
+    }
+
 
     // ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -96,6 +106,22 @@ class TrustScoreCalculatorTest {
         a.occurredAt = now;
         return a;
     }
+
+    private LedgerAttestation attestationWithSnapshot(final UUID entryId, final AttestationVerdict verdict, final String capabilityTag, final String attestorId, final String snapshotJson) {
+        final LedgerAttestation a = new LedgerAttestation();
+        a.id                = UUID.randomUUID();
+        a.ledgerEntryId     = entryId;
+        a.subjectId         = UUID.randomUUID();
+        a.attestorId        = attestorId;
+        a.attestorType      = ActorType.AGENT;
+        a.verdict           = verdict;
+        a.confidence        = 1.0;
+        a.capabilityTag     = capabilityTag;
+        a.occurredAt        = now;
+        a.relevanceSnapshot = snapshotJson;
+        return a;
+    }
+
 
     // ── Empty decisions ──────────────────────────────────────────────────────
 
@@ -305,5 +331,143 @@ class TrustScoreCalculatorTest {
         assertThat(scores.globalScore().overturnedCount())
                 .as("Entry with FLAGGED attestation must count as overturned")
                 .isEqualTo(1);
+    }
+
+    @Test
+    void capabilityScore_groupAwareFactor_shiftsScore() {
+        final TestLedgerEntry d = decision("alice");
+        final LedgerAttestation close1 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "close-1", "{\"org-distance\": 1}");
+        final LedgerAttestation close2 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "close-2", "{\"org-distance\": 1}");
+        final LedgerAttestation close3 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "close-3", "{\"org-distance\": 1}");
+        final LedgerAttestation farPeer = attestationWithSnapshot(d.id, AttestationVerdict.FLAGGED, "review", "far-peer", "{\"org-distance\": 3}");
+
+        final ComputedScores baseline = calculator().computeAll(List.of(d), Map.of(d.id, List.of(close1, close2, close3, farPeer)), now);
+
+        AttestationRelevanceFactor capFactor = groupCapFactor(0.5);
+        final ComputedScores weighted = calculatorWithRelevance(capFactor).computeAll(List.of(d), Map.of(d.id, List.of(close1, close2, close3, farPeer)), now);
+
+        // 3 same-unit (75%) > 50% cap -> same-unit SOUND attestations down-weighted
+        // far-peer FLAGGED stays at full weight -> score shifts lower
+        assertThat(weighted.capabilityScores().get("review").trustScore())
+                .isLessThan(baseline.capabilityScores().get("review").trustScore());
+    }
+
+    @Test
+    void globalScore_groupAwareFactor_affectsGlobalScore() {
+        final TestLedgerEntry d = decision("alice");
+        final LedgerAttestation close1 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, CapabilityTag.GLOBAL, "close-1", "{\"org-distance\": 1}");
+        final LedgerAttestation close2 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, CapabilityTag.GLOBAL, "close-2", "{\"org-distance\": 1}");
+        final LedgerAttestation close3 = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, CapabilityTag.GLOBAL, "close-3", "{\"org-distance\": 1}");
+        final LedgerAttestation farPeer = attestationWithSnapshot(d.id, AttestationVerdict.FLAGGED, CapabilityTag.GLOBAL, "far-peer", "{\"org-distance\": 3}");
+
+        final ComputedScores baseline = calculator().computeAll(List.of(d), Map.of(d.id, List.of(close1, close2, close3, farPeer)), now);
+        final ComputedScores weighted = calculatorWithRelevance(groupCapFactor(0.5)).computeAll(List.of(d), Map.of(d.id, List.of(close1, close2, close3, farPeer)), now);
+
+        // 3 same-unit (75%) > 50% cap -> SOUND attestations down-weighted, FLAGGED unchanged
+        assertThat(weighted.globalScore().trustScore())
+                .isLessThan(baseline.globalScore().trustScore());
+    }
+
+    @Test
+    void equalRelevance_preservesBaselineScore() {
+        final TestLedgerEntry   d = decision("alice");
+        final LedgerAttestation a = attestation(d.id, AttestationVerdict.SOUND, "review");
+
+        AttestationRelevanceFactor uniformFactor = new AttestationRelevanceFactor() {
+            @Override
+            public RelevanceAssessment assess(AttestationRelevanceContext ctx) {
+                return new RelevanceAssessment(0.8, "uniform");
+            }
+
+            @Override
+            public String name() {
+                return "uniform";
+            }
+        };
+
+        final ComputedScores baseline = calculator().computeAll(List.of(d), Map.of(d.id, List.of(a)), now);
+        final ComputedScores weighted = calculatorWithRelevance(uniformFactor).computeAll(List.of(d), Map.of(d.id, List.of(a)), now);
+
+        assertThat(weighted.capabilityScores().get("review").trustScore())
+                .isCloseTo(baseline.capabilityScores().get("review").trustScore(), within(1e-9));
+    }
+
+    @Test
+    void snapshotRoundTrip_orgDistanceFlowsThroughToFactor() {
+        final TestLedgerEntry   d    = decision("alice");
+        List<io.casehub.ledger.api.model.LedgerAttestation> atts = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            atts.add(attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "close-" + i, "{\"org-distance\": 1}"));
+        }
+        for (int i = 0; i < 2; i++) {
+            atts.add(attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "far-" + i, "{\"org-distance\": 3}"));
+        }
+
+        final ComputedScores baseline = calculator().computeAll(List.of(d), Map.of(d.id, atts), now);
+        final ComputedScores weighted = calculatorWithRelevance(groupCapFactor(0.5)).computeAll(List.of(d), Map.of(d.id, atts), now);
+
+        assertThat(weighted.capabilityScores().get("review").trustScore()).isGreaterThan(0.5);
+        assertThat(baseline.capabilityScores().get("review").trustScore()).isGreaterThan(0.5);
+    }
+
+
+    private static AttestationRelevanceFactor groupCapFactor(final double maxSameUnitShare) {
+        return new AttestationRelevanceFactor() {
+            @Override
+            public RelevanceAssessment assess(AttestationRelevanceContext ctx) {
+                return RelevanceAssessment.NEUTRAL;
+            }
+
+            @Override
+            public Map<UUID, RelevanceAssessment> assessBatch(List<AttestationRelevanceContext> ctxs) {
+                Map<UUID, RelevanceAssessment> result    = new LinkedHashMap<>();
+                List<UUID>                     sameUnit  = new ArrayList<>();
+                List<UUID>                     crossUnit = new ArrayList<>();
+
+                for (AttestationRelevanceContext ctx : ctxs) {
+                    var snapshot = ctx.snapshot();
+                    if (snapshot != null && snapshot.containsKey("org-distance")) {
+                        int dist = ((Number) snapshot.get("org-distance")).intValue();
+                        if (dist == 1) {
+                            sameUnit.add(ctx.attestationId());
+                        } else if (dist > 1) {
+                            crossUnit.add(ctx.attestationId());
+                        } else {
+                            result.put(ctx.attestationId(), RelevanceAssessment.NEUTRAL);
+                        }
+                    } else {
+                        result.put(ctx.attestationId(), RelevanceAssessment.NEUTRAL);
+                    }
+                }
+
+                int sameCount  = sameUnit.size();
+                int crossCount = crossUnit.size();
+                if (crossCount == 0 || sameCount == 0) {
+                    for (AttestationRelevanceContext ctx : ctxs) {
+                        result.put(ctx.attestationId(), RelevanceAssessment.NEUTRAL);
+                    }
+                    return result;
+                }
+
+                double fraction = (double) sameCount / (sameCount + crossCount);
+                if (fraction <= maxSameUnitShare) {
+                    for (AttestationRelevanceContext ctx : ctxs) {
+                        result.put(ctx.attestationId(), RelevanceAssessment.NEUTRAL);
+                    }
+                    return result;
+                }
+
+                double              weight = maxSameUnitShare * crossCount / ((1.0 - maxSameUnitShare) * sameCount);
+                RelevanceAssessment capped = new RelevanceAssessment(weight, "capped");
+                for (UUID id : sameUnit) {result.put(id, capped);}
+                for (UUID id : crossUnit) {result.put(id, RelevanceAssessment.NEUTRAL);}
+                return result;
+            }
+
+            @Override
+            public String name() {
+                return "test-independence";
+            }
+        };
     }
 }
