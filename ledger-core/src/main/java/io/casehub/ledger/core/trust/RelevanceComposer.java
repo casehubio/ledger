@@ -39,14 +39,22 @@ public class RelevanceComposer {
             return result;
         }
 
-        Map<UUID, Double> result = new LinkedHashMap<>();
+        Map<UUID, Double> products = new LinkedHashMap<>();
         for (AttestationRelevanceContext ctx : contexts) {
-            double product = 1.0;
-            for (AttestationRelevanceFactor factor : factors) {
-                RelevanceAssessment assessment = factor.assess(ctx);
-                product *= assessment.weight();
+            products.put(ctx.attestationId(), 1.0);
+        }
+
+        for (AttestationRelevanceFactor factor : factors) {
+            Map<UUID, RelevanceAssessment> batch = factor.assessBatch(contexts);
+            for (var entry : batch.entrySet()) {
+                products.merge(entry.getKey(), entry.getValue().weight(),
+                               (existing, weight) -> existing * weight);
             }
-            result.put(ctx.attestationId(), Math.max(minWeight, product));
+        }
+
+        Map<UUID, Double> result = new LinkedHashMap<>();
+        for (var entry : products.entrySet()) {
+            result.put(entry.getKey(), Math.max(minWeight, entry.getValue()));
         }
         return result;
     }

@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RelevanceComposerTest {
 
@@ -117,6 +119,80 @@ class RelevanceComposerTest {
         var composer = new RelevanceComposer(List.of(), 1.0);
         assertNotNull(composer);
     }
+
+
+    @Test
+    void batchFactor_composesWithPerItemFactor() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
+        AttestationRelevanceFactor perItem = fixedFactor(0.8, "per-item");
+
+        AttestationRelevanceFactor batchFactor = new AttestationRelevanceFactor() {
+            @Override
+            public RelevanceAssessment assess(AttestationRelevanceContext ctx) {
+                return RelevanceAssessment.NEUTRAL;
+            }
+
+            @Override
+            public Map<UUID, RelevanceAssessment> assessBatch(List<AttestationRelevanceContext> ctxs) {
+                Map<UUID, RelevanceAssessment> result = new java.util.LinkedHashMap<>();
+                for (AttestationRelevanceContext ctx : ctxs) {
+                    if (ctx.attestationId().equals(id1)) {
+                        result.put(ctx.attestationId(), new RelevanceAssessment(0.5, "capped"));
+                    } else {
+                        result.put(ctx.attestationId(), RelevanceAssessment.NEUTRAL);
+                    }
+                }
+                return result;
+            }
+
+            @Override
+            public String name() {
+                return "batch";
+            }
+        };
+
+        var composer = new RelevanceComposer(List.of(perItem, batchFactor), 0.3);
+        var result   = composer.assess(List.of(ctx(id1), ctx(id2)));
+
+        // id1: 0.8 * 0.5 = 0.4
+        assertEquals(0.4, result.get(id1), 1e-9);
+        // id2: 0.8 * 1.0 = 0.8
+        assertEquals(0.8, result.get(id2), 1e-9);
+    }
+
+    @Test
+    void batchFactor_partialMap_missingIdTreatedAsNeutral() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
+        AttestationRelevanceFactor batchFactor = new AttestationRelevanceFactor() {
+            @Override
+            public RelevanceAssessment assess(AttestationRelevanceContext ctx) {
+                return RelevanceAssessment.NEUTRAL;
+            }
+
+            @Override
+            public Map<UUID, RelevanceAssessment> assessBatch(List<AttestationRelevanceContext> ctxs) {
+                // Only return assessment for id1, omit id2
+                return Map.of(id1, new RelevanceAssessment(0.6, "partial"));
+            }
+
+            @Override
+            public String name() {
+                return "partial";
+            }
+        };
+
+        var composer = new RelevanceComposer(List.of(batchFactor), 0.5);
+        var result   = composer.assess(List.of(ctx(id1), ctx(id2)));
+
+        assertEquals(0.6, result.get(id1), 1e-9);
+        // id2 not in batch result -> stays at initial 1.0
+        assertEquals(1.0, result.get(id2), 1e-9);
+    }
+
 
     private static AttestationRelevanceFactor fixedFactor(double weight, String name) {
         return new AttestationRelevanceFactor() {
