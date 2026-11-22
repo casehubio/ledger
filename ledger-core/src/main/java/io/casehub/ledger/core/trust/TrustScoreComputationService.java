@@ -1,12 +1,10 @@
 package io.casehub.ledger.core.trust;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.ledger.api.model.ActorTrustScoreBase;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
-import io.casehub.ledger.api.spi.AttestationRelevanceContext;
 import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
 import io.casehub.ledger.core.config.TrustScoreProperties;
@@ -23,7 +21,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class TrustScoreComputationService {
-    private static final ObjectMapper SNAPSHOT_MAPPER = new ObjectMapper();
 
 
     private final CrossTenantLedgerEntryRepository ledgerRepo;
@@ -140,12 +137,7 @@ public class TrustScoreComputationService {
         Instant now = Instant.now();
 
         Map<UUID, Double> relevanceMap = relevanceComposer.assess(
-                allAttestations.stream()
-                               .map(att -> new AttestationRelevanceContext(
-                                       att.id, att.attestorId, att.attestorType, att.attestorRole,
-                                       entryActorIndex.get(att.ledgerEntryId), null,
-                                       att.capabilityTag, att.trustDimension, att.occurredAt, parseSnapshot(att)))
-                               .toList());
+                EigenTrustEdgeWeights.buildRelevanceContexts(allAttestations, entryActorIndex));
 
         Map<UUID, Double> edgeWeights = EigenTrustEdgeWeights.compute(
                 allAttestations, decayFunction, relevanceMap, now);
@@ -156,19 +148,6 @@ public class TrustScoreComputationService {
         for (Map.Entry<String, Double> entry : globalScores.entrySet()) {
             trustRepo.updateGlobalTrustScore(entry.getKey(), entry.getValue());
         }
-    }
-
-    private static Map<String, Object> parseSnapshot(LedgerAttestation att) {
-        if (att.relevanceSnapshot != null && !att.relevanceSnapshot.isBlank()) {
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> parsed = SNAPSHOT_MAPPER.readValue(att.relevanceSnapshot, Map.class);
-                return parsed;
-            } catch (Exception ex) {
-                return Map.of();
-            }
-        }
-        return Map.of();
     }
 
 }
