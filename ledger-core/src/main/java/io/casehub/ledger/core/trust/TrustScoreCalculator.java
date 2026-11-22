@@ -23,9 +23,6 @@ import java.util.stream.Collectors;
  * here for the actual computation.
  */
 public class TrustScoreCalculator {
-    private static final com.fasterxml.jackson.databind.ObjectMapper SNAPSHOT_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
-    private static final java.util.logging.Logger                    log             = java.util.logging.Logger.getLogger(TrustScoreCalculator.class.getName());
-
 
     private final DecayFunction             decayFunction;
     private final GlobalScoreStrategy       globalScoreStrategy;
@@ -72,25 +69,13 @@ public class TrustScoreCalculator {
         // ── Resolve relevance for all attestations ───────────────────────────
         final List<AttestationRelevanceContext> relevanceContexts = new ArrayList<>();
         for (final LedgerAttestation att : rawAttestations) {
-            final LedgerEntry   entry         = entryById.get(att.ledgerEntryId);
-            final String        scoredActorId = entry != null ? entry.actorId : null;
-            final String        tenancyId     = entry != null ? entry.tenancyId : null;
-            Map<String, Object> snapshot      = null;
-            if (att.relevanceSnapshot != null && !att.relevanceSnapshot.isBlank()) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> parsed = SNAPSHOT_MAPPER.readValue(att.relevanceSnapshot, Map.class);
-                    snapshot = parsed;
-                } catch (Exception ex) {
-                    log.log(java.util.logging.Level.FINE,
-                            "Failed to parse relevanceSnapshot for attestation {0}: {1}",
-                            new Object[]{att.id, ex.getMessage()});
-                }
-            }
+            final LedgerEntry entry         = entryById.get(att.ledgerEntryId);
+            final String      scoredActorId = entry != null ? entry.actorId : null;
+            final String      tenancyId     = entry != null ? entry.tenancyId : null;
             relevanceContexts.add(new AttestationRelevanceContext(
                     att.id, att.attestorId, att.attestorType, att.attestorRole,
                     scoredActorId, tenancyId, att.capabilityTag, att.trustDimension,
-                    att.occurredAt, snapshot));
+                    att.occurredAt, SnapshotParser.parse(att)));
         }
         final Map<UUID, Double> relevanceMap = relevanceComposer.assess(relevanceContexts);
 
