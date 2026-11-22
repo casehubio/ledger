@@ -1,13 +1,14 @@
 package io.casehub.ledger.runtime.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.ledger.api.model.ActorTrustScoreBase;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
+import io.casehub.ledger.api.spi.AttestationRelevanceContext;
 import io.casehub.ledger.api.spi.CrossTenantLedgerEntryRepository;
 import io.casehub.ledger.api.spi.TrustScoreSnapshotRepository;
-import io.casehub.ledger.api.spi.AttestationRelevanceContext;
 import io.casehub.ledger.core.trust.DecayFunction;
 import io.casehub.ledger.core.trust.EigenTrustComputer;
 import io.casehub.ledger.core.trust.EigenTrustEdgeWeights;
@@ -47,6 +48,8 @@ import java.util.stream.Collectors;
  */
 @ApplicationScoped
 public class TrustScoreJob {
+    private static final ObjectMapper SNAPSHOT_MAPPER = new ObjectMapper();
+
 
     @Inject
     @CrossTenant
@@ -196,7 +199,7 @@ public class TrustScoreJob {
                                .map(att -> new AttestationRelevanceContext(
                                        att.id, att.attestorId, att.attestorType, att.attestorRole,
                                        entryActorIndex.get(att.ledgerEntryId), null,
-                                       att.capabilityTag, att.trustDimension, att.occurredAt, Map.of()))
+                                       att.capabilityTag, att.trustDimension, att.occurredAt, parseSnapshot(att)))
                                .toList());
 
         final Map<UUID, Double> edgeWeights = EigenTrustEdgeWeights.compute(
@@ -212,4 +215,18 @@ public class TrustScoreJob {
             trustRepo.updateGlobalTrustScore(entry.getKey(), entry.getValue());
         }
     }
+
+    private static Map<String, Object> parseSnapshot(LedgerAttestation att) {
+        if (att.relevanceSnapshot != null && !att.relevanceSnapshot.isBlank()) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> parsed = SNAPSHOT_MAPPER.readValue(att.relevanceSnapshot, Map.class);
+                return parsed;
+            } catch (Exception ex) {
+                return Map.of();
+            }
+        }
+        return Map.of();
+    }
+
 }

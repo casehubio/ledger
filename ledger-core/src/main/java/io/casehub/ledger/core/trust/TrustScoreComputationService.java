@@ -1,5 +1,6 @@
 package io.casehub.ledger.core.trust;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.ledger.api.model.ActorTrustScoreBase;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntry;
@@ -22,6 +23,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class TrustScoreComputationService {
+    private static final ObjectMapper SNAPSHOT_MAPPER = new ObjectMapper();
+
 
     private final CrossTenantLedgerEntryRepository ledgerRepo;
     private final ActorTrustScoreRepository        trustRepo;
@@ -141,7 +144,7 @@ public class TrustScoreComputationService {
                                .map(att -> new AttestationRelevanceContext(
                                        att.id, att.attestorId, att.attestorType, att.attestorRole,
                                        entryActorIndex.get(att.ledgerEntryId), null,
-                                       att.capabilityTag, att.trustDimension, att.occurredAt, Map.of()))
+                                       att.capabilityTag, att.trustDimension, att.occurredAt, parseSnapshot(att)))
                                .toList());
 
         Map<UUID, Double> edgeWeights = EigenTrustEdgeWeights.compute(
@@ -154,4 +157,18 @@ public class TrustScoreComputationService {
             trustRepo.updateGlobalTrustScore(entry.getKey(), entry.getValue());
         }
     }
+
+    private static Map<String, Object> parseSnapshot(LedgerAttestation att) {
+        if (att.relevanceSnapshot != null && !att.relevanceSnapshot.isBlank()) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> parsed = SNAPSHOT_MAPPER.readValue(att.relevanceSnapshot, Map.class);
+                return parsed;
+            } catch (Exception ex) {
+                return Map.of();
+            }
+        }
+        return Map.of();
+    }
+
 }
