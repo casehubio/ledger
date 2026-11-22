@@ -41,7 +41,7 @@ from driving weights to near-zero.
 The raw relevance weight per attestation is:
 
 ```
-rawRelevance = max(minWeight, ∏ factor.assess(ctx).weight())
+rawRelevance = max(minWeight, ∏ factor.assessBatch(ctxs)[attestationId].weight())
 ```
 
 This raw weight feeds into mass-preserving normalisation inside `TrustScoreComputer`:
@@ -112,12 +112,19 @@ regardless of relevance.
 - `TrustScoreCalculator` batch-resolves relevance via `RelevanceComposer` once per
   per-actor computation pass. Factors that need I/O should use the `assessBatch` default
   method to amortise queries.
+- `RelevanceComposer` calls `assessBatch()` per factor (not `assess()` per attestation).
+  Existing per-item factors work unchanged via the default `assessBatch()` delegation.
+  Group-aware factors (e.g. `IndependenceAwareRelevanceFactor` in eidos) override
+  `assessBatch()` to reason about batch composition — the first shipped example caps
+  same-unit share of a group's evidence mass.
 - The `relevanceSnapshot` JSON on `LedgerAttestation` is append-only in practice: once
   written, the snapshot is immutable (the enricher pipeline only runs at write time).
   This supports compliance audit trails — the basis for a weight is permanently recorded.
-- Future work: concrete `AttestationRelevanceFactor` implementations (org-proximity,
-  capability-overlap) live in consumers (casehub-work, casehub-qhorus), not in ledger.
-  Ledger provides the SPI and composition; domain knowledge stays in the domain.
+- Concrete `AttestationRelevanceFactor` implementations live in consumers, not in ledger.
+  Shipped: `OrgProximityRelevanceFactor` (accuracy-biased, per-attestation) and
+  `IndependenceAwareRelevanceFactor` (independence-biased, group-aware via `assessBatch()`),
+  both in eidos org-runtime. Ledger provides the SPI and composition; domain knowledge
+  stays in the domain.
 
 ## References
 

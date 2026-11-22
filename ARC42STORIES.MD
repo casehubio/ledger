@@ -963,7 +963,7 @@ Not closed here: agent identity binding does not affect trust scores directly (L
 
 **Why decay-weighted average for dimensions rather than Bayesian Beta (ADR 0009):** Dimension scores are continuous [0,1] assessments. Beta model is for binary success/failure. Decay-weighted average preserves the continuous signal. Valence asymmetry deliberately suppressed — all dimension attestations pass SOUND to DecayFunction.
 
-**Why pair-scoped relevance is separate from attestor-scoped credibility (ADR 0018):** Credibility reflects the attestor's own track record — same weight for every attestation they make. Relevance reflects the attestor-actor relationship — same attestor may be highly relevant to one actor (same team) and irrelevant to another (different org). Conflating them into one weight prevents independent variation along both axes. The composition model (product with floor, mass-preserving normalisation) allows accuracy-biased and independence-biased factors to coexist.
+**Why pair-scoped relevance is separate from attestor-scoped credibility (ADR 0018):** Credibility reflects the attestor's own track record — same weight for every attestation they make. Relevance reflects the attestor-actor relationship — same attestor may be highly relevant to one actor (same team) and irrelevant to another (different org). Conflating them into one weight prevents independent variation along both axes. The composition model (product with floor, mass-preserving normalisation) allows accuracy-biased and independence-biased factors to coexist. The shipped independence factor (`IndependenceAwareRelevanceFactor` in eidos) uses `assessBatch()` for group-level reasoning — capping same-unit share at a configurable threshold (default 60%).
 
 #### Pattern introduced
 
@@ -1310,7 +1310,7 @@ Full ADR catalogue: `docs/adr/INDEX.md` (18 ADRs; 2 superseded).
 | EU AI Act enforcement deadline (2 August 2026) | Non-compliance penalties up to EUR 15M / 3% turnover | Compliance infrastructure complete; consumer integration testing in progress |
 | EigenTrust non-convergence on small graphs | Degenerate trust scores for deployments with < 10 actors | ADR 0016: gated behind applicability criteria, default disabled |
 | Anti-gaming gap — Sybil attacks and trust-building-then-exploit | Coordinated malicious agents can accumulate trust then defect | Identity layer (bilateral signing + key rotation + SUSPECT) addresses identity; social gaming remains open |
-| In-unit amplification from org-proximity weighting | Attestors in the same org unit are weighted higher (accuracy bias), but correlated attestors can amplify each other's assessments | Floor on relevance weight (default 0.5) bounds amplification; independence-biased factors can be contributed via same SPI; mass-preserving normalisation prevents total score inflation |
+| In-unit amplification from org-proximity weighting | Attestors in the same org unit are weighted higher (accuracy bias), but correlated attestors can amplify each other's assessments | Floor on relevance weight (default 0.5) bounds amplification; `IndependenceAwareRelevanceFactor` (eidos) caps same-unit share at 60% via `assessBatch()` group-level reasoning; mass-preserving normalisation prevents total score inflation |
 | H2 dialect divergence from PostgreSQL | Tests pass on H2 but fail on real PostgreSQL | PostgreSQL Testcontainers in CI; three-way dialect detection in LedgerSequenceAllocator |
 
 ### Technical Debt

@@ -71,6 +71,16 @@ Pure Java -- no CDI, no database. Suitable for unit tests without Quarkus. Algor
 
 Default `ExponentialDecayFunction` applies exponential decay with an asymmetric valence multiplier -- FLAGGED attestations decay slower via `casehub.ledger.decay.flagged-persistence-multiplier` (default 0.5 = FLAGGED persists twice as long as SOUND).
 
+### Attestation Relevance Pipeline
+
+`TrustScoreCalculator.computeAll()` builds `AttestationRelevanceContext` records from each attestation's `relevanceSnapshot` JSON and passes them to `RelevanceComposer`. The composer calls `assessBatch()` on each `AttestationRelevanceFactor` bean -- per-item factors use the default delegation (loops `assess()`); group-aware factors override `assessBatch()` to reason about batch composition.
+
+Shipped factors (both in eidos org-runtime):
+- **`OrgProximityRelevanceFactor`** -- accuracy-biased: weights by `org-distance` from snapshot (same-unit = 1.0, cross-unit decreasing). Per-attestation.
+- **`IndependenceAwareRelevanceFactor`** -- independence-biased: caps same-unit share of a group at `casehub.eidos.trust.independence.max-same-unit-share` (default 0.6). Uses `assessBatch()` for group-level reasoning.
+
+The four-factor weight chain is: `decay × confidence × credibility × normalised_relevance`. Adding a new relevance dimension requires a `LedgerAttestationEnricher` (write-time, writes to `relevanceSnapshot` JSON) and an `AttestationRelevanceFactor` (read-time, reads from `AttestationRelevanceContext.snapshot()`). No schema migration needed.
+
 ### PerActorTrustComputer
 
 `@ApplicationScoped` package-private CDI bean that orchestrates trust computation for a single actor. Called by both `TrustScoreJob` (batch) and `IncrementalTrustUpdateObserver` (per-attestation). Delegates pure computation to `TrustScoreCalculator`, persists results via `ActorTrustScoreRepository.upsert()`, and captures `TrustScoreSnapshot` records for all four score types on every computation.
