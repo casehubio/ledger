@@ -20,7 +20,8 @@ final class SnapshotParser {
             return Map.of();
         }
         try {
-            return MAPPER.readValue(att.relevanceSnapshot, Map.class);
+            Map<String, Object> result = MAPPER.readValue(att.relevanceSnapshot, Map.class);
+            return result != null ? result : Map.of();
         } catch (Exception ex) {
             log.log(Level.FINE, "Failed to parse relevanceSnapshot for attestation {0}: {1}",
                     new Object[]{att.id, ex.getMessage()});

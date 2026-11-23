@@ -50,4 +50,10 @@ class SnapshotParserTest {
     void malformedJson_returnsEmptyMapWithoutThrowing(final String badJson) {
         assertThat(SnapshotParser.parse(attestation(badJson))).isEmpty();
     }
+
+    @Test
+    void jsonNullLiteral_returnsEmptyMap() {
+        assertThat(SnapshotParser.parse(attestation("null"))).isEmpty();
+    }
+
 }
