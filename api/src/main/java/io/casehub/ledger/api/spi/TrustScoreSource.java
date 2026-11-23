@@ -21,6 +21,22 @@ public interface TrustScoreSource {
 
     OptionalDouble globalScore(String actorId);
 
+    /**
+     * Optional derivation metadata for the global trust score. Consumers that want to reason
+     * about how a score was computed (algorithm, data sufficiency, attestation count) use this
+     * instead of the opaque {@link #globalScore(String)}.
+     *
+     * <p>The default returns BETA with unknown attestation count and full data sufficiency.
+     * Implementations that have richer context should override.
+     */
+    default java.util.Optional<io.casehub.ledger.api.model.TrustScoreDetail> globalScoreDetail(final String actorId) {
+        return globalScore(actorId).stream()
+                                   .mapToObj(s -> new io.casehub.ledger.api.model.TrustScoreDetail(
+                                           s, io.casehub.ledger.api.model.TrustAlgorithm.BETA, -1, 1.0, null))
+                                   .findFirst();
+    }
+
+
     OptionalDouble capabilityScore(String actorId, String capabilityTag);
 
     OptionalDouble dimensionScore(String actorId, String dimensionKey);
