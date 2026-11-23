@@ -42,7 +42,23 @@ public interface TrustScoreSource {
 
     OptionalDouble capabilityScore(String actorId, String capabilityTag);
 
+    default java.util.Optional<TrustScoreDetail> capabilityScoreDetail(final String actorId,
+                                                                       final String capabilityTag) {
+        return capabilityScore(actorId, capabilityTag).stream()
+                                                      .mapToObj(s -> new TrustScoreDetail(s, TrustAlgorithm.BETA, -1, 1.0, null))
+                                                      .findFirst();
+    }
+
+
     OptionalDouble dimensionScore(String actorId, String dimensionKey);
+
+    default java.util.Optional<TrustScoreDetail> dimensionScoreDetail(final String actorId,
+                                                                      final String dimensionKey) {
+        return dimensionScore(actorId, dimensionKey).stream()
+                                                    .mapToObj(s -> new TrustScoreDetail(s, TrustAlgorithm.BETA, -1, 1.0, null))
+                                                    .findFirst();
+    }
+
 
     OptionalDouble capabilityDimensionScore(String actorId, String capabilityTag, String dimensionKey);
 
