@@ -223,6 +223,8 @@ casehub-ledger/  (local folder: ~/claude/casehub/ledger)
 │       │   ├── AttestationVerdict.java      — SOUND | FLAGGED | ENDORSED | CHALLENGED enum
 │       │   ├── CapabilityTag.java           — sentinel constants: GLOBAL = "*" for cross-capability attestations
 │       │   ├── ScoreType.java               — GLOBAL | CAPABILITY | DIMENSION | CAPABILITY_DIMENSION enum (trust score type; see ADR 0010)
+│       │   ├── TrustAlgorithm.java          — BETA | EIGENTRUST | HYBRID enum (which algorithm produced a trust score; see #249)
+│       │   ├── TrustScoreDetail.java        — record: derivation metadata (score, algorithm, directAttestationCount, dataSufficiency, mixingWeight); side-channel for TrustScoreSource (#249)
 │       │   ├── AuditRecord.java             — immutable record: domain-agnostic audit event fields for LedgerAppender write path; metadata component for consumer-provided JSON context (#172)
 │       │   ├── AttestationSummary.java      — immutable record: verdict counts + confidence stats for aggregate queries (#201)
 │       │   └── supplement/
