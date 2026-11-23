@@ -1,5 +1,8 @@
 package io.casehub.ledger.api.spi;
 
+import io.casehub.ledger.api.model.TrustAlgorithm;
+import io.casehub.ledger.api.model.TrustScoreDetail;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +32,10 @@ public interface TrustScoreSource {
      * <p>The default returns BETA with unknown attestation count and full data sufficiency.
      * Implementations that have richer context should override.
      */
-    default java.util.Optional<io.casehub.ledger.api.model.TrustScoreDetail> globalScoreDetail(final String actorId) {
+    default java.util.Optional<TrustScoreDetail> globalScoreDetail(final String actorId) {
         return globalScore(actorId).stream()
-                                   .mapToObj(s -> new io.casehub.ledger.api.model.TrustScoreDetail(
-                                           s, io.casehub.ledger.api.model.TrustAlgorithm.BETA, -1, 1.0, null))
+                                   .mapToObj(s -> new TrustScoreDetail(
+                                           s, TrustAlgorithm.BETA, -1, 1.0, null))
                                    .findFirst();
     }
 
