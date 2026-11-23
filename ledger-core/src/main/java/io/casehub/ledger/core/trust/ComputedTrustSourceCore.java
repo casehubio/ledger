@@ -44,6 +44,24 @@ public class ComputedTrustSourceCore implements TrustScoreSource {
     }
 
     @Override
+    public java.util.Optional<io.casehub.ledger.api.model.TrustScoreDetail> globalScoreDetail(String actorId) {
+        TrustScoreCalculator.ComputedScores scores = computeIfAbsent(actorId);
+        if (scores == null) {
+            return java.util.Optional.empty();
+        }
+        TrustScoreComputer.ActorScore global      = scores.globalScore();
+        int                           directCount = global.attestationPositive() + global.attestationNegative();
+        double                        sufficiency = Math.min(1.0, directCount / 10.0);
+        return java.util.Optional.of(new io.casehub.ledger.api.model.TrustScoreDetail(
+                global.trustScore(),
+                io.casehub.ledger.api.model.TrustAlgorithm.BETA,
+                directCount,
+                sufficiency,
+                null));
+    }
+
+
+    @Override
     public OptionalDouble capabilityScore(String actorId, String capabilityTag) {
         TrustScoreCalculator.ComputedScores scores = computeIfAbsent(actorId);
         if (scores == null) {

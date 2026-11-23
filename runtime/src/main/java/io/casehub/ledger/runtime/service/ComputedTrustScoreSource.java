@@ -36,6 +36,10 @@ public class ComputedTrustScoreSource implements TrustScoreSource {
     public OptionalDouble globalScore(String actorId) {return core.globalScore(actorId);}
 
     @Override
+    public java.util.Optional<io.casehub.ledger.api.model.TrustScoreDetail> globalScoreDetail(String actorId) {return core.globalScoreDetail(actorId);}
+
+
+    @Override
     public OptionalDouble capabilityScore(String actorId, String capabilityTag) {return core.capabilityScore(actorId, capabilityTag);}
 
     @Override

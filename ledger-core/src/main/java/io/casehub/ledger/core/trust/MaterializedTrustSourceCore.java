@@ -1,11 +1,9 @@
 package io.casehub.ledger.core.trust;
 
-import io.casehub.ledger.api.model.ActorTrustScoreBase;
 import io.casehub.ledger.api.model.ScoreType;
 import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.api.spi.TrustScoreSource;
 
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +24,22 @@ public class MaterializedTrustSourceCore implements TrustScoreSource {
                 .map(s -> OptionalDouble.of(s.trustScore))
                 .orElse(OptionalDouble.empty());
     }
+
+    @Override
+    public java.util.Optional<io.casehub.ledger.api.model.TrustScoreDetail> globalScoreDetail(String actorId) {
+        return repository.findByActorId(actorId)
+                         .map(s -> {
+                             int    directCount = s.attestationPositive + s.attestationNegative;
+                             double sufficiency = Math.min(1.0, directCount / 10.0);
+                             return new io.casehub.ledger.api.model.TrustScoreDetail(
+                                     s.trustScore,
+                                     io.casehub.ledger.api.model.TrustAlgorithm.BETA,
+                                     directCount,
+                                     sufficiency,
+                                     null);
+                         });
+    }
+
 
     @Override
     public OptionalDouble capabilityScore(String actorId, String capabilityTag) {
