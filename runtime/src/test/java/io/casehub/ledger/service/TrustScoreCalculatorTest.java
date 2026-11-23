@@ -411,6 +411,19 @@ class TrustScoreCalculatorTest {
     }
 
 
+    @Test
+    void malformedRelevanceSnapshot_pipelineCompletesWithNeutralFallback() {
+        final TestLedgerEntry   d         = decision("alice");
+        final LedgerAttestation valid     = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "peer-a", "{\"org-distance\": 1}");
+        final LedgerAttestation malformed = attestationWithSnapshot(d.id, AttestationVerdict.SOUND, "review", "peer-b", "not valid json");
+
+        final ComputedScores scores = calculatorWithRelevance(groupCapFactor(0.5))
+                                              .computeAll(List.of(d), Map.of(d.id, List.of(valid, malformed)), now);
+
+        assertThat(scores.capabilityScores()).containsKey("review");
+        assertThat(scores.capabilityScores().get("review").trustScore()).isGreaterThan(0.5);
+    }
+
     private static AttestationRelevanceFactor groupCapFactor(final double maxSameUnitShare) {
         return new AttestationRelevanceFactor() {
             @Override
